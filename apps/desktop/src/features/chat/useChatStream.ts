@@ -16,7 +16,7 @@ export const NEXUS = "nexus";
  * Chat actions for one conversation (`undefined` = a new chat). The live turn lives in the chat
  * store, so navigating away does not interrupt streaming and coming back shows the progress.
  */
-export function useChatStream(conversationId: string | undefined) {
+export function useChatStream(conversationId: string | undefined, assistantId: string = NEXUS) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const key = conversationId ?? NEW;
@@ -69,9 +69,9 @@ export function useChatStream(conversationId: string | undefined) {
   const send = useCallback(
     (text: string, attachments: AttachmentInput[], think: boolean) =>
       run(text, (onEvent) =>
-        api.chat.send({ conversation_id: conversationId ?? null, assistant_id: NEXUS, text, attachments, think }, onEvent),
+        api.chat.send({ conversation_id: conversationId ?? null, assistant_id: assistantId, text, attachments, think }, onEvent),
       ),
-    [run, conversationId],
+    [run, conversationId, assistantId],
   );
 
   const regenerate = useCallback(

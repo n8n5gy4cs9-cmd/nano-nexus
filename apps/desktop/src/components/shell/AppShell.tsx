@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Outlet } from "react-router-dom";
 
+import { AssistantSwitcher } from "@/features/assistants/AssistantSwitcher";
 import { PermissionModal } from "@/features/permissions/PermissionModal";
 import { useShortcuts } from "@/hooks/useShortcuts";
 import { usePlatform } from "@/hooks/usePlatform";
@@ -54,6 +55,7 @@ export function AppShell() {
       </div>
       {inspectorOpen ? <Inspector /> : null}
       <PermissionModal />
+      <AssistantSwitcher />
     </div>
   );
 }

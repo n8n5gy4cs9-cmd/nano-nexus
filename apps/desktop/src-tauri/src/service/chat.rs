@@ -86,6 +86,8 @@ struct Buffer {
     content: String,
     reasoning: String,
     last_flush: Instant,
+    /// `{tool, args, summary, ok}` per tool call, in order (saved as the message's `tool_trace`).
+    tools: Vec<serde_json::Value>,
 }
 
 impl PersistingSink {
@@ -99,8 +101,15 @@ impl PersistingSink {
                 content: String::new(),
                 reasoning: String::new(),
                 last_flush: Instant::now(),
+                tools: Vec::new(),
             }),
         }
+    }
+
+    /// The tool calls seen so far as a JSON array, or `None` when there were none.
+    pub fn tool_trace(&self) -> Option<String> {
+        let b = self.buf.lock().ok()?;
+        (!b.tools.is_empty()).then(|| serde_json::Value::Array(b.tools.clone()).to_string())
     }
 }
 
@@ -115,6 +124,25 @@ impl Sink<ChatEvent> for PersistingSink {
                 ChatEvent::Reasoning { delta } => {
                     b.reasoning.push_str(delta);
                     true
+                }
+                ChatEvent::ToolCall { tool, args_json } => {
+                    let args = serde_json::from_str::<serde_json::Value>(args_json)
+                        .unwrap_or(serde_json::Value::Null);
+                    b.tools
+                        .push(serde_json::json!({"tool": tool, "args": args, "summary": null, "ok": null}));
+                    false
+                }
+                ChatEvent::ToolResult { tool, summary, ok } => {
+                    if let Some(t) = b
+                        .tools
+                        .iter_mut()
+                        .rev()
+                        .find(|t| t["tool"] == tool.as_str() && t["ok"].is_null())
+                    {
+                        t["summary"] = serde_json::Value::String(summary.clone());
+                        t["ok"] = serde_json::Value::Bool(*ok);
+                    }
+                    false
                 }
                 _ => false,
             };
@@ -378,6 +406,7 @@ fn start_turn(
 
         let mut fin = MessageFinish::new(outcome.status, outcome.content.clone());
         fin.reasoning = outcome.reasoning.clone();
+        fin.tool_trace = persisting.tool_trace();
         fin.error = outcome.error.as_ref().map(|(_, m)| m.clone());
         fin.tokens_prompt = outcome.tokens_prompt;
         fin.tokens_out = outcome.tokens_out;
@@ -914,5 +943,37 @@ mod tests {
         sink.send(ChatEvent::Content { delta: "!".into() });
         assert_eq!(store.get_message(&m.id).unwrap().unwrap().content, "one two!");
         assert_eq!(inner.events().len(), 4, "every event is forwarded");
+    }
+
+    #[tokio::test]
+    async fn the_sink_records_a_tool_trace() {
+        let store = Arc::new(Store::open_in_memory().unwrap());
+        let conv = store.create_conversation(&AssistantId::from("nexus")).unwrap();
+        let m = store
+            .insert_assistant_placeholder(&conv.id, &AssistantId::from("nexus"), None)
+            .unwrap();
+        let sink = PersistingSink::new(
+            Arc::new(VecSink::<ChatEvent>::default()),
+            store,
+            m.id,
+            Duration::from_secs(5),
+        );
+        assert_eq!(sink.tool_trace(), None);
+        sink.send(ChatEvent::ToolCall {
+            tool: "read_file".into(),
+            args_json: "{\"path\":\"/a/b.md\"}".into(),
+        });
+        sink.send(ChatEvent::ToolResult {
+            tool: "read_file".into(),
+            summary: "Read b.md".into(),
+            ok: true,
+        });
+        let v: serde_json::Value = serde_json::from_str(&sink.tool_trace().unwrap()).unwrap();
+        assert_eq!(v[0]["tool"], "read_file");
+        assert_eq!(v[0]["args"]["path"], "/a/b.md");
+        assert_eq!(
+            (v[0]["summary"].as_str(), v[0]["ok"].as_bool()),
+            (Some("Read b.md"), Some(true))
+        );
     }
 }

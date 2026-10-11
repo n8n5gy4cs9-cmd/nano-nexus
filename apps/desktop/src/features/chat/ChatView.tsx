@@ -1,22 +1,25 @@
 import { useQuery } from "@tanstack/react-query";
+import { ChevronsUpDown } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import type { Message } from "@/bindings";
+import { AssistantIcon, Kbd } from "@/components/ui";
+import { FALLBACK_CARD, useAssistants } from "@/hooks/useAssistants";
 import { usePlatform } from "@/hooks/usePlatform";
 import { useChatShortcuts } from "@/hooks/useChatShortcuts";
 import { api } from "@/lib/api";
+import { modLabel } from "@/lib/platform";
+import { useAssistantChoice } from "@/stores/assistant";
 import type { LiveTurn } from "@/stores/chat";
 
 import { Composer } from "./Composer";
 import { EmptyChat } from "./EmptyChat";
-import { AssistantMessage, UserMessage, type AssistantView } from "./Message";
+import { AssistantMessage, UserMessage, type AssistantBadge, type AssistantView } from "./Message";
+import { parseToolTrace } from "./ToolChips";
 import { MessageList, type ListItem } from "./MessageList";
-import { NEXUS_PLACEHOLDER, NEXUS_STARTERS } from "./starters";
 import { conversationKey, useChatStream } from "./useChatStream";
 
-const ASSISTANT_NAME = "Nexus";
-const TAGLINE = "Your everyday local copilot. It can read the folders you share.";
 
 function storedView(m: Message): AssistantView {
   return {
@@ -27,6 +30,7 @@ function storedView(m: Message): AssistantView {
     stopped: m.status === "stopped",
     error: m.status === "error" ? { code: "internal", message: m.error ?? "Something went wrong." } : null,
     stats: m.tps !== null || m.ttft_ms !== null ? { tps: m.tps, ttftMs: m.ttft_ms, tokensOut: m.tokens_out } : null,
+    tools: parseToolTrace(m.tool_trace),
   };
 }
 
@@ -41,6 +45,7 @@ function liveView(t: LiveTurn): AssistantView {
     error: t.error,
     stats: null,
     statusText: t.statusText,
+    tools: t.tools,
   };
 }
 
@@ -50,10 +55,22 @@ export function needsOptimisticUser(messages: Message[], t: LiveTurn): boolean {
   return !messages.some((m) => m.role === "user" && m.content === t.userText && m.created_at >= t.startedAt - 2000);
 }
 
+function SwitchDivider({ name }: { name: string }) {
+  return (
+    <div role="separator" className="my-1 flex items-center gap-3 text-caption text-faint">
+      <span className="h-px flex-1 bg-border" />
+      Switched to {name}
+      <span className="h-px flex-1 bg-border" />
+    </div>
+  );
+}
+
 /** One conversation: messages, composer, and the live (streaming) turn. */
 export function ChatView() {
   const { conversationId } = useParams();
-  const { turn, streaming, send, regenerate, editResend, stop } = useChatStream(conversationId);
+  const selectedId = useAssistantChoice((s) => s.selectedId);
+  const setSwitcherOpen = useAssistantChoice((s) => s.setSwitcherOpen);
+  const { byId } = useAssistants();
   const [think, setThink] = useState(false);
   const [composerEmpty, setComposerEmpty] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -66,6 +83,16 @@ export function ChatView() {
     enabled: conversationId !== undefined,
     retry: false,
   });
+  const activeId = conv.data?.conversation.assistant_id ?? selectedId;
+  const card = byId.get(activeId) ?? (activeId === FALLBACK_CARD.id ? FALLBACK_CARD : (byId.get("nexus") ?? FALLBACK_CARD));
+  const { turn, streaming, send, regenerate, editResend, stop } = useChatStream(conversationId, card.id);
+  const badgeFor = useCallback(
+    (id: string | null): AssistantBadge => {
+      const c = (id ? byId.get(id) : undefined) ?? card;
+      return { name: c.name, icon: c.icon, color: c.color };
+    },
+    [byId, card],
+  );
   const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings.get, retry: false, staleTime: 60_000 });
   const ctxSize = settings.data?.["runtime.ctx_size"] ?? 8192;
 
@@ -75,6 +102,7 @@ export function ChatView() {
   const items: ListItem[] = useMemo(() => {
     const out: ListItem[] = [];
     const lastUser = [...messages].reverse().find((m) => m.role === "user");
+    let lastAssistant: string | null = null;
     for (const m of messages) {
       if (m.role === "user") {
         out.push({
@@ -94,9 +122,13 @@ export function ChatView() {
         });
       } else if (m.role === "assistant") {
         if (liveSlot?.assistantId === m.id) continue; // rendered live below
+        if (m.assistant_id && lastAssistant !== null && m.assistant_id !== lastAssistant) {
+          out.push({ key: `switch-${m.id}`, node: <SwitchDivider name={badgeFor(m.assistant_id).name} /> });
+        }
+        if (m.assistant_id) lastAssistant = m.assistant_id;
         out.push({
           key: m.id,
-          node: <AssistantMessage v={storedView(m)} name={ASSISTANT_NAME} onRegenerate={streaming ? undefined : () => void regenerate(m.id, think)} onRestart={restart} />,
+          node: <AssistantMessage v={storedView(m)} assistant={badgeFor(m.assistant_id)} onRegenerate={streaming ? undefined : () => void regenerate(m.id, think)} onRestart={restart} />,
         });
       }
     }
@@ -106,11 +138,11 @@ export function ChatView() {
       }
       out.push({
         key: liveSlot.assistantId ?? "live-assistant",
-        node: <AssistantMessage v={liveView(liveSlot)} name={ASSISTANT_NAME} onRestart={restart} onRegenerate={() => undefined} />,
+        node: <AssistantMessage v={liveView(liveSlot)} assistant={badgeFor(card.id)} onRestart={restart} onRegenerate={() => undefined} />,
       });
     }
     return out;
-  }, [messages, liveSlot, streaming, think, editResend, regenerate, editingId]);
+  }, [messages, liveSlot, streaming, think, editResend, regenerate, editingId, badgeFor, card.id]);
 
   const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
   const lastAnswer = [...messages].reverse().find((m) => m.role === "assistant" && m.content);
@@ -133,21 +165,30 @@ export function ChatView() {
 
   return (
     <div className="flex h-full flex-col">
-      {conv.data ? (
-        <header className="flex h-[52px] shrink-0 items-center border-b border-border px-5 backdrop-blur">
-          <h2 className="truncate text-body font-semibold">{conv.data.conversation.title}</h2>
-        </header>
-      ) : null}
+      <header className="flex h-[52px] shrink-0 items-center gap-3 border-b border-border px-5 backdrop-blur">
+        <h2 className="min-w-0 flex-1 truncate text-body font-semibold">{conv.data?.conversation.title ?? ""}</h2>
+        <button
+          type="button"
+          onClick={() => setSwitcherOpen(true)}
+          aria-label={`Assistant: ${card.name}. Switch assistant`}
+          className="flex h-8 shrink-0 items-center gap-2 rounded-button border border-border bg-surface px-2 text-small hover:bg-surface-2"
+        >
+          <AssistantIcon icon={card.icon} color={card.color} size={20} />
+          <span className="font-medium">{card.name}</span>
+          <ChevronsUpDown className="size-3.5 text-faint" />
+          <Kbd>{modLabel(platform)}/</Kbd>
+        </button>
+      </header>
       {empty ? (
         <div className="min-h-0 flex-1">
-          <EmptyChat name={ASSISTANT_NAME} tagline={TAGLINE} starters={NEXUS_STARTERS} onPick={(t) => void send(t, [], think)} />
+          <EmptyChat name={card.name} icon={card.icon} color={card.color} tagline={card.tagline} starters={card.starters} onPick={(t) => void send(t, [], think)} />
         </div>
       ) : (
         <MessageList items={items} version={`${liveSlot?.content.length ?? 0}:${liveSlot?.reasoning.length ?? 0}:${messages.length}`} />
       )}
       <Composer
         key={conversationId ?? "new"}
-        placeholder={NEXUS_PLACEHOLDER}
+        placeholder={card.placeholder ?? "Ask anything…"}
         streaming={streaming}
         think={think}
         onThinkChange={setThink}

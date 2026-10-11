@@ -84,6 +84,8 @@ export const commands = {
 	assistantImport: (toml: string) => typedError<AssistantDetail_Serialize, IpcError>(__TAURI_INVOKE("assistant_import", { toml })),
 	/**  Serialize a spec edited in the builder form to TOML. */
 	assistantRenderToml: (spec: AssistantSpec_Deserialize) => typedError<string, IpcError>(__TAURI_INVOKE("assistant_render_toml", { spec })),
+	/**  Parse TOML into a spec for the builder (nothing is saved). */
+	assistantDraft: (toml: string) => typedError<AssistantSpec_Serialize, IpcError>(__TAURI_INVOKE("assistant_draft", { toml })),
 };
 
 /** Events */

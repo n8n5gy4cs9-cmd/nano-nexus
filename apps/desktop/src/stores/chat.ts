@@ -2,6 +2,13 @@ import { create } from "zustand";
 
 import type { ChatEvent, ErrorCode } from "@/bindings";
 
+/** One tool call shown as a chip. `ok` is `null` while it runs. */
+export interface ToolChip {
+  tool: string;
+  summary: string | null;
+  ok: boolean | null;
+}
+
 /** A turn that is (or just was) streaming. Lives in a store so it survives navigation. */
 export interface LiveTurn {
   /** What the user typed (shown immediately, before the backend echoes it). */
@@ -15,6 +22,7 @@ export interface LiveTurn {
   status: "starting" | "streaming" | "done" | "stopped" | "error";
   error: { code: ErrorCode; message: string } | null;
   statusText: string | null;
+  tools: ToolChip[];
 }
 
 /** Key of the conversation a turn belongs to; `NEW` until the backend assigns an id. */
@@ -47,6 +55,7 @@ export const useChat = create<ChatStore>((set) => ({
           status: "starting",
           error: null,
           statusText: null,
+          tools: [],
         },
       },
     })),
@@ -153,7 +162,34 @@ export function handleChatEvent(getKey: () => string, e: ChatEvent): void {
       flushDeltas();
       st.apply(key, { status: "error", error: { code: e.code, message: e.message }, statusText: null });
       return;
+    case "tool_call": {
+      const t = st.turns[key];
+      if (t) st.apply(key, { tools: [...t.tools, { tool: e.tool, summary: null, ok: null }], statusText: toolStatus(e.tool) });
+      return;
+    }
+    case "tool_result": {
+      const t = st.turns[key];
+      if (!t) return;
+      const idx = t.tools.findLastIndex((c) => c.tool === e.tool && c.ok === null);
+      const tools = t.tools.map((c, i) => (i === idx ? { ...c, summary: e.summary, ok: e.ok } : c));
+      st.apply(key, { tools, statusText: null });
+      return;
+    }
     default:
-      return; // tool and permission events arrive with M06
+      return; // permission prompts are shown by the app-level modal
   }
+}
+
+/** Status line while a tool runs. */
+export function toolStatus(tool: string): string {
+  const verbs: Record<string, string> = {
+    read_file: "Reading a file…",
+    list_dir: "Looking in a folder…",
+    search_files: "Searching for files…",
+    grep_text: "Searching inside files…",
+    file_info: "Checking a file…",
+    calculate: "Calculating…",
+    now: "Checking the time…",
+  };
+  return verbs[tool] ?? "Working…";
 }

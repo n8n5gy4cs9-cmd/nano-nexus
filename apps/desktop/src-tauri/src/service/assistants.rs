@@ -253,6 +253,11 @@ pub fn import(ctx: &AppCtx, text: &str) -> Result<AssistantDetail, NexusError> {
     save(ctx, &text, None)
 }
 
+/// Parse TOML text (for example from Prompt Architect) into a spec for the builder, without saving.
+pub fn draft(text: &str) -> Result<AssistantSpec, NexusError> {
+    registry::validate_toml(text).map_err(field_error)
+}
+
 /// Serialize a spec edited in the builder.
 pub fn render_toml(spec: &AssistantSpec) -> Result<String, NexusError> {
     toml::to_string(spec).map_err(|e| NexusError::Internal(e.to_string()))

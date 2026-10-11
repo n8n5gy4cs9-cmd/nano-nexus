@@ -5,6 +5,11 @@
  */
 import type {
   AppInfo,
+  AssistantCard,
+  AssistantDetail,
+  AssistantSpec,
+  AssistantSpec_Serialize,
+  ValidationReport,
   AttachmentInput,
   ChatEvent,
   ChatSendArgs,
@@ -97,6 +102,20 @@ export const api = {
     /** Subscribe to `notification:new`. */
     onNew: (handler: (n: NotificationPayload) => void): Promise<Unsubscribe> =>
       getTransport().on<NotificationPayload>("notification:new", handler),
+  },
+  assistants: {
+    list: () => getTransport().call<AssistantCard[]>("assistants_list"),
+    get: (id: string) => getTransport().call<AssistantDetail>("assistant_get", { id }),
+    validate: (toml: string) => getTransport().call<ValidationReport>("assistant_validate", { toml }),
+    save: (toml: string, previousId: string | null = null) =>
+      getTransport().call<AssistantDetail>("assistant_save", { toml, previousId }),
+    delete: (id: string) => getTransport().call<null>("assistant_delete", { id }),
+    duplicate: (id: string, name: string | null = null) => getTransport().call<AssistantDetail>("assistant_duplicate", { id, name }),
+    setEnabled: (id: string, enabled: boolean) => getTransport().call<AssistantCard>("assistant_set_enabled", { id, enabled }),
+    exportToml: (id: string) => getTransport().call<string>("assistant_export", { id }),
+    importToml: (toml: string) => getTransport().call<AssistantDetail>("assistant_import", { toml }),
+    draft: (toml: string) => getTransport().call<AssistantSpec_Serialize>("assistant_draft", { toml }),
+    renderToml: (spec: AssistantSpec) => getTransport().call<string>("assistant_render_toml", { spec }),
   },
   fs: {
     grants: () => getTransport().call<Grant[]>("fs_grants_list"),

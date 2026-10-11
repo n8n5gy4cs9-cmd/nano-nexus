@@ -1,14 +1,19 @@
-import { Check, Copy, Hexagon, Pencil, RotateCw } from "lucide-react";
+import { Check, Copy, Pencil, RotateCw, WandSparkles } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import type { ErrorCode, Message as StoredMessage } from "@/bindings";
-import { Button, IconButton, Textarea } from "@/components/ui";
+import { AssistantIcon, Button, IconButton, Textarea } from "@/components/ui";
 import { api } from "@/lib/api";
+import { extractAssistantToml } from "@/lib/assistant-toml";
 import { cn } from "@/lib/cn";
+import { useAssistantChoice } from "@/stores/assistant";
+import type { ToolChip } from "@/stores/chat";
 
 import { ErrorCard } from "./ErrorCard";
 import { Markdown } from "./Markdown";
 import { ThoughtsBlock } from "./ThoughtsBlock";
+import { ToolChips } from "./ToolChips";
 
 const openLink = (url: string) => void api.app.openExternal(url).catch(() => undefined);
 
@@ -23,6 +28,14 @@ export interface AssistantView {
   error: { code: ErrorCode; message: string } | null;
   stats: { tps: number | null; ttftMs: number | null; tokensOut: number | null } | null;
   statusText?: string | null | undefined;
+  tools?: ToolChip[] | undefined;
+}
+
+/** Who wrote an answer: name, icon, and color of the assistant. */
+export interface AssistantBadge {
+  name: string;
+  icon: string;
+  color: string;
 }
 
 export function formatStats(s: NonNullable<AssistantView["stats"]>): string {
@@ -92,16 +105,18 @@ export function UserMessage({
 
 export function AssistantMessage({
   v,
-  name,
+  assistant,
   onRegenerate,
   onRestart,
 }: {
   v: AssistantView;
-  name: string;
+  assistant: AssistantBadge;
   onRegenerate?: (() => void) | undefined;
   onRestart?: (() => void) | undefined;
 }) {
   const [copied, setCopied] = useState(false);
+  const navigate = useNavigate();
+  const builderToml = !v.streaming && v.content ? extractAssistantToml(v.content) : null;
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(v.content);
@@ -114,17 +129,28 @@ export function AssistantMessage({
   return (
     <div className="group" data-role="assistant" data-message-id={v.id}>
       <div className="mb-1 flex items-center gap-2 text-small font-medium text-muted">
-        <span className="grid size-5 place-items-center rounded-chip bg-[image:var(--hue-violet)] text-accent-fg">
-          <Hexagon className="size-3" />
-        </span>
-        {name}
+        <AssistantIcon icon={assistant.icon} color={assistant.color} size={20} />
+        {assistant.name}
       </div>
+      <ToolChips chips={v.tools ?? []} />
       {v.reasoning ? <ThoughtsBlock text={v.reasoning} streaming={v.streaming && v.content === ""} startedAt={v.thinkingStartedAt} /> : null}
       {v.statusText ? <p className="my-1 text-small text-muted">{v.statusText}</p> : null}
       {v.content ? (
         <Markdown source={v.content} onOpenLink={openLink} className={cn(v.streaming && "streaming-caret")} />
       ) : v.streaming && !v.reasoning ? (
         <p className="animate-pulse text-muted">…</p>
+      ) : null}
+      {builderToml ? (
+        <Button
+          size="sm"
+          className="mt-2"
+          onClick={() => {
+            useAssistantChoice.getState().setBuilderDraft(builderToml);
+            void navigate("/assistants");
+          }}
+        >
+          <WandSparkles /> Open in builder
+        </Button>
       ) : null}
       {v.stopped && !v.streaming ? <p className="text-small text-faint">Stopped.</p> : null}
       {v.error ? <ErrorCard code={v.error.code} message={v.error.message} onRetry={onRegenerate} onRestart={onRestart} /> : null}

@@ -4,9 +4,10 @@ import { useNavigate } from "react-router-dom";
 import { focusComposer } from "@/lib/focus";
 import { hasMod, type Platform } from "@/lib/platform";
 import { NAV, SETTINGS_SECTION } from "@/routes";
+import { useAssistantChoice } from "@/stores/assistant";
 import { useUi } from "@/stores/ui";
 
-/** Global shortcuts: ⌘N new chat, ⌘1…⌘8 sections, ⌘, settings, ⌘\ sidebar, ⌘I inspector (Ctrl on Windows/Linux). */
+/** Global shortcuts: ⌘N new chat, ⌘1…⌘8 sections, ⌘, settings, ⌘/ assistants, ⌘\ sidebar, ⌘I inspector (Ctrl on Windows/Linux). */
 export function useShortcuts(platform: Platform) {
   const navigate = useNavigate();
   useEffect(() => {
@@ -26,6 +27,9 @@ export function useShortcuts(platform: Platform) {
       } else if (e.key === ",") {
         e.preventDefault();
         void navigate(SETTINGS_SECTION.path);
+      } else if (e.key === "/") {
+        e.preventDefault();
+        useAssistantChoice.getState().setSwitcherOpen(true);
       } else if (e.key === "\\") {
         e.preventDefault();
         ui.toggleSidebar();

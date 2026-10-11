@@ -67,6 +67,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             assistants::assistant_export,
             assistants::assistant_import,
             assistants::assistant_render_toml,
+            assistants::assistant_draft,
         ])
         .events(collect_events![
             runtime::RuntimeStatus,

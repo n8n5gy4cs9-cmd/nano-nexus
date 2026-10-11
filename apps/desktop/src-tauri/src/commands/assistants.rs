@@ -84,3 +84,10 @@ pub async fn assistant_import(ctx: Ctx<'_>, toml: String) -> CmdResult<Assistant
 pub async fn assistant_render_toml(spec: AssistantSpec) -> CmdResult<String> {
     service::assistants::render_toml(&spec).map_err(IpcError::from)
 }
+
+/// Parse TOML into a spec for the builder (nothing is saved).
+#[tauri::command]
+#[specta::specta]
+pub async fn assistant_draft(toml: String) -> CmdResult<AssistantSpec> {
+    service::assistants::draft(&toml).map_err(IpcError::from)
+}

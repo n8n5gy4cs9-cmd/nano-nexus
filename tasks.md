@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 85/229 tasks done (37%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 90/229 tasks done (39%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -127,11 +127,11 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T06.05** Router workflow (heuristic gate, dynamic action schema, arg resolution, loop guard, max hops) + scripted mock tests (2026-10-11)
 - [x] **T06.06** Permission integration in tools (broker, denied → model told) + tests (2026-10-11) — `PermissionAsker` trait in nexus-agent; the app's broker-backed impl lands with the T06.07 service wiring
 - [x] **T06.07** Store assistants repo + commands `assistants_*`, `assistant_validate` (field errors + token count) (2026-10-11) — also: registry in AppState, chat resolves assistants from it (+ `draft_spec`), router wired into chat turns with the broker-backed asker; bindings regenerated
-- [ ] **T06.08** UI Assistants gallery (categories, search, cards, permission chips, pipeline cards disabled until ready)
-- [ ] **T06.09** UI assistant switcher (⌘/) + header chip + "switched to" divider
-- [ ] **T06.10** UI Builder sheet (form, icon/color pickers, prompt editor w/ live token count, params, tools, starters) + Test chat (draft spec)
-- [ ] **T06.11** Import/export TOML + Prompt Architect "Open in builder" detection
-- [ ] **T06.12** UI tool chips + status lines in chat
+- [x] **T06.08** UI Assistants gallery (categories, search, cards, permission chips, pipeline cards disabled until ready) (2026-10-11)
+- [x] **T06.09** UI assistant switcher (⌘/) + header chip + "switched to" divider (2026-10-11)
+- [x] **T06.10** UI Builder sheet (form, icon/color pickers, prompt editor w/ live token count, params, tools, starters) + Test chat (draft spec) (2026-10-11)
+- [x] **T06.11** Import/export TOML + Prompt Architect "Open in builder" detection (2026-10-11) — export = clipboard + webview download (the app never writes to arbitrary paths); new command `assistant_draft`
+- [x] **T06.12** UI tool chips + status lines in chat (2026-10-11)
 - [ ] ⭐ **T06.13** 🍎 Exit check: router eval 20 prompts ≥ 80% correct tool choice (SPIKES.md §router); denied path graceful
 
 ## M07: Model manager and downloads · [spec](docs/milestones/M07-models.md) · [contract](docs/architecture/MODEL-MANAGER.md)
