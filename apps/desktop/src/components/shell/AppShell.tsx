@@ -5,6 +5,7 @@ import { usePlatform } from "@/hooks/usePlatform";
 import { useUi } from "@/stores/ui";
 
 import { Inspector } from "./Inspector";
+import { RuntimePill } from "./RuntimePill";
 import { Sidebar } from "./Sidebar";
 import { TitleBar } from "./TitleBar";
 
@@ -18,7 +19,7 @@ export function AppShell() {
     <div className="flex h-full bg-bg text-text">
       {sidebarOpen ? <Sidebar platform={platform} /> : null}
       <div className="flex min-w-0 flex-1 flex-col">
-        <TitleBar platform={platform} />
+        <TitleBar platform={platform} right={<RuntimePill />} />
         <main className="min-h-0 flex-1 overflow-auto">
           <Outlet />
         </main>
