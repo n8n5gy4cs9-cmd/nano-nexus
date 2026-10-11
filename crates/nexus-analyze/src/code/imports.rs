@@ -133,7 +133,9 @@ pub fn read_config(root: &Path, config_files: &[String]) -> ProjectConfig {
     for rel in config_files {
         let dir = dir_of(rel).to_owned();
         let name = rel.rsplit('/').next().unwrap_or(rel);
-        let Ok(text) = std::fs::read_to_string(root.join(rel)) else { continue };
+        let Ok(text) = std::fs::read_to_string(root.join(rel)) else {
+            continue;
+        };
         match name {
             "Cargo.toml" => cfg.cargo.push(dir),
             "go.mod" => {
@@ -146,7 +148,9 @@ pub fn read_config(root: &Path, config_files: &[String]) -> ProjectConfig {
                 }
             }
             _ => {
-                let Ok(v) = serde_json::from_str::<serde_json::Value>(&strip_jsonc(&text)) else { continue };
+                let Ok(v) = serde_json::from_str::<serde_json::Value>(&strip_jsonc(&text)) else {
+                    continue;
+                };
                 let opts = &v["compilerOptions"];
                 let paths = opts["paths"]
                     .as_object()
@@ -213,11 +217,20 @@ fn edge(f: &TextFact) -> ImportEdge {
 }
 
 /// Resolve every import of every file.
-pub fn resolve_all(files: &[IndexedFile], facts: &[FileFacts], folders: &[String], cfg: &ProjectConfig) -> Vec<Vec<ImportEdge>> {
+pub fn resolve_all(
+    files: &[IndexedFile],
+    facts: &[FileFacts],
+    folders: &[String],
+    cfg: &ProjectConfig,
+) -> Vec<Vec<ImportEdge>> {
     let ctx = Ctx {
         files,
         facts,
-        by_path: files.iter().enumerate().map(|(i, f)| (f.path.as_str(), i as u32)).collect(),
+        by_path: files
+            .iter()
+            .enumerate()
+            .map(|(i, f)| (f.path.as_str(), i as u32))
+            .collect(),
         folders: folders.iter().map(String::as_str).collect(),
         cfg,
     };
@@ -276,17 +289,25 @@ fn python(ctx: &Ctx<'_>, from: &IndexedFile, imp: &ImportFact) -> ImportEdge {
         let mut out: Vec<SegRef> = Vec::new();
         let mut file = None;
         for (i, (a, b)) in segs.iter().enumerate() {
-            let Some(path) = join(&cur, &rest[*a..*b]) else { break };
+            let Some(path) = join(&cur, &rest[*a..*b]) else {
+                break;
+            };
             let last = i + 1 == segs.len();
             let py = format!("{path}.py");
             let init = format!("{path}/__init__.py");
             if let Some(&fi) = ctx.by_path.get(py.as_str()) {
-                out.push(SegRef { span: sp(&imp.module.span, dots + a, dots + b), target: SegTarget::File(fi) });
+                out.push(SegRef {
+                    span: sp(&imp.module.span, dots + a, dots + b),
+                    target: SegTarget::File(fi),
+                });
                 file = Some(fi);
                 cur = path;
                 break;
             } else if ctx.folders.contains(path.as_str()) || ctx.by_path.contains_key(init.as_str()) {
-                out.push(SegRef { span: sp(&imp.module.span, dots + a, dots + b), target: SegTarget::Folder(path.clone()) });
+                out.push(SegRef {
+                    span: sp(&imp.module.span, dots + a, dots + b),
+                    target: SegTarget::Folder(path.clone()),
+                });
                 if last {
                     file = ctx.by_path.get(init.as_str()).copied();
                 }
@@ -308,16 +329,29 @@ fn python(ctx: &Ctx<'_>, from: &IndexedFile, imp: &ImportFact) -> ImportEdge {
             }
         }
         // `from pkg import submodule`
-        if file.is_none() {
+        let pkg_target = e
+            .segs
+            .last()
+            .is_none_or(|s| matches!(s.target, SegTarget::Folder(_)));
+        if !imp.names.is_empty() {
+            if !pkg_target {
+                return e;
+            }
             for n in &imp.names {
                 let Some(path) = join(&cur, &n.text) else { continue };
                 let py = format!("{path}.py");
                 if let Some(&fi) = ctx.by_path.get(py.as_str()) {
-                    e.segs.push(SegRef { span: n.span.clone(), target: SegTarget::File(fi) });
+                    e.segs.push(SegRef {
+                        span: n.span.clone(),
+                        target: SegTarget::File(fi),
+                    });
                     e.aliases.push((n.text.clone(), SegTarget::File(fi)));
                     e.files.push(fi);
                 } else if ctx.folders.contains(path.as_str()) {
-                    e.segs.push(SegRef { span: n.span.clone(), target: SegTarget::Folder(path.clone()) });
+                    e.segs.push(SegRef {
+                        span: n.span.clone(),
+                        target: SegTarget::Folder(path.clone()),
+                    });
                     e.aliases.push((n.text.clone(), SegTarget::Folder(path)));
                 }
             }
@@ -365,7 +399,14 @@ fn resolve_js(ctx: &Ctx<'_>, path: &str) -> Option<JsHit> {
 }
 
 /// Segments of `rel` (a specifier tail) mapped to files/folders below `start_dir`.
-fn js_segs(ctx: &Ctx<'_>, span: &Span, rel_off: usize, rel: &str, start_dir: &str, hit: &JsHit) -> Vec<SegRef> {
+fn js_segs(
+    ctx: &Ctx<'_>,
+    span: &Span,
+    rel_off: usize,
+    rel: &str,
+    start_dir: &str,
+    hit: &JsHit,
+) -> Vec<SegRef> {
     let mut out = Vec::new();
     let mut cur = start_dir.to_owned();
     let segs = parts(rel, "/");
@@ -387,9 +428,15 @@ fn js_segs(ctx: &Ctx<'_>, span: &Span, rel_off: usize, rel: &str, start_dir: &st
                 Some((stem, ext)) if JS_EXTS.contains(&ext) => a + stem.len(),
                 _ => *b,
             };
-            out.push(SegRef { span: sp(span, rel_off + a, rel_off + stem_end), target: SegTarget::File(*fi) });
+            out.push(SegRef {
+                span: sp(span, rel_off + a, rel_off + stem_end),
+                target: SegTarget::File(*fi),
+            });
         } else if ctx.folders.contains(path.as_str()) {
-            out.push(SegRef { span: sp(span, rel_off + a, rel_off + b), target: SegTarget::Folder(path.clone()) });
+            out.push(SegRef {
+                span: sp(span, rel_off + a, rel_off + b),
+                target: SegTarget::Folder(path.clone()),
+            });
         }
         cur = path;
     }
@@ -428,7 +475,9 @@ fn js(ctx: &Ctx<'_>, from: &IndexedFile, imp: &ImportFact) -> ImportEdge {
     let base = join(&cfg.dir, cfg.base_url.as_deref().unwrap_or(".")).unwrap_or_default();
     for (pattern, targets) in &cfg.paths {
         let (matched, star) = match pattern.split_once('*') {
-            Some((pre, post)) if spec.starts_with(pre) && spec.ends_with(post) && spec.len() >= pre.len() + post.len() => {
+            Some((pre, post))
+                if spec.starts_with(pre) && spec.ends_with(post) && spec.len() >= pre.len() + post.len() =>
+            {
                 (true, Some((pre.len(), spec.len() - post.len())))
             }
             None if pattern == spec => (true, None),
@@ -440,8 +489,12 @@ fn js(ctx: &Ctx<'_>, from: &IndexedFile, imp: &ImportFact) -> ImportEdge {
         for t in targets {
             let tail = star.map(|(a, b)| &spec[a..b]).unwrap_or("");
             let target = t.replace('*', tail);
-            let Some(path) = join(&base, &target) else { continue };
-            let Some(hit) = resolve_js(ctx, &path) else { continue };
+            let Some(path) = join(&base, &target) else {
+                continue;
+            };
+            let Some(hit) = resolve_js(ctx, &path) else {
+                continue;
+            };
             if let Some((a, b)) = star {
                 let prefix_dir = t.split('*').next().unwrap_or("").trim_end_matches('/');
                 let start = join(&base, prefix_dir).unwrap_or_default();
@@ -476,7 +529,11 @@ fn crate_root(ctx: &Ctx<'_>, from: &str) -> String {
     let mut cur = dir_of(from).to_owned();
     loop {
         if ctx.cfg.cargo.contains(&cur) {
-            return if cur.is_empty() { "src".into() } else { format!("{cur}/src") };
+            return if cur.is_empty() {
+                "src".into()
+            } else {
+                format!("{cur}/src")
+            };
         }
         if cur.is_empty() {
             return dir_of(from).to_owned();
@@ -506,7 +563,9 @@ fn module_file_of_dir(ctx: &Ctx<'_>, dir: &str) -> Option<u32> {
         }
     }
     let (parent, stem) = dir.rsplit_once('/').unwrap_or(("", dir));
-    ctx.by_path.get(join(parent, &format!("{stem}.rs"))?.as_str()).copied()
+    ctx.by_path
+        .get(join(parent, &format!("{stem}.rs"))?.as_str())
+        .copied()
 }
 
 fn rust(ctx: &Ctx<'_>, from: &IndexedFile, imp: &ImportFact) -> ImportEdge {
@@ -517,7 +576,10 @@ fn rust(ctx: &Ctx<'_>, from: &IndexedFile, imp: &ImportFact) -> ImportEdge {
     if !text.contains("::") && !text.contains('{') && text.chars().all(|c| c.is_alphanumeric() || c == '_') {
         // Either `mod x;` or `use x;`; both name a child module of this one.
         if let Some((seg, fi, _)) = mod_target(ctx, &here, text) {
-            e.segs.push(SegRef { span: imp.module.span.clone(), target: seg.clone() });
+            e.segs.push(SegRef {
+                span: imp.module.span.clone(),
+                target: seg.clone(),
+            });
             e.files.push(fi);
             e.aliases.push((text.to_owned(), seg));
         }
@@ -550,8 +612,13 @@ fn rust(ctx: &Ctx<'_>, from: &IndexedFile, imp: &ImportFact) -> ImportEdge {
     }
     let mut last_file = None;
     for (a, b) in segs.iter().skip(idx) {
-        let Some((seg, fi, next)) = mod_target(ctx, &dir, &prefix[*a..*b]) else { break };
-        e.segs.push(SegRef { span: sp(&imp.module.span, *a, *b), target: seg });
+        let Some((seg, fi, next)) = mod_target(ctx, &dir, &prefix[*a..*b]) else {
+            break;
+        };
+        e.segs.push(SegRef {
+            span: sp(&imp.module.span, *a, *b),
+            target: seg,
+        });
         last_file = Some(fi);
         dir = next;
         resolved_any = true;
@@ -569,7 +636,9 @@ fn rust(ctx: &Ctx<'_>, from: &IndexedFile, imp: &ImportFact) -> ImportEdge {
         let mut pos = 0;
         while pos < tail.len() {
             let rest = &tail[pos..];
-            let Some(start) = rest.find(|c: char| c.is_alphabetic() || c == '_') else { break };
+            let Some(start) = rest.find(|c: char| c.is_alphabetic() || c == '_') else {
+                break;
+            };
             let ident_len = rest[start..]
                 .find(|c: char| !(c.is_alphanumeric() || c == '_'))
                 .unwrap_or(rest.len() - start);
@@ -580,7 +649,10 @@ fn rust(ctx: &Ctx<'_>, from: &IndexedFile, imp: &ImportFact) -> ImportEdge {
                 continue;
             }
             if let Some((seg, fi, _)) = mod_target(ctx, &dir, ident) {
-                e.segs.push(SegRef { span: sp(&imp.module.span, abs, abs + ident_len), target: seg.clone() });
+                e.segs.push(SegRef {
+                    span: sp(&imp.module.span, abs, abs + ident_len),
+                    target: seg.clone(),
+                });
                 e.aliases.push((ident.to_owned(), seg));
                 e.files.push(fi);
             }
@@ -600,7 +672,9 @@ fn go(ctx: &Ctx<'_>, from: &IndexedFile, imp: &ImportFact) -> ImportEdge {
         .iter()
         .filter(|(d, _)| d.is_empty() || from.path.starts_with(&format!("{d}/")))
         .max_by_key(|(d, _)| d.len());
-    let Some((mod_dir, module)) = modules else { return e };
+    let Some((mod_dir, module)) = modules else {
+        return e;
+    };
     let rest = if spec == module {
         ""
     } else if let Some(r) = spec.strip_prefix(&format!("{module}/")) {
@@ -611,11 +685,16 @@ fn go(ctx: &Ctx<'_>, from: &IndexedFile, imp: &ImportFact) -> ImportEdge {
     let base_off = 1 + spec.len() - rest.len();
     let mut cur = mod_dir.clone();
     for (a, b) in parts(rest, "/") {
-        let Some(path) = join(&cur, &rest[a..b]) else { return e };
+        let Some(path) = join(&cur, &rest[a..b]) else {
+            return e;
+        };
         if !ctx.folders.contains(path.as_str()) {
             break;
         }
-        e.segs.push(SegRef { span: sp(&imp.module.span, base_off + a, base_off + b), target: SegTarget::Folder(path.clone()) });
+        e.segs.push(SegRef {
+            span: sp(&imp.module.span, base_off + a, base_off + b),
+            target: SegTarget::Folder(path.clone()),
+        });
         cur = path;
     }
     if rest.is_empty() || !e.segs.is_empty() {
@@ -640,7 +719,11 @@ fn java(ctx: &Ctx<'_>, _from: &IndexedFile, imp: &ImportFact) -> ImportEdge {
     let segs = parts(spec, ".");
     // Longest prefix that names a file (`a/b/C.java`) or a folder (`a/b`), under any source root.
     for take in (1..=segs.len()).rev() {
-        let path: String = segs[..take].iter().map(|(a, b)| &spec[*a..*b]).collect::<Vec<_>>().join("/");
+        let path: String = segs[..take]
+            .iter()
+            .map(|(a, b)| &spec[*a..*b])
+            .collect::<Vec<_>>()
+            .join("/");
         let file_suffix = format!("{path}.java");
         let file = ctx
             .files
@@ -656,7 +739,11 @@ fn java(ctx: &Ctx<'_>, _from: &IndexedFile, imp: &ImportFact) -> ImportEdge {
         }
         // Folder chain for the leading segments, rooted where the match was found.
         let root = match (&file, &folder) {
-            (Some(f), _) => ctx.files[*f].path.trim_end_matches(&file_suffix).trim_end_matches('/').to_owned(),
+            (Some(f), _) => ctx.files[*f]
+                .path
+                .trim_end_matches(&file_suffix)
+                .trim_end_matches('/')
+                .to_owned(),
             (None, Some(d)) => d.trim_end_matches(&path).trim_end_matches('/').to_owned(),
             _ => String::new(),
         };
@@ -668,7 +755,10 @@ fn java(ctx: &Ctx<'_>, _from: &IndexedFile, imp: &ImportFact) -> ImportEdge {
                 // A class import names the file only by convention; the class symbol itself carries the rename.
                 e.files.push(fi as u32);
             } else if ctx.folders.contains(p.as_str()) {
-                e.segs.push(SegRef { span: sp(&imp.module.span, *a, *b), target: SegTarget::Folder(p.clone()) });
+                e.segs.push(SegRef {
+                    span: sp(&imp.module.span, *a, *b),
+                    target: SegTarget::Folder(p.clone()),
+                });
                 if is_last {
                     e.files = files_in_folder(ctx, &p);
                 }

@@ -4,6 +4,7 @@ expression: "dump(\"java_app/src/main/java/shop/pricing/cart_item.java\")"
 ---
 (program (package_declaration (scoped_identifier scope: (identifier) name: (identifier))) (class_declaration (modifiers) name: (identifier) body: (class_body (field_declaration (modifiers) type: (type_identifier) declarator: (variable_declarator name: (identifier))) (field_declaration (modifiers) type: (floating_point_type) declarator: (variable_declarator name: (identifier))) (constructor_declaration (modifiers) name: (identifier) parameters: (formal_parameters (formal_parameter type: (type_identifier) name: (identifier)) (formal_parameter type: (floating_point_type) name: (identifier))) body: (constructor_body (expression_statement (assignment_expression left: (field_access object: (this) field: (identifier)) right: (identifier))) (expression_statement (assignment_expression left: (field_access object: (this) field: (identifier)) right: (identifier))))) (method_declaration (modifiers) type: (floating_point_type) name: (identifier) parameters: (formal_parameters (formal_parameter type: (floating_point_type) name: (identifier))) body: (block (local_variable_declaration type: (floating_point_type) declarator: (variable_declarator name: (identifier) value: (binary_expression left: (identifier) right: (identifier)))) (return_statement (identifier)))))))
 
+L1 import.module shop.pricing
 L1 ref shop
 L1 ref pricing
 L3 def.class cart_item

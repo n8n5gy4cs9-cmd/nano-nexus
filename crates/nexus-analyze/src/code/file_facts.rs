@@ -578,7 +578,9 @@ pub fn extract(lang: Lang, src: &[u8]) -> Option<FileFacts> {
 fn group_imports(lang: Lang, root: Node<'_>, modules: &[TextFact], names: &[TextFact]) -> Vec<ImportFact> {
     let stmt_kinds: &[&str] = match lang {
         Lang::Python => &["import_statement", "import_from_statement"],
-        Lang::JavaScript | Lang::TypeScript | Lang::Tsx => &["import_statement", "export_statement", "call_expression"],
+        Lang::JavaScript | Lang::TypeScript | Lang::Tsx => {
+            &["import_statement", "export_statement", "call_expression"]
+        }
         Lang::Rust => &["use_declaration", "mod_item"],
         Lang::Go => &["import_spec"],
         Lang::Java => &["import_declaration", "package_declaration"],
@@ -589,11 +591,13 @@ fn group_imports(lang: Lang, root: Node<'_>, modules: &[TextFact], names: &[Text
         .map(|m| {
             let range = root
                 .descendant_for_byte_range(m.span.start as usize, m.span.end as usize)
-                .and_then(|mut n| loop {
-                    if stmt_kinds.contains(&n.kind()) {
-                        break Some((n.start_byte() as u32, n.end_byte() as u32));
+                .and_then(|mut n| {
+                    loop {
+                        if stmt_kinds.contains(&n.kind()) {
+                            break Some((n.start_byte() as u32, n.end_byte() as u32));
+                        }
+                        n = n.parent()?;
                     }
-                    n = n.parent()?;
                 })
                 .unwrap_or((m.span.start, m.span.end));
             ImportFact {

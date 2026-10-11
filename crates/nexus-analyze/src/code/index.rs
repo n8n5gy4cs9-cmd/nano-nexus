@@ -230,11 +230,7 @@ struct Found {
 /// (code files, warnings, manifest files)
 type Walked = (Vec<Found>, Vec<String>, Vec<String>);
 
-fn walk(
-    root: &Path,
-    opts: &IndexOptions,
-    cancel: &CancellationToken,
-) -> Result<Walked, IndexError> {
+fn walk(root: &Path, opts: &IndexOptions, cancel: &CancellationToken) -> Result<Walked, IndexError> {
     let skip: HashSet<String> = SKIP_DIRS
         .iter()
         .map(|s| (*s).to_owned())
@@ -463,7 +459,12 @@ fn is_go_exported(name: &str) -> bool {
     name.chars().next().is_some_and(char::is_uppercase)
 }
 
-fn link(files: &[IndexedFile], facts: &[FileFacts], folders: &[String], edges: &[Vec<ImportEdge>]) -> Vec<Symbol> {
+fn link(
+    files: &[IndexedFile],
+    facts: &[FileFacts],
+    folders: &[String],
+    edges: &[Vec<ImportEdge>],
+) -> Vec<Symbol> {
     let mut symbols: Vec<Symbol> = Vec::new();
     let mut metas: Vec<Meta> = Vec::new();
     let mut keys: HashMap<(u32, String, String, String), SymbolId> = HashMap::new();
@@ -494,7 +495,9 @@ fn link(files: &[IndexedFile], facts: &[FileFacts], folders: &[String], edges: &
             let exported = match (&d.visibility, file.lang) {
                 (Some(v), _) if matches!(v.as_str(), "pub" | "public" | "export") => true,
                 (_, Lang::Go) => d.scope.is_empty() && is_go_exported(&d.name),
-                (_, Lang::Python | Lang::JavaScript) => d.scope.is_empty() && d.visible.is_none() && !d.name.starts_with('_'),
+                (_, Lang::Python | Lang::JavaScript) => {
+                    d.scope.is_empty() && d.visible.is_none() && !d.name.starts_with('_')
+                }
                 _ => false,
             };
             if exported {
@@ -532,7 +535,11 @@ fn link(files: &[IndexedFile], facts: &[FileFacts], folders: &[String], edges: &
     for (fi, f) in files.iter().enumerate() {
         let name = f.path.rsplit('/').next().unwrap_or(&f.path);
         let stem = name.rsplit_once('.').map(|(s, _)| s).unwrap_or(name);
-        let scope = f.path.rsplit_once('/').map(|(d, _)| d.to_owned()).unwrap_or_default();
+        let scope = f
+            .path
+            .rsplit_once('/')
+            .map(|(d, _)| d.to_owned())
+            .unwrap_or_default();
         let id = SymbolId(symbols.len() as u32);
         file_syms.push(id);
         symbols.push(Symbol {
@@ -557,7 +564,10 @@ fn link(files: &[IndexedFile], facts: &[FileFacts], folders: &[String], edges: &
     let mut folder_syms: HashMap<&str, SymbolId> = HashMap::new();
     for dir in folders {
         let name = dir.rsplit('/').next().unwrap_or(dir);
-        let scope = dir.rsplit_once('/').map(|(d, _)| d.to_owned()).unwrap_or_default();
+        let scope = dir
+            .rsplit_once('/')
+            .map(|(d, _)| d.to_owned())
+            .unwrap_or_default();
         let id = SymbolId(symbols.len() as u32);
         folder_syms.insert(dir.as_str(), id);
         symbols.push(Symbol {
@@ -691,23 +701,38 @@ impl<'a> LinkCtx<'a> {
     }
 
     fn dir(&self, file: u32) -> &str {
-        self.files[file as usize].path.rsplit_once('/').map(|(d, _)| d).unwrap_or("")
+        self.files[file as usize]
+            .path
+            .rsplit_once('/')
+            .map(|(d, _)| d)
+            .unwrap_or("")
     }
 
     fn pool(&self, name: &str, lang: Lang) -> Vec<SymbolId> {
         self.by_name
             .get(name)
-            .map(|v| v.iter().copied().filter(|id| family(self.m(*id).lang) == family(lang)).collect())
+            .map(|v| {
+                v.iter()
+                    .copied()
+                    .filter(|id| family(self.m(*id).lang) == family(lang))
+                    .collect()
+            })
             .unwrap_or_default()
     }
 
     fn resolve(&self, r: &RefFact, fi: u32) -> Resolution<'a> {
         let lang = self.files[fi as usize].lang;
-        let none = Resolution { symbols: Vec::new(), modules: Vec::new() };
+        let none = Resolution {
+            symbols: Vec::new(),
+            modules: Vec::new(),
+        };
         let pool = self.pool(&r.name, lang);
         let top_level = |x: &Meta| x.scope.is_empty() && x.visible.is_none();
         let is_loc = |x: &Meta| is_local_kind(x.kind) && x.visible.is_some();
-        let sym = |v: Vec<SymbolId>| Resolution { symbols: v, modules: Vec::new() };
+        let sym = |v: Vec<SymbolId>| Resolution {
+            symbols: v,
+            modules: Vec::new(),
+        };
 
         if r.member {
             let class = r.enclosing.iter().rev().find(|e| e.class);
@@ -727,7 +752,11 @@ impl<'a> LinkCtx<'a> {
                 }
             }
             // `Type.member`, `module.item`, `package.Item`: look at what the receiver names.
-            if let Some(obj) = r.object.as_deref().filter(|o| o.chars().all(|c| c.is_alphanumeric() || c == '_')) {
+            if let Some(obj) = r
+                .object
+                .as_deref()
+                .filter(|o| o.chars().all(|c| c.is_alphanumeric() || c == '_'))
+            {
                 let recv = RefFact {
                     name: obj.to_owned(),
                     span: r.span.clone(),
@@ -741,7 +770,12 @@ impl<'a> LinkCtx<'a> {
                     .symbols
                     .iter()
                     .map(|id| self.m(*id))
-                    .filter(|x| matches!(x.kind, SymbolKind::Class | SymbolKind::Interface | SymbolKind::Enum | SymbolKind::Module))
+                    .filter(|x| {
+                        matches!(
+                            x.kind,
+                            SymbolKind::Class | SymbolKind::Interface | SymbolKind::Enum | SymbolKind::Module
+                        )
+                    })
                     .collect();
                 if !types.is_empty() {
                     let names: Vec<&str> = types.iter().map(|x| x.name.as_str()).collect();
@@ -750,7 +784,8 @@ impl<'a> LinkCtx<'a> {
                         .copied()
                         .filter(|id| {
                             let x = self.m(*id);
-                            is_member_kind(x.kind) && x.scope.last().is_some_and(|l| names.contains(&l.as_str()))
+                            is_member_kind(x.kind)
+                                && x.scope.last().is_some_and(|l| names.contains(&l.as_str()))
                         })
                         .collect();
                     if !v.is_empty() {
@@ -763,30 +798,30 @@ impl<'a> LinkCtx<'a> {
                         .iter()
                         .flat_map(|t| match t {
                             SegTarget::File(f) => vec![*f],
-                            SegTarget::Folder(d) => (0..self.files.len() as u32).filter(|f| self.dir(*f) == d).collect(),
+                            SegTarget::Folder(d) => (0..self.files.len() as u32)
+                                .filter(|f| self.dir(*f) == d)
+                                .collect(),
                         })
                         .collect();
-                    return sym(
-                        pool.iter()
-                            .copied()
-                            .filter(|id| {
-                                let x = self.m(*id);
-                                in_files.contains(&x.file) && top_level(x) && !is_loc(x)
-                            })
-                            .collect(),
-                    );
+                    return sym(pool
+                        .iter()
+                        .copied()
+                        .filter(|id| {
+                            let x = self.m(*id);
+                            in_files.contains(&x.file) && top_level(x) && !is_loc(x)
+                        })
+                        .collect());
                 }
             }
             // Anything else: any member with that name, or a top-level item.
-            return sym(
-                pool.iter()
-                    .copied()
-                    .filter(|id| {
-                        let x = self.m(*id);
-                        (is_member_kind(x.kind) && !is_loc(x)) || (top_level(x) && !is_loc(x))
-                    })
-                    .collect(),
-            );
+            return sym(pool
+                .iter()
+                .copied()
+                .filter(|id| {
+                    let x = self.m(*id);
+                    (is_member_kind(x.kind) && !is_loc(x)) || (top_level(x) && !is_loc(x))
+                })
+                .collect());
         }
 
         // 1. Locals and parameters of the enclosing functions, innermost first.
@@ -820,13 +855,20 @@ impl<'a> LinkCtx<'a> {
             }
         }
         // 3. Top level of the same file (and items nested in an enclosing function).
-        let nested: Vec<&str> = r.enclosing.iter().filter(|e| !e.class).map(|e| e.name.as_str()).collect();
+        let nested: Vec<&str> = r
+            .enclosing
+            .iter()
+            .filter(|e| !e.class)
+            .map(|e| e.name.as_str())
+            .collect();
         let v: Vec<SymbolId> = pool
             .iter()
             .copied()
             .filter(|id| {
                 let x = self.m(*id);
-                x.file == fi && !is_loc(x) && (top_level(x) || x.scope.last().is_some_and(|l| nested.contains(&l.as_str())))
+                x.file == fi
+                    && !is_loc(x)
+                    && (top_level(x) || x.scope.last().is_some_and(|l| nested.contains(&l.as_str())))
             })
             .collect();
         if !v.is_empty() {
@@ -847,7 +889,10 @@ impl<'a> LinkCtx<'a> {
                 let seen = visible.contains(&x.file);
                 match lang {
                     Lang::Go => seen || self.dir(x.file) == my_dir,
-                    Lang::Java => seen || (package.is_some() && package == self.facts[x.file as usize].package.as_deref()),
+                    Lang::Java => {
+                        seen || (package.is_some()
+                            && package == self.facts[x.file as usize].package.as_deref())
+                    }
                     Lang::CSharp => true,
                     _ => seen,
                 }
@@ -858,7 +903,10 @@ impl<'a> LinkCtx<'a> {
         }
         // 5. A module alias used in code (`pricing.calc_total`, `pricing::x`, `fmt.Println`).
         match self.aliases[fi as usize].get(r.name.as_str()) {
-            Some(t) => Resolution { symbols: Vec::new(), modules: t.clone() },
+            Some(t) => Resolution {
+                symbols: Vec::new(),
+                modules: t.clone(),
+            },
             None => none,
         }
     }

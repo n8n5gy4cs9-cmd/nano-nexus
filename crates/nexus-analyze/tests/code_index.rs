@@ -222,3 +222,101 @@ fn cancel_stops_indexing() {
     let r = build_index(&fixture("py_app"), &IndexOptions::default(), None, &cancel);
     assert!(matches!(r, Err(nexus_analyze::code::IndexError::Cancelled)));
 }
+
+fn named(idx: &CodeIndex, name: &str, kind: SymbolKind, scope_or_sig: &str) -> Vec<String> {
+    let s = idx
+        .symbols
+        .iter()
+        .find(|s| s.name == name && s.kind == kind && s.signature == scope_or_sig)
+        .unwrap_or_else(|| panic!("no {kind:?} {name} ({scope_or_sig})"));
+    places(idx, s)
+}
+
+#[test]
+fn imports_name_files_and_folders() {
+    let py = index("py_app");
+    assert_eq!(
+        named(&py, "pricing", SymbolKind::File, "util/pricing.py"),
+        ["main.py:2", "main.py:3", "main.py:10", "tests/test_pricing.py:1"]
+    );
+    assert_eq!(
+        named(&py, "util", SymbolKind::Folder, "util"),
+        ["main.py:2", "main.py:3", "tests/test_pricing.py:1"]
+    );
+    assert_eq!(
+        named(&py, "Helper_Funcs", SymbolKind::File, "Helper_Funcs.py"),
+        ["main.py:4"]
+    );
+
+    let ts = index("ts_app");
+    // `@lib/pricing` goes through tsconfig `paths`; `../lib/Helper_Funcs` is relative.
+    assert_eq!(
+        named(&ts, "pricing", SymbolKind::File, "src/lib/pricing.ts"),
+        ["src/index.ts:1"]
+    );
+    assert_eq!(
+        named(&ts, "Helper_Funcs", SymbolKind::File, "src/lib/Helper_Funcs.ts"),
+        ["src/index.ts:2", "src/ui/Button.tsx:1"]
+    );
+    assert_eq!(
+        named(&ts, "lib", SymbolKind::Folder, "src/lib"),
+        ["src/index.ts:2", "src/ui/Button.tsx:1"]
+    );
+    assert_eq!(
+        named(&ts, "Button", SymbolKind::File, "src/ui/Button.tsx"),
+        ["src/index.ts:3"]
+    );
+
+    let rs = index("rust_app");
+    assert_eq!(
+        named(&rs, "pricing", SymbolKind::File, "src/pricing.rs"),
+        ["src/main.rs:2", "src/main.rs:4"]
+    );
+    assert_eq!(
+        named(&rs, "Helpers", SymbolKind::File, "src/Helpers.rs"),
+        ["src/main.rs:1", "src/main.rs:5"]
+    );
+    let s = only(&rs, "calc_total", SymbolKind::Function);
+    assert_eq!(
+        places(&rs, s),
+        [
+            "src/main.rs:4",
+            "src/main.rs:9",
+            "src/main.rs:19",
+            "src/pricing.rs:15"
+        ]
+    );
+
+    let go = index("go_app");
+    assert_eq!(
+        named(&go, "pricing", SymbolKind::Folder, "pricing"),
+        ["main.go:6", "main.go:11", "main.go:12", "main.go:13"]
+    );
+    assert_eq!(
+        named(&go, "util_funcs", SymbolKind::Folder, "util_funcs"),
+        ["main.go:7", "main.go:13"]
+    );
+
+    let java = index("java_app");
+    let pricing = named(&java, "pricing", SymbolKind::Folder, "src/main/java/shop/pricing");
+    assert_eq!(
+        pricing,
+        [
+            "src/main/java/shop/Main.java:3",
+            "src/main/java/shop/Main.java:4",
+            "src/main/java/shop/pricing/Calc.java:1",
+            "src/main/java/shop/pricing/cart_item.java:1"
+        ]
+    );
+}
+
+#[test]
+fn tsconfig_comments_and_trailing_commas_are_tolerated() {
+    use nexus_analyze::code::imports::strip_jsonc;
+    let v: serde_json::Value = serde_json::from_str(&strip_jsonc(
+        "{\n // c\n \"a\": [1, 2,], /* x */ \"u\": \"http://x//y\",\n}",
+    ))
+    .unwrap();
+    assert_eq!(v["u"], "http://x//y");
+    assert_eq!(v["a"][1], 2);
+}
