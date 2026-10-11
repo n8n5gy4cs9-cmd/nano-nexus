@@ -15,7 +15,7 @@ use crate::categories::{self, Category};
 use crate::dups::{self, DupMode};
 use crate::junk::{self, JunkHit};
 use crate::naming::{self, NamingHit};
-use crate::report::{self, FileEntry, FolderReport, ScanWarning, FolderTotals};
+use crate::report::{self, FileEntry, FolderReport, FolderTotals, ScanWarning};
 
 const MAX_WARNINGS: usize = 200;
 /// At most this many files are opened to compare their bytes with their extension.

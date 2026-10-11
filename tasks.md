@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 153/234 tasks done (65%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 154/234 tasks done (65%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -171,7 +171,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [ ] ⭐ **T08.21** 🍎 Exit check: 100k files < 10 s; narrative numbers validated; DocLens cites correct pages 5/5; no raw secrets anywhere
 
 ## M09: Rename Forge · [spec](docs/milestones/M09-rename-forge.md) · [contract](docs/architecture/ANALYZER.md#5-rename-forge)
-- [ ] **T09.01** 🔬 **S4** tree-sitter 0.27 + grammar pins (python, javascript, typescript/tsx, rust, c-sharp, go, java) parse your own projects → SPIKES.md
+- [x] **T09.01** 🔬 **S4** tree-sitter 0.27 + grammar pins (python, javascript, typescript/tsx, rust, c-sharp, go, java) parse your own projects → SPIKES.md (2026-10-11) — pins load and parse samples in the container; parsing your own projects happens in T09.17
 - [ ] **T09.02** Fixture projects `tests/fixtures/{py_app,ts_app,rust_app,cs_app,go_app,java_app}` (hand-written: cross-file refs, imports, string lookups, config files, nested folders)
 - [ ] **T09.03** Tags queries per language (`queries/<lang>/tags.scm`) + S-expression snapshot tests
 - [ ] **T09.04** Symbol index (defs, refs, scopes, imports, file/folder symbols, ambiguity) + serialization + incremental re-index

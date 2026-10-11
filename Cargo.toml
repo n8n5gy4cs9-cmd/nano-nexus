@@ -83,3 +83,12 @@ mdns-sd = "0.13" # Bonjour advertising as nanonexus.local (LAN Share)
 rcgen = "0.13" # self-signed certificate for optional HTTPS (LAN Share)
 axum-server = { version = "0.7", default-features = false, features = ["tls-rustls-no-provider"] } # TLS listener for axum
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] } # ring provider: no C toolchain needed, cross-compiles to Windows
+# M09 Rename Forge: code parsing (spike S4: all grammars load with tree-sitter 0.27)
+tree-sitter = "0.27"
+tree-sitter-python = "0.25"
+tree-sitter-javascript = "0.25"
+tree-sitter-typescript = "0.23"
+tree-sitter-rust = "0.24"
+tree-sitter-c-sharp = "0.23"
+tree-sitter-go = "0.25"
+tree-sitter-java = "0.23"

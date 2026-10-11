@@ -4,6 +4,7 @@
 pub mod bm25;
 pub mod categories;
 pub mod chunk;
+pub mod code;
 pub mod dups;
 pub mod extract;
 pub mod facts;

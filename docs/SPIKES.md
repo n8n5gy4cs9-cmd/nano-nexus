@@ -23,8 +23,10 @@ _Pending (T01.05)._
 ## S3: Quantization benchmark
 _Pending (T01.07)._
 
-## S4: tree-sitter-gdscript compatibility
-_Pending (T09.01)._
+## S4: tree-sitter 0.27 + grammar pins (2026-10-11, Linux container)
+- Pins (workspace `Cargo.toml`): tree-sitter 0.27, python 0.25, javascript 0.25, typescript 0.23 (TS + TSX), rust 0.24, c-sharp 0.23, go 0.25, java 0.23. All load against tree-sitter 0.27 (they share `tree-sitter-language`); no patches needed.
+- `code::lang::tests` parses a hand-written sample per language with zero error nodes. `.jsx` uses the JavaScript grammar (includes JSX).
+- Pending 🍎: parse your own projects on the Mac (`T09.17` covers the real run). GDScript is not needed (P2).
 
 ## S5: PDF extraction quality
 _Pending (T08.06)._
