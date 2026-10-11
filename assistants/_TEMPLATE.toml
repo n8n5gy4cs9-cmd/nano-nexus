@@ -1,0 +1,57 @@
+# Template for a custom assistant. Copy it, rename it to <id>.toml, and edit it.
+# Import via Assistants → Import, or paste it into the Builder. Schema: schemas/assistant.schema.json
+# Tips for small local models (docs/architecture/ASSISTANTS.md §2):
+#   short prompt (≤ 250 words), "Your job:" first, numbered steps, explicit output format,
+#   grounding rule for documents, word limit. Avoid long lists of "never" rules.
+schema_version = 1
+id = "my-assistant"                # kebab-case, unique
+name = "My Assistant"
+icon = "sparkles"                  # any lucide icon name: https://lucide.dev/icons
+color = "violet"                   # violet | teal | amber | blue | green | red | indigo | pink | slate
+category = "Custom"
+tagline = "One line that says what it does."
+description = "A longer description shown on the gallery card."
+version = "1.0.0"
+
+[model]
+thinking = false                   # default state of "Think harder"
+temperature = 0.5                  # 0.2 precise … 0.8 creative
+top_p = 0.95
+min_p = 0.0
+max_tokens = 1000
+
+[context]
+attach = ["text", "file"]          # text | file | folder | selection | none
+max_attach_tokens = 3000
+history_turns = 6
+
+[permissions]
+needs = []                         # read | write | create | move | trash
+
+[workflow]
+kind = "chat"                      # chat | router (tools) | pipeline (reuse a built-in pipeline)
+# pipeline = "doc_qa"              # when kind = "pipeline": folder_report, doc_qa, doc_summarize, rename_propose,
+#                                  #   tidy_plan, secrets_report, log_triage, data_profile, commit_message
+# max_hops = 3                     # when kind = "router"
+
+[tools]
+allowed = []                       # router only: read_file, list_dir, search_files, grep_text, scan_folder,
+                                   #   file_info, doc_search, calculate, now
+
+[ui]
+starters = ["First example request", "Second example request"]
+placeholder = "Ask me…"
+output = "markdown"                # markdown | report | table
+
+[prompt]
+system = '''
+Your job: <one sentence>.
+
+## Steps
+1. …
+2. …
+
+## Format
+<the exact skeleton of a good answer>
+Keep it under 200 words.
+'''

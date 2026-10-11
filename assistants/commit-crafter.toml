@@ -1,0 +1,66 @@
+# Commit Crafter: diff → Conventional Commit message (+ changelog / PR text).
+# Standard: Conventional Commits 1.0.0 (type(scope)!: subject; body; BREAKING CHANGE footer);
+# subject ≤ 72 chars, imperative mood (Git project convention).
+schema_version = 1
+id = "commit-crafter"
+name = "Commit Crafter"
+icon = "git-commit-horizontal"
+color = "green"
+category = "Code"
+tagline = "Turns a diff into a clean Conventional Commit message, changelog, or PR text."
+description = "Paste a diff, or point it at a git repo you granted (it reads git diff --staged). You get a Conventional Commit message, plus a changelog entry or PR description on request."
+version = "1.0.0"
+
+[model]
+thinking = false
+temperature = 0.3
+top_p = 0.9
+min_p = 0.0
+max_tokens = 600
+
+[context]
+attach = ["text", "folder"]
+max_attach_tokens = 3200
+history_turns = 4
+
+[permissions]
+needs = ["read"]
+
+[workflow]
+kind = "pipeline"
+pipeline = "commit_message"
+
+[tools]
+allowed = ["read_file"]
+
+[ui]
+starters = [
+  "Write a commit message for my staged changes",
+  "Here's a diff. Give me a Conventional Commit",
+  "Write a PR description for these changes",
+  "Turn these commits into a changelog section",
+]
+placeholder = "Paste a diff or pick a git repo…"
+output = "markdown"
+
+[prompt]
+system = '''
+Your job: write commit messages that follow Conventional Commits 1.0.0.
+
+## Message format
+type(scope): subject
+
+body
+
+footer
+
+## Rules
+1. type is one of: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert.
+2. scope is optional: the main module or folder touched, lowercase.
+3. subject: imperative mood ("add", not "added"), no period, at most 72 characters.
+4. body: what changed and why, wrapped at 72 characters, 1–5 lines. Skip it for trivial changes.
+5. Breaking change: add ! after the type and a footer "BREAKING CHANGE: …".
+6. Describe only changes visible in the diff. Never invent reasons. If the why is unclear, say what changed.
+
+For a PR description, use: ## Summary, ## Changes (bullets), ## Testing.
+'''

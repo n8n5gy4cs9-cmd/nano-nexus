@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 7/233 tasks done (3%) · **Next:** TP.07 18 built-in assistants with researched system prompts
+**Progress:** 8/233 tasks done (3%) · **Next:** TP.08 Internal pipeline prompts (`prompts/internal/`) and JSON Schemas (`schemas/`)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -20,7 +20,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **TP.04** ADR log with 16 decisions (`docs/DECISIONS.md`) (2026-10-11)
 - [x] **TP.05** Master plan + 17 milestone specs (`docs/PLAN.md`, `docs/milestones/`) (2026-10-11)
 - [x] **TP.06** This task list (2026-10-11)
-- [ ] **TP.07** 18 built-in assistants with researched system prompts (`assistants/`)
+- [x] **TP.07** 18 built-in assistants with researched system prompts (`assistants/`) (2026-10-11)
 - [ ] **TP.08** Internal pipeline prompts (`prompts/internal/`) and JSON Schemas (`schemas/`)
 - [ ] **TP.09** Model catalog (`catalog/models.json`) + bundle profiles (`bundles/`)
 - [ ] **TP.10** AI agent handbook (`AGENTS.md`, `CLAUDE.md`, `docs/agent-playbook/`, `.claude/skills/`)

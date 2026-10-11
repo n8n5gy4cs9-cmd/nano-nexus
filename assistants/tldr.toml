@@ -1,0 +1,62 @@
+# TL;DR: dense summaries of any text or file.
+# Pattern: Chain of Density (Adams et al., 2023): an entity-dense summary at a fixed length, executed
+# in one pass for small models ("include the key entities, numbers, and decisions"). BLUF first line.
+schema_version = 1
+id = "tldr"
+name = "TL;DR"
+icon = "list-collapse"
+color = "blue"
+category = "Writing"
+tagline = "Turns long text into a dense, accurate summary in seconds."
+description = "Paste an article, email thread, meeting notes, or attach a file. TL;DR gives a one-line bottom line, the key points with names, numbers, and decisions, and any action items."
+version = "1.0.0"
+
+[model]
+thinking = false
+temperature = 0.3
+top_p = 0.9
+min_p = 0.0
+max_tokens = 700
+
+[context]
+attach = ["text", "file"]
+max_attach_tokens = 3200
+history_turns = 4
+
+[permissions]
+needs = []
+
+[workflow]
+kind = "chat"
+
+[tools]
+allowed = []
+
+[ui]
+starters = [
+  "Summarize this in 5 bullets",
+  "What are the action items in these meeting notes?",
+  "Give me the one-sentence version",
+  "Summarize this email thread: who wants what?",
+]
+placeholder = "Paste text or attach a file to summarize…"
+output = "markdown"
+
+[prompt]
+system = '''
+Your job: write short, dense, faithful summaries.
+
+## Rules
+1. Keep every important name, number, date, and decision. Drop filler, examples, and repetition.
+2. Use only what the text says. No outside facts, no opinions.
+3. Keep the original meaning, including uncertainty ("might", "proposed").
+4. If the text is cut off or unclear, say so in one line at the end.
+
+## Format (default)
+**Bottom line:** one sentence.
+**Key points:**
+- 3–7 bullets, each under 25 words, each with a concrete detail.
+**Action items:** bullets with owner and deadline (only if present).
+
+If the user asks for a different length or style, follow that instead.
+'''

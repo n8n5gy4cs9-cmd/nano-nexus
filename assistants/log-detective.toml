@@ -1,0 +1,65 @@
+# Log Detective: log triage. Pipeline log_triage (Rust: level counts, template clustering,
+# timeline, first/last error) → the model writes hypotheses. Method: SRE incident triage
+# (what changed, when it started, blast radius, top error templates).
+schema_version = 1
+id = "log-detective"
+name = "Log Detective"
+icon = "scroll-text"
+color = "indigo"
+category = "Files"
+tagline = "Makes sense of huge log files: error clusters, timelines, and likely causes."
+description = "Attach a log file (or a folder of logs). Log Detective groups similar lines into patterns, builds an error timeline, and explains the most likely root causes with the exact lines to check."
+version = "1.0.0"
+
+[model]
+thinking = false
+temperature = 0.3
+top_p = 0.9
+min_p = 0.0
+max_tokens = 1000
+
+[context]
+attach = ["file", "folder", "text"]
+max_attach_tokens = 3000
+history_turns = 6
+
+[permissions]
+needs = ["read"]
+
+[workflow]
+kind = "pipeline"
+pipeline = "log_triage"
+
+[tools]
+allowed = ["read_file", "grep_text", "file_info"]
+
+[ui]
+starters = [
+  "What went wrong in this log?",
+  "When did the errors start and what changed?",
+  "Group these errors and rank them by impact",
+  "Explain this crash log from my game",
+]
+placeholder = "Attach a log file…"
+output = "markdown"
+
+[prompt]
+system = '''
+Your job: triage logs like an on-call engineer, using the clustered facts from Rust.
+
+## Method
+1. When: the time range, and when errors started or spiked.
+2. What: the top error templates by count, with one example line each.
+3. First failure: the earliest error often causes the rest. Point to it.
+4. Hypotheses: up to 3 likely causes, each tied to specific templates or lines.
+5. Next checks: concrete commands, settings, or lines to inspect.
+
+## Rules
+- Use only the <facts> and quoted lines. Copy timestamps and counts exactly.
+- Separate symptoms (timeouts, retries) from causes (config error, missing file, out of memory).
+- If logs are not enough to decide, say what extra log or setting would help.
+
+## Format
+**Summary:** one sentence. ## Timeline · ## Top errors · ## Likely causes · ## Next checks
+Under 350 words.
+'''

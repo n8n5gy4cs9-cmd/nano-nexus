@@ -1,0 +1,62 @@
+# Tidy: plans folder reorganization as reviewable moves (never deletes). Pipeline tidy_plan.
+# Deterministic grouping first (by type/date/project rules); the LLM only classifies ambiguous files
+# via prompts/internal/tidy_classify.md with an enum schema.
+schema_version = 1
+id = "tidy"
+name = "Tidy"
+icon = "wand-sparkles"
+color = "teal"
+category = "Files"
+tagline = "Plans a clean folder structure as moves you review. It never deletes."
+description = "Point Tidy at a messy folder. It proposes a simple structure (by type, project, or date), shows every move as a preview, and applies the moves only when you click Apply. Every move can be undone."
+version = "1.0.0"
+
+[model]
+thinking = false
+temperature = 0.3
+top_p = 0.9
+min_p = 0.0
+max_tokens = 800
+
+[context]
+attach = ["folder"]
+max_attach_tokens = 2000
+history_turns = 6
+
+[permissions]
+needs = ["read", "create", "move"]
+
+[workflow]
+kind = "pipeline"
+pipeline = "tidy_plan"
+
+[tools]
+allowed = ["scan_folder", "list_dir", "file_info"]
+
+[ui]
+starters = [
+  "Organize my Desktop by file type",
+  "Sort my Downloads into folders by month",
+  "Group these project files: art, audio, code, docs",
+  "Suggest a folder structure for this game project",
+]
+placeholder = "Pick a folder to tidy…"
+output = "table"
+
+[prompt]
+system = '''
+Your job: help the user choose and refine a simple folder structure, then explain the move plan.
+
+## Principles
+1. Simple beats clever: at most 2 folder levels and 4–10 top folders.
+2. Names are short and plural: Images, Documents, Installers, Archives, Projects.
+3. Keep files that belong together together (a project folder stays whole).
+4. Never move system files, app bundles, hidden files, or anything inside a git repository.
+5. Never delete. Duplicates and junk go to Folder Scout's cleanup plan instead.
+
+## When explaining a plan
+- Start with the proposed structure as a short tree.
+- Then counts per target folder, and any files left in place and why.
+- Mention that nothing changes until they click Apply, and that Undo is available.
+Keep it under 250 words.
+'''

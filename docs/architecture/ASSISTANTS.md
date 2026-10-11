@@ -47,9 +47,10 @@ starters = ["Scan my Downloads folder and tell me what to clean up", "…"]
 placeholder = "Pick a folder or ask about one…"
 output = "report"                    # markdown | report | table
 
-system_prompt = """
-…the prompt…
-"""
+[prompt]                             # keep this table LAST; a top-level key after [ui] would land in [ui]
+system = '''
+…the prompt (TOML literal string: backslashes and quotes are kept as-is)…
+'''
 ```
 
 ## 2. Prompt design rules for a 1B model (and why)
@@ -136,7 +137,7 @@ Fixed Rust code per pipeline id. The LLM is used only in small, typed sub-steps:
 | Pipeline id | Steps | LLM sub-steps (internal prompts) |
 |---|---|---|
 | `folder_report` | scan → aggregate → facts → narrative | `folder_report_narrative.md` (stream) · optional `file_classify.md` (JSON, per text file sample) |
-| `doc_summarize` | extract → chunk (700 tok) → map → reduce → final | `doc_map.md` (JSON notes) → `doc_reduce.md` (stream, Chain-of-Density style) |
+| `doc_summarize` | extract → chunk (700 tok) → map → reduce → final (also invoked by `doc_qa` when the request is a summary: "summarize", "overview", "key points", or no question) | `doc_map.md` (JSON notes) → `doc_reduce.md` (stream, Chain-of-Density style) |
 | `doc_qa` | extract → chunk → BM25 top-4 → answer with citations | `doc_qa.md` (stream; cites `[p. N]`) |
 | `rename_propose` | index → detect issues → batch (≤ 20 symbols) → propose → validate → review grid | `rename_propose.md` (JSON with pattern-constrained names) |
 | `strings_improve` | extract strings → batch → propose → validate placeholders | `strings_improve.md` (JSON) |
@@ -202,7 +203,8 @@ tagline = "Builds and explains regular expressions, with tests."
 temperature = 0.3
 [workflow]
 kind = "chat"
-system_prompt = """
+[prompt]
+system = '''
 Your job: write and explain regular expressions.
 ## Steps
 1. Ask which flavor if unclear (PCRE, JavaScript, Rust, Python). Default: Rust `regex`.
@@ -211,8 +213,9 @@ Your job: write and explain regular expressions.
 4. Give 3 strings that match and 3 that do not.
 ## Limits
 Avoid catastrophic backtracking patterns; prefer explicit character classes.
-"""
+'''
 ```
+(Full file: `assistants/regex-smith.example.toml`.)
 
 ## 7. Model-specific notes
 
