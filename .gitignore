@@ -1,0 +1,37 @@
+# --- Build outputs ---
+/target/
+**/target/
+/dist/
+**/dist/
+**/node_modules/
+.pnpm-store/
+
+# --- Local AI payload (built/downloaded on YOUR machine, never committed) ---
+/vendor/
+*.gguf
+*.gguf.part
+*.metallib
+apps/desktop/src-tauri/binaries/
+apps/desktop/src-tauri/resources/models/
+
+# --- Tauri generated ---
+apps/desktop/src-tauri/gen/schemas/
+
+# --- OS / editor noise ---
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# --- Env / secrets ---
+.env
+.env.*
+!.env.example
+*.p12
+*.pem
+
+# --- Logs ---
+*.log
