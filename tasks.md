@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 167/234 tasks done (71%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 168/234 tasks done (71%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -201,7 +201,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [ ] ⭐ **T10.07** Exit check: demo flow; 10k-line file smooth; no save bypasses change sets
 
 ## M11: Notifications, jobs, watches · [spec](docs/milestones/M11-notifications-jobs.md)
-- [ ] **T11.01** JobRegistry (persist, events 4 Hz, cancel, startup recovery) + tests
+- [x] **T11.01** JobRegistry (persist, events 4 Hz, cancel, startup recovery) + tests (2026-10-11) — `nexus-store::jobs::JobRegistry` (+ `Store` job CRUD, `recover_interrupted_jobs`, `prune_jobs`): start/progress/finish/fail/cancelled/cancel, per-job 250 ms throttle (terminal updates always go out), cancel token per job, emit callback instead of Tauri so it is testable. Wiring into `AppCtx`, the `job:update` event and `jobs_list`/`job_cancel` commands comes with T11.02
 - [ ] **T11.02** Migrate scan/download/propose/narrative to jobs
 - [ ] **T11.03** UI Jobs indicator + popover (progress, cancel, open result)
 - [ ] **T11.04** Notification preferences per kind + routing (click → route) + tests

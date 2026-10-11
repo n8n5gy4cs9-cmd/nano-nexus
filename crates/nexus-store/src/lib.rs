@@ -6,6 +6,7 @@
 pub mod assistants;
 pub mod chat;
 pub mod fs;
+pub mod jobs;
 mod migrate;
 pub mod models;
 pub mod notifications;
@@ -23,6 +24,7 @@ use rusqlite::Connection;
 pub use assistants::AssistantRow;
 pub use chat::{ConversationPatch, MessageFinish};
 pub use fs::{ChangeSetRow, NewAudit};
+pub use jobs::{JobHandle, JobRegistry};
 pub use migrate::{MIGRATIONS, schema_version};
 pub use models::{DownloadRow, ModelRow};
 pub use notifications::NewNotification;
