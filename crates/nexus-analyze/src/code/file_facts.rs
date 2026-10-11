@@ -65,6 +65,9 @@ pub struct Encl {
 pub struct TextFact {
     pub span: Span,
     pub text: String,
+    /// Strings only: the function the literal is an argument of (`getattr`), or `[]` for an index.
+    #[serde(default)]
+    pub ctx: Option<String>,
 }
 
 /// One import statement: its module specifier and the names it brings in.
@@ -83,6 +86,7 @@ pub struct FileFacts {
     pub import_names: Vec<TextFact>,
     pub imports: Vec<ImportFact>,
     pub strings: Vec<TextFact>,
+    pub comments: Vec<TextFact>,
     pub package: Option<String>,
 }
 
@@ -553,6 +557,11 @@ pub fn extract(lang: Lang, src: &[u8]) -> Option<FileFacts> {
                 Some(TextFact {
                     span: span_of(n),
                     text: text(n, src).to_owned(),
+                    ctx: if kind == TagKind::Str {
+                        string_ctx(n, src)
+                    } else {
+                        None
+                    },
                 })
             })
             .collect()
@@ -561,6 +570,21 @@ pub fn extract(lang: Lang, src: &[u8]) -> Option<FileFacts> {
     let import_names = texts(TagKind::ImportName);
     let imports = group_imports(lang, root, &import_modules, &import_names);
     let strings = texts(TagKind::Str);
+    let mut comments = Vec::new();
+    let mut stack = vec![root];
+    while let Some(n) = stack.pop() {
+        if is_comment(n) {
+            comments.push(TextFact {
+                span: span_of(n),
+                text: text(n, src).to_owned(),
+                ctx: None,
+            });
+            continue;
+        }
+        let mut c = n.walk();
+        stack.extend(n.children(&mut c));
+    }
+    comments.sort_by_key(|c| c.span.start);
 
     let package = package_of(lang, root, src);
     Some(FileFacts {
@@ -570,8 +594,40 @@ pub fn extract(lang: Lang, src: &[u8]) -> Option<FileFacts> {
         import_names,
         imports,
         strings,
+        comments,
         package,
     })
+}
+
+/// The call (or index) a string literal is an argument of.
+fn string_ctx(n: Node<'_>, src: &[u8]) -> Option<String> {
+    let mut cur = n.parent();
+    for _ in 0..4 {
+        let p = cur?;
+        match p.kind() {
+            "subscript" | "subscript_expression" | "element_access_expression" | "index_expression" => {
+                return Some("[]".into());
+            }
+            "call"
+            | "call_expression"
+            | "invocation_expression"
+            | "method_invocation"
+            | "macro_invocation" => {
+                let f = p
+                    .child_by_field_name("function")
+                    .or_else(|| p.child_by_field_name("name"))
+                    .or_else(|| p.child_by_field_name("macro"))?;
+                let t = text(f, src);
+                let last = t.rsplit(['.', ':', '>']).next().unwrap_or(t);
+                return Some(last.to_owned());
+            }
+            "assignment" | "expression_statement" | "variable_declarator" | "return_statement" | "pair" => {
+                return None;
+            }
+            _ => cur = p.parent(),
+        }
+    }
+    None
 }
 
 /// Attach each imported name to the statement of its module specifier.

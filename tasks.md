@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 158/234 tasks done (67%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 159/234 tasks done (67%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -176,7 +176,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T09.03** Tags queries per language (`queries/<lang>/tags.scm`) + S-expression snapshot tests (2026-10-11) — queries in `crates/nexus-analyze/queries/<lang>/tags.scm` (typescript shared with tsx); runner `code::tags`; 13 insta snapshots in `crates/nexus-analyze/tests/snapshots`. Kind refinement (method vs function, constant vs variable, TS parameter properties) is done by the index (T09.04)
 - [x] **T09.04** Symbol index (defs, refs, scopes, imports, file/folder symbols, ambiguity) + serialization + incremental re-index (2026-10-11) — `code::index` (`build_index`, postcard `save`/`load`, hash-incremental), `code::file_facts`; refs are resolved by name + scope; import-graph resolution comes in T09.05 (cross-file refs currently use imported names / package / namespace)
 - [x] **T09.05** Import/module resolution per language (py, ts/js incl. tsconfig paths, rust mod/use, c# using, go packages, java packages) + tests (2026-10-11) — `code::imports`: py (relative/absolute, packages), ts/js (relative, `tsconfig` paths/baseUrl, index files, written extensions), rust (`mod`/`use` crate/self/super), go (go.mod module path → folders), java (package/import → folders/files); C# has no file mapping (namespaces). File/folder symbols get Import refs per specifier segment plus Code refs for module aliases
-- [ ] **T09.06** Non-code refs: config/manifest scanner (package.json, tsconfig, Cargo.toml, pyproject, *.csproj, go.mod, YAML/JSON/TOML), string-lookup detection, opt-in docs/comments + tests
+- [x] **T09.06** Non-code refs: config/manifest scanner (package.json, tsconfig, Cargo.toml, pyproject, *.csproj, go.mod, YAML/JSON/TOML), string-lookup detection, opt-in docs/comments + tests (2026-10-11) — `code::noncode`: config/manifest path+qualified-name scan (segment-wise, quoted single words), string lookups (recognised calls auto, other equal strings = possible/ambiguous), docs and comments stored as `Doc`/`Comment` refs (the planner includes them only when opted in, T09.10). `Location.file >= OTHER_BASE` = config/doc file, use `CodeIndex::path_of`
 - [ ] **T09.07** Reserved-name lists per language (keywords, builtins, entry points, dunders, tests, overrides) + `PUBLIC_API`/`OVERRIDE` flags + per-project ignore list
 - [ ] **T09.08** Naming rules engine (all rules §5.5, symbols + files + folders) + conventions per kind/language + tests
 - [ ] **T09.09** Proposal pipeline (batching ≤ 20, `<sym>` blocks incl. files/folders, pattern schema, validator, reask, needs_manual) + mock tests

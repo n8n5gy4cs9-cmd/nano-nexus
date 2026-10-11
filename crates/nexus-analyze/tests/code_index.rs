@@ -38,11 +38,12 @@ fn only<'a>(idx: &'a CodeIndex, name: &str, kind: SymbolKind) -> &'a Symbol {
     v[0]
 }
 
-/// `path:line` of every reference, sorted.
+/// `path:line` of every code and import reference (strings, config, docs and comments are checked separately).
 fn places(idx: &CodeIndex, s: &Symbol) -> Vec<String> {
     s.refs
         .iter()
-        .map(|r| format!("{}:{}", idx.files[r.loc.file as usize].path, r.loc.line))
+        .filter(|r| matches!(r.kind, RefKind::Code | RefKind::Import))
+        .map(|r| format!("{}:{}", idx.path_of(r.loc.file).unwrap(), r.loc.line))
         .collect()
 }
 
@@ -128,8 +129,8 @@ fn typescript_references_include_shorthand_and_type_queries() {
         p.contains(&"src/index.ts:9".into()),
         "typeof calcTotal and the call: {p:?}"
     );
-    // The string "calcTotal" is not a code reference (string lookups arrive in T09.06).
-    assert!(s.refs.iter().all(|r| r.kind != RefKind::StringLiteral));
+    // The string "calcTotal" is not a code reference; it is a StringLiteral one.
+    assert!(s.refs.iter().any(|r| r.kind == RefKind::StringLiteral));
     let class = only(&idx, "cart_item", SymbolKind::Class);
     assert!(class.refs.len() >= 4, "{:?}", places(&idx, class));
     // Constructor parameter properties are fields.
@@ -319,4 +320,123 @@ fn tsconfig_comments_and_trailing_commas_are_tolerated() {
     .unwrap();
     assert_eq!(v["u"], "http://x//y");
     assert_eq!(v["a"][1], 2);
+}
+
+fn refs_by_kind(idx: &CodeIndex, s: &Symbol, kind: RefKind) -> Vec<String> {
+    s.refs
+        .iter()
+        .filter(|r| r.kind == kind)
+        .map(|r| {
+            format!(
+                "{}:{}{}",
+                idx.path_of(r.loc.file).unwrap(),
+                r.loc.line,
+                if r.ambiguous { "?" } else { "" }
+            )
+        })
+        .collect()
+}
+
+#[test]
+fn config_string_and_doc_references() {
+    let py = index("py_app");
+    let f = only(&py, "calc_total", SymbolKind::Function);
+    assert_eq!(refs_by_kind(&py, f, RefKind::ConfigFile), ["pyproject.toml:6"]);
+    assert_eq!(
+        refs_by_kind(&py, f, RefKind::StringLiteral),
+        ["main.py:10"],
+        "getattr is a recognised call position"
+    );
+    assert_eq!(refs_by_kind(&py, f, RefKind::Doc), ["README.md:1"]);
+    let pricing = py
+        .symbols
+        .iter()
+        .find(|s| s.name == "pricing" && s.kind == SymbolKind::File)
+        .unwrap();
+    assert_eq!(
+        refs_by_kind(&py, pricing, RefKind::ConfigFile),
+        ["pyproject.toml:6"]
+    );
+    assert_eq!(refs_by_kind(&py, pricing, RefKind::Doc), ["README.md:1"]);
+    let util = only(&py, "util", SymbolKind::Folder);
+    assert_eq!(refs_by_kind(&py, util, RefKind::ConfigFile), ["pyproject.toml:6"]);
+
+    let ts = index("ts_app");
+    let f = only(&ts, "calcTotal", SymbolKind::Function);
+    assert_eq!(
+        refs_by_kind(&ts, f, RefKind::StringLiteral),
+        ["src/index.ts:9"],
+        "registry[\"calcTotal\"]"
+    );
+    let src = ts
+        .symbols
+        .iter()
+        .find(|s| s.name == "src" && s.kind == SymbolKind::Folder)
+        .unwrap();
+    let c = refs_by_kind(&ts, src, RefKind::ConfigFile);
+    assert_eq!(
+        c,
+        [
+            "package.json:4",
+            "package.json:5",
+            "tsconfig.json:5",
+            "tsconfig.json:7"
+        ]
+    );
+    let lib = ts
+        .symbols
+        .iter()
+        .find(|s| s.name == "lib" && s.kind == SymbolKind::Folder)
+        .unwrap();
+    assert_eq!(refs_by_kind(&ts, lib, RefKind::ConfigFile), ["tsconfig.json:5"]);
+
+    let cs = index("cs_app");
+    let p = only(&cs, "Program", SymbolKind::Class);
+    assert_eq!(refs_by_kind(&cs, p, RefKind::ConfigFile), ["Shop.csproj:5"]);
+    let helpers = cs
+        .symbols
+        .iter()
+        .find(|s| s.name == "calc_helpers" && s.kind == SymbolKind::File)
+        .unwrap();
+    assert_eq!(refs_by_kind(&cs, helpers, RefKind::ConfigFile), ["Shop.csproj:8"]);
+
+    let java = index("java_app");
+    let m = only(&java, "Main", SymbolKind::Class);
+    assert!(refs_by_kind(&java, m, RefKind::ConfigFile).contains(&"pom.xml:7".into()));
+    let g = java
+        .symbols
+        .iter()
+        .find(|s| s.name == "calcTotal" && s.kind == SymbolKind::Method)
+        .unwrap();
+    assert_eq!(
+        refs_by_kind(&java, g, RefKind::StringLiteral),
+        ["src/main/java/shop/Main.java:10"]
+    );
+}
+
+#[test]
+fn substrings_and_plain_strings_are_not_references() {
+    let tmp = tempfile::tempdir().unwrap();
+    std::fs::write(
+        tmp.path().join("a.py"),
+        "def calc_total():\n    pass\n\nx = \"calc_total\"\ny = \"calc_total_2\"\n# calc_total is used\n",
+    )
+    .unwrap();
+    std::fs::write(
+        tmp.path().join("cfg.toml"),
+        "k = \"a:calc_total\"\nother = \"calc_total_2\"\nsame = \"mycalc_total\"\n",
+    )
+    .unwrap();
+    let idx = build_index(
+        tmp.path(),
+        &IndexOptions::default(),
+        None,
+        &CancellationToken::new(),
+    )
+    .unwrap();
+    let f = only(&idx, "calc_total", SymbolKind::Function);
+    // A bare equal string outside a lookup call is only a *possible* reference.
+    assert_eq!(refs_by_kind(&idx, f, RefKind::StringLiteral), ["a.py:4?"]);
+    assert_eq!(refs_by_kind(&idx, f, RefKind::ConfigFile), ["cfg.toml:1"]);
+    assert_eq!(refs_by_kind(&idx, f, RefKind::Comment), ["a.py:6"]);
 }

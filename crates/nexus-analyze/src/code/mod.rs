@@ -5,6 +5,7 @@ pub mod imports;
 pub mod index;
 pub mod lang;
 pub mod model;
+pub mod noncode;
 pub mod tags;
 
 pub use index::{CodeIndex, IndexError, IndexOptions, Symbol, SymbolId, build_index};

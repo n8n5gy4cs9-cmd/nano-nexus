@@ -19,6 +19,7 @@ use super::file_facts::{self, FileFacts, RefFact, is_self_name};
 use super::imports::{self, ImportEdge, SegTarget};
 use super::lang::Lang;
 use super::model::SymbolKind;
+use super::noncode::{self, OTHER_BASE, OtherFile};
 
 /// Bump when the on-disk layout changes; an old cache is simply rebuilt.
 pub const INDEX_VERSION: u32 = 1;
@@ -124,6 +125,8 @@ pub struct CodeIndex {
     pub reparsed: u32,
     /// Manifests found while walking (`tsconfig.json`, `go.mod`, `Cargo.toml`, …), relative paths.
     pub config_files: Vec<String>,
+    /// Config and doc files that were scanned for references (`Location.file >= OTHER_BASE`).
+    pub others: Vec<OtherFile>,
     /// Resolved imports per file, aligned with `files`.
     pub imports: Vec<Vec<ImportEdge>>,
     /// Per-file parse results, aligned with `files`.
@@ -188,6 +191,17 @@ impl CodeIndex {
         self.files.get(id as usize)
     }
 
+    /// Relative path of a location's file (code, config, or doc file).
+    pub fn path_of(&self, file: u32) -> Option<&str> {
+        if file >= OTHER_BASE {
+            self.others
+                .get((file - OTHER_BASE) as usize)
+                .map(|o| o.path.as_str())
+        } else {
+            self.files.get(file as usize).map(|f| f.path.as_str())
+        }
+    }
+
     pub fn symbol(&self, id: SymbolId) -> Option<&Symbol> {
         self.symbols.get(id.0 as usize)
     }
@@ -227,8 +241,8 @@ struct Found {
     size: u64,
 }
 
-/// (code files, warnings, manifest files)
-type Walked = (Vec<Found>, Vec<String>, Vec<String>);
+/// (code files, warnings, manifest files, config/doc files to scan)
+type Walked = (Vec<Found>, Vec<String>, Vec<String>, Vec<OtherFile>);
 
 fn walk(root: &Path, opts: &IndexOptions, cancel: &CancellationToken) -> Result<Walked, IndexError> {
     let skip: HashSet<String> = SKIP_DIRS
@@ -239,6 +253,7 @@ fn walk(root: &Path, opts: &IndexOptions, cancel: &CancellationToken) -> Result<
     let mut found = Vec::new();
     let mut warnings = Vec::new();
     let mut configs = Vec::new();
+    let mut others: Vec<OtherFile> = Vec::new();
     let walker = WalkBuilder::new(root)
         .hidden(true)
         .git_ignore(true)
@@ -271,6 +286,14 @@ fn walk(root: &Path, opts: &IndexOptions, cancel: &CancellationToken) -> Result<
             configs.push(rel.clone());
         }
         let Some(lang) = Lang::from_path(entry.path()) else {
+            if let Some(kind) = noncode::other_kind(&entry.file_name().to_string_lossy())
+                && noncode::wants(entry.metadata().map(|m| m.len()).unwrap_or(0), others.len())
+            {
+                others.push(OtherFile {
+                    path: rel,
+                    kind: kind.to_owned(),
+                });
+            }
             continue;
         };
         let size = entry.metadata().map(|m| m.len()).unwrap_or(0);
@@ -294,7 +317,8 @@ fn walk(root: &Path, opts: &IndexOptions, cancel: &CancellationToken) -> Result<
     }
     found.sort_by(|a, b| a.rel.cmp(&b.rel));
     configs.sort();
-    Ok((found, warnings, configs))
+    others.sort_by(|a, b| a.path.cmp(&b.path));
+    Ok((found, warnings, configs, others))
 }
 
 /// Build (or incrementally refresh) the index of `root`. Files whose hash matches `prev` are not parsed again.
@@ -304,7 +328,7 @@ pub fn build_index(
     prev: Option<&CodeIndex>,
     cancel: &CancellationToken,
 ) -> Result<CodeIndex, IndexError> {
-    let (found, mut warnings, config_files) = walk(root, opts, cancel)?;
+    let (found, mut warnings, config_files, others) = walk(root, opts, cancel)?;
     let cached: HashMap<&str, (&IndexedFile, &FileFacts)> = prev
         .filter(|p| p.version == INDEX_VERSION)
         .map(|p| {
@@ -373,7 +397,17 @@ pub fn build_index(
     let folders = folders_of(&files);
     let cfg = imports::read_config(root, &config_files);
     let edges = imports::resolve_all(&files, &facts, &folders, &cfg);
-    let symbols = link(&files, &facts, &folders, &edges);
+    let mut symbols = link(&files, &facts, &folders, &edges);
+    noncode::scan(
+        &noncode::Project {
+            root,
+            files: &files,
+            facts: &facts,
+            folders: &folders,
+            others: &others,
+        },
+        &mut symbols,
+    );
     Ok(CodeIndex {
         version: INDEX_VERSION,
         root: root.to_string_lossy().replace('\\', "/"),
@@ -383,6 +417,7 @@ pub fn build_index(
         warnings,
         reparsed: reparsed.load(Ordering::Relaxed),
         config_files,
+        others,
         imports: edges,
         facts,
     })
@@ -398,6 +433,11 @@ fn folders_of(files: &[IndexedFile]) -> Vec<String> {
         }
     }
     set.into_iter().collect()
+}
+
+/// Whether two languages share names (JavaScript, TypeScript, and TSX do).
+pub fn same_family(a: Lang, b: Lang) -> bool {
+    family(a) == family(b)
 }
 
 fn family(lang: Lang) -> u8 {
