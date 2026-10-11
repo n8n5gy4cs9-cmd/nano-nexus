@@ -16,6 +16,7 @@ import {
 } from "@/components/ui";
 import { api } from "@/lib/api";
 import { toIpcException } from "@/lib/ipc";
+import { logActivity } from "@/stores/activity";
 
 import { ACCESS_VERB, LEVEL_LABEL, type Decision, type GrantLevel, type PermissionRequest } from "./types";
 
@@ -33,7 +34,12 @@ export function usePermissionQueue() {
   useEffect(() => {
     let cancelled = false;
     let off: (() => void) | undefined;
-    const add = (r: PermissionRequest) => setQueue((q) => (q.some((x) => x.id === r.id) ? q : [...q, r]));
+    const add = (r: PermissionRequest) =>
+      setQueue((q) => {
+        if (q.some((x) => x.id === r.id)) return q;
+        logActivity("chat", `${r.assistant} needs ${r.needed} access to ${r.path}: waiting for your answer`);
+        return [...q, r];
+      });
     api.permissions
       .onRequest(add)
       .then((u) => {
@@ -48,9 +54,17 @@ export function usePermissionQueue() {
       .pending()
       .then((list) => list.forEach(add))
       .catch(() => {});
+    // Safety net: if an event is ever missed, an open request still shows up within two seconds.
+    const poll = window.setInterval(() => {
+      api.permissions
+        .pending()
+        .then((list) => list.forEach(add))
+        .catch(() => {});
+    }, 2000);
     return () => {
       cancelled = true;
       off?.();
+      window.clearInterval(poll);
     };
   }, []);
   const answer = useCallback(async (id: string, decision: Decision) => {

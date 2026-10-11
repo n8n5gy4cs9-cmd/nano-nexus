@@ -118,6 +118,8 @@ pub fn builder() -> Builder<tauri::Wry> {
             fs::ChangeSetUpdate,
             models::DownloadProgressEvent,
             models::ModelChanged,
+            permissions::PermissionRequested,
+            chat::ConversationUpdated,
             share::ShareStatusChanged
         ])
         // Timestamps (ms) and byte counts stay far below 2^53, so numbers are exact.
