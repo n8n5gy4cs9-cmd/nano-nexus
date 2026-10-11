@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 64/229 tasks done (27%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 65/229 tasks done (28%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -103,7 +103,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [ ] ⭐ **T04.17** 🍎 Exit check: TTFT < 1 s, 60 fps stream, stop < 200 ms, 50-turn context OK, restart persists, FTS works — ⏳ Mac-only; owner to run
 
 ## M05: Permissions and change sets · [spec](docs/milestones/M05-permissions.md) · [contract](docs/architecture/PERMISSIONS.md)
-- [ ] **T05.01** Grants model + canonicalization (existing + non-existing paths, dunce on Windows) + tests
+- [x] **T05.01** Grants model + canonicalization (existing + non-existing paths, dunce on Windows) + tests (2026-10-11)
 - [ ] **T05.02** Deny list (per OS, user entries) + check algorithm + exhaustive tests (boundaries, symlinks, expiry, max level)
 - [ ] **T05.03** Store migration 0002 (grants, deny_rules, audit_log, changesets) + repos; load grants on startup
 - [ ] **T05.04** Batched async audit writer + tests

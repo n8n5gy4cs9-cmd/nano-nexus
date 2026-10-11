@@ -4,6 +4,7 @@
 pub mod chat;
 pub mod error;
 pub mod events;
+pub mod fs;
 pub mod ids;
 pub mod paths;
 pub mod settings;

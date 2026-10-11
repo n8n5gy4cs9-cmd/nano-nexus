@@ -9,3 +9,10 @@ license.workspace = true
 workspace = true
 
 [dependencies]
+nexus-core = { path = "../nexus-core" }
+dunce.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
