@@ -103,6 +103,9 @@ async fn chat(State(s): State<Arc<Shared>>, h: HeaderMap, Json(b): Json<Value>) 
     if let Ok(mut r) = s.requests.lock() {
         r.push(b.clone());
     }
+    if b.to_string().contains("SLOW") {
+        tokio::time::sleep(Duration::from_millis(300)).await;
+    }
     if b.to_string().contains("OVERFLOW") {
         let body = json!({"error": {"code": 400, "type": "exceed_context_size_error",
             "message": "the request exceeds the available context size, try increasing it",
