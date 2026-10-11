@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 165/234 tasks done (70%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 166/234 tasks done (70%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -183,7 +183,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T09.10** Planner → ChangeSet (byte ranges + file/folder moves, import/config/string refs, overlaps, collisions, case-only renames via temp name) + git-dirty detection + tests (2026-10-11) — `code::plan::plan_renames`: validator-gated items → one ChangeSet (file moves, then folder moves deepest-first from old paths, then byte-range edits at final paths; case-only via `.nexus-rename-tmp-N`); public API / ambiguous / doc / comment refs opt-in; stale-hash error; existing-target check; `git_dirty` via fixed-arg `git status --porcelain`. Not yet checked against Journal::apply in an integration test
 - [x] **T09.11** Find: symbol + usages search, project overview, router tool `find_symbol` + tests (2026-10-11) — `code::find` (`find_symbols` exact/prefix/substring/fuzzy with usage counts by kind, `usages`, `overview`, `render_find`) + `nexus-agent` `FindSymbol` tool over a `CodeSource` trait on `ToolCx`. Not wired in the app crate yet (comes with T09.14: implement `CodeSource` over the stored index, add `find_symbol` to a router assistant); the naming-issue summary of the overview is left to the UI task
 - [x] **T09.12** Verify with the project's own checker (cargo check, tsc, compileall, dotnet build, go build, mvn/gradle), fixed args, streamed output (2026-10-11) — `code::verify`: `detect` (cargo, tsc, python compileall, dotnet, go, mvn, gradle; root manifests only) and async `run` (fixed argv, no shell, merged stdout/stderr streamed per line, cancel token, 15 min timeout, first 10 error lines, `missing` when the binary is not installed). Uses the workspace `tokio` (already pinned) as a direct dependency of nexus-analyze
-- [ ] **T09.13** Strings mode (extract, propose, placeholder validation, CSV/JSON export, optional `t("KEY")` change set)
+- [x] **T09.13** Strings mode (extract, propose, placeholder validation, CSV/JSON export, optional `t("KEY")` change set) (2026-10-11) — `code::strings` (UI-position extraction by argument/call name, log calls and f-strings excluded, placeholder extraction + exact-multiset validation, max_len, CONSTANT_CASE unique keys, fallback key, CSV/JSON export, `t("KEY")` rewrite ChangeSet incl. JSX `attr={t(..)}`) + `nexus-agent::pipelines::strings::propose` (batches ≤ 20, one reask, fallback). Fixture `tests/fixtures/strings_app`. Template-literal and C#/Rust-raw strings are skipped
 - [ ] **T09.14** Store migration 0005 + commands `rename_*` + jobs + notifications
 - [ ] **T09.15** UI stepper + issues grid (Symbols / Files & folders tabs, virtualized, filters, inline edit w/ live validation, bulk accept, re-propose)
 - [ ] **T09.16** UI occurrence drawer (code previews) + Plan & preview (Changes) + git banner + Verify panel + Strings tab + Find tab

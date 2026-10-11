@@ -11,6 +11,7 @@ pub mod plan;
 pub mod propose;
 pub mod reserved;
 pub mod rules;
+pub mod strings;
 pub mod tags;
 pub mod verify;
 

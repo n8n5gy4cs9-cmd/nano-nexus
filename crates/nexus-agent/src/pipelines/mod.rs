@@ -7,6 +7,7 @@ pub mod doc;
 pub mod folder;
 pub mod rename;
 pub mod simple;
+pub mod strings;
 #[cfg(test)]
 mod testkit;
 pub mod tidy;
