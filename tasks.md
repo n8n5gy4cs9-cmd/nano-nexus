@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 54/229 tasks done (23%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 55/229 tasks done (24%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -90,7 +90,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T04.04** ContextBudget (tokenize + LRU cache, history window, reserve) + tests (2026-10-11)
 - [x] **T04.05** TurnEngine chat workflow (stream → ChatEvent, think toggle, reasoning not re-sent) + mock-LLM tests (2026-10-11)
 - [x] **T04.06** Commands: `chat_send` / `chat_stop` / `chat_regenerate` / `chat_edit_resend` with streaming persistence (500 ms) (2026-10-11)
-- [ ] **T04.07** Delta coalescing (16 ms / 32 chars) in Rust; Channel ordering test
+- [x] **T04.07** Delta coalescing (16 ms / 32 chars) in Rust; Channel ordering test (2026-10-11)
 - [ ] **T04.08** Title job (`title.md` + schema + fallback) and history summary job (`history_summary.md`)
 - [ ] **T04.09** Conversations commands (list w/ FTS search, get, update, delete, export_md)
 - [ ] **T04.10** UI ConversationList (grouped by date, search, pin, rename, delete, export)

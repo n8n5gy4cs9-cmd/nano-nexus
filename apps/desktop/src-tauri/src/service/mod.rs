@@ -3,6 +3,7 @@
 
 pub mod app;
 pub mod chat;
+pub mod coalesce;
 pub mod notifications;
 pub mod runtime;
 pub mod settings;

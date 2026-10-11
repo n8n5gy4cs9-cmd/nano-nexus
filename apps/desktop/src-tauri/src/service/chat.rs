@@ -304,8 +304,10 @@ fn start_turn(
     let assistant_id = placeholder.id.clone();
     let attachments = user.attachments.clone();
     tokio::spawn(async move {
+        // engine -> persist (raw, ordered) -> coalesce (16 ms / 32 chars) -> UI
+        let coalescing = Arc::new(super::coalesce::CoalescingSink::new(sink.clone()));
         let persisting = PersistingSink::new(
-            sink.clone(),
+            coalescing.clone(),
             ctx.store.clone(),
             assistant_id.clone(),
             PERSIST_EVERY,
@@ -314,6 +316,7 @@ fn start_turn(
             assistant_message_id: assistant_id.clone(),
         });
         let outcome = ctx.engine.run(input, &persisting, cancel).await;
+        coalescing.flush();
 
         let mut fin = MessageFinish::new(outcome.status, outcome.content.clone());
         fin.reasoning = outcome.reasoning.clone();
