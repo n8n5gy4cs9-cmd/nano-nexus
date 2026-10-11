@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 47/217 tasks done (21%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 48/217 tasks done (22%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -79,7 +79,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T03.12** Notifications plumbing: plugin, `notify()` service (DB + emit + OS when unfocused), bell popover, test notification (2026-10-11)
 - [x] **T03.13** App icon (hexagon nexus) 1024px → `pnpm tauri icon` (2026-10-11)
 - [ ] **T03.14** 🍎 Walking-skeleton `.app` (overlay config with default model) → move to /Applications → works offline → notification → no orphan
-- [ ] **T03.15** Write `scripts/fetch-runtime-windows.mjs` (GitHub release digest verification, extract, prune, lock) + mock test
+- [x] **T03.15** Write `scripts/fetch-runtime-windows.mjs` (GitHub release digest verification, extract, prune, lock) + mock test (2026-10-11)
 - [ ] **T03.16** 🍎🪟🔬 **S7** cross-compile skeleton for Windows x64 (cargo-xwin + NSIS) on the Mac; run in a Win11 ARM VM / PC → SPIKES.md
 - [ ] ⭐ **T03.17** Exit check: Ready < 5 s in dev; kill server → auto-restart; theme persists; skeletons OK on macOS + Windows
 

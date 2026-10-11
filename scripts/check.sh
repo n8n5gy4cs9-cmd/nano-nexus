@@ -82,4 +82,10 @@ for f in scripts/*.mjs; do
 done
 echo "  ok"
 
+step "Node script tests (node --test)"
+if ls scripts/*.test.mjs >/dev/null 2>&1; then
+  node --test scripts/*.test.mjs >/dev/null || { node --test scripts/*.test.mjs 2>&1 | tail -40; echo "  ✖ node tests failed" >&2; exit 1; }
+fi
+echo "  ok"
+
 printf '\n\033[1;32m✔ all checks passed\033[0m\n'
