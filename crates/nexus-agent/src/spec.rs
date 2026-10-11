@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 /// Sampling for the final (streamed) answer. Values are relative intents; the effective temperature
 /// is also capped by the model's recommendation.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
 #[serde(deny_unknown_fields, default)]
 pub struct ModelParams {
     pub thinking: bool,
@@ -33,7 +33,7 @@ impl Default for ModelParams {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
 #[serde(deny_unknown_fields, default)]
 pub struct ContextSpec {
     /// `text | file | folder | selection | none`
@@ -52,45 +52,51 @@ impl Default for ContextSpec {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, specta::Type)]
 #[serde(deny_unknown_fields, default)]
 pub struct PermissionsSpec {
     /// `read | write | create | move | trash`
     pub needs: Vec<String>,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
 #[serde(deny_unknown_fields)]
 pub struct WorkflowSpec {
     /// `chat | router | pipeline`
     pub kind: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub pipeline: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub max_hops: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub always_route: Option<bool>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, specta::Type)]
 #[serde(deny_unknown_fields, default)]
 pub struct ToolsSpec {
     pub allowed: Vec<String>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, specta::Type)]
 #[serde(deny_unknown_fields, default)]
 pub struct UiSpec {
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     pub starters: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub placeholder: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub output: Option<String>,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
 #[serde(deny_unknown_fields)]
 pub struct PromptSpec {
     pub system: String,
 }
 
 /// One assistant.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
 #[serde(deny_unknown_fields)]
 pub struct AssistantSpec {
     pub schema_version: u32,
@@ -102,7 +108,7 @@ pub struct AssistantSpec {
     pub tagline: String,
     #[serde(default)]
     pub description: String,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub version: Option<String>,
     #[serde(default)]
     pub model: ModelParams,

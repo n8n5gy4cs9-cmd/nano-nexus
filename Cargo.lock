@@ -2487,6 +2487,7 @@ dependencies = [
 name = "nano-nexus"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "dunce",
  "futures-util",
  "nexus-agent",
@@ -2507,6 +2508,7 @@ dependencies = [
  "tempfile",
  "tokio",
  "tokio-util",
+ "toml 1.1.8+spec-1.1.0",
  "tracing",
 ]
 
@@ -2563,6 +2565,7 @@ dependencies = [
  "secrecy",
  "serde",
  "serde_json",
+ "specta",
  "tempfile",
  "thiserror 2.0.21",
  "time",

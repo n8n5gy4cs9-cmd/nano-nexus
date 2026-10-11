@@ -3,6 +3,7 @@
 //!
 //! **Never edit an applied migration; add a new one.**
 
+pub mod assistants;
 pub mod chat;
 pub mod fs;
 mod migrate;
@@ -15,6 +16,7 @@ use std::sync::{Mutex, MutexGuard};
 use nexus_core::error::NexusError;
 use rusqlite::Connection;
 
+pub use assistants::AssistantRow;
 pub use chat::{ConversationPatch, MessageFinish};
 pub use fs::{ChangeSetRow, NewAudit};
 pub use migrate::{MIGRATIONS, schema_version};

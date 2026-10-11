@@ -15,7 +15,7 @@ static BUILTIN_DIR: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/../../assis
 pub const ASSISTANT_SCHEMA: &str = include_str!("../../../schemas/assistant.schema.json");
 
 /// Where an assistant came from.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, specta::Type)]
 #[serde(rename_all = "snake_case")]
 pub enum Source {
     Builtin,
@@ -23,7 +23,7 @@ pub enum Source {
 }
 
 /// One problem found in an assistant file, tied to the field it concerns.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, specta::Type)]
 pub struct FieldError {
     /// JSON-pointer-like path (`/model/temperature`); empty for the whole file.
     pub path: String,
@@ -32,7 +32,10 @@ pub struct FieldError {
 
 impl FieldError {
     fn whole(message: impl Into<String>) -> Self {
-        Self { path: String::new(), message: message.into() }
+        Self {
+            path: String::new(),
+            message: message.into(),
+        }
     }
 }
 
@@ -48,13 +51,19 @@ fn schema_validator() -> Option<&'static jsonschema::Validator> {
 /// Validate assistant TOML: syntax, the JSON Schema, then the typed mapping. Returns every problem found
 /// (field errors), or the parsed spec.
 pub fn validate_toml(text: &str) -> Result<AssistantSpec, Vec<FieldError>> {
-    let value: serde_json::Value = toml::from_str(text).map_err(|e| vec![FieldError::whole(format!("not valid TOML: {e}"))])?;
+    let value: serde_json::Value =
+        toml::from_str(text).map_err(|e| vec![FieldError::whole(format!("not valid TOML: {e}"))])?;
     let Some(validator) = schema_validator() else {
-        return Err(vec![FieldError::whole("the assistant schema failed to load (this is a bug)")]);
+        return Err(vec![FieldError::whole(
+            "the assistant schema failed to load (this is a bug)",
+        )]);
     };
     let errors: Vec<FieldError> = validator
         .iter_errors(&value)
-        .map(|e| FieldError { path: e.instance_path.to_string(), message: e.to_string() })
+        .map(|e| FieldError {
+            path: e.instance_path.to_string(),
+            message: e.to_string(),
+        })
         .collect();
     if !errors.is_empty() {
         return Err(errors);
@@ -63,7 +72,7 @@ pub fn validate_toml(text: &str) -> Result<AssistantSpec, Vec<FieldError>> {
 }
 
 /// Prompt size state for the builder's meter: green <= 350, amber <= 450, red above.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, specta::Type)]
 #[serde(rename_all = "snake_case")]
 pub enum TokenLevel {
     Green,
@@ -83,7 +92,7 @@ pub fn token_level(tokens: u32) -> TokenLevel {
 }
 
 /// Result of `assistant_validate`.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, specta::Type)]
 pub struct ValidationReport {
     pub ok: bool,
     pub errors: Vec<FieldError>,
@@ -98,7 +107,13 @@ pub fn validate_report(text: &str) -> ValidationReport {
     match validate_toml(text) {
         Ok(spec) => {
             let tokens = estimate_tokens(&spec.prompt.system);
-            ValidationReport { ok: true, errors: vec![], prompt_tokens: tokens, level: token_level(tokens), id: Some(spec.id) }
+            ValidationReport {
+                ok: true,
+                errors: vec![],
+                prompt_tokens: tokens,
+                level: token_level(tokens),
+                id: Some(spec.id),
+            }
         }
         Err(errors) => {
             // Still measure the prompt when the file parses as TOML, so the meter works while fixing errors.
@@ -106,8 +121,42 @@ pub fn validate_report(text: &str) -> ValidationReport {
                 .ok()
                 .and_then(|v| v.get("prompt")?.get("system")?.as_str().map(estimate_tokens))
                 .unwrap_or(0);
-            ValidationReport { ok: false, errors, prompt_tokens: tokens, level: token_level(tokens), id: None }
+            ValidationReport {
+                ok: false,
+                errors,
+                prompt_tokens: tokens,
+                level: token_level(tokens),
+                id: None,
+            }
         }
+    }
+}
+
+/// `Err(milestone)` while a pipeline's code does not exist yet. The gallery shows such cards disabled.
+pub fn pipeline_ready(pipeline: &str) -> Result<(), &'static str> {
+    match pipeline {
+        "folder_report" | "doc_qa" | "doc_summarize" | "tidy_plan" | "secrets_report" | "log_triage"
+        | "data_profile" | "commit_message" => Err("Available in M08"),
+        "rename_propose" | "strings_improve" => Err("Available in M09"),
+        _ => Err("Not available yet"),
+    }
+}
+
+/// Turn a display name into a kebab-case id.
+pub fn slug(name: &str) -> String {
+    let mut out = String::new();
+    for c in name.to_lowercase().chars() {
+        if c.is_ascii_alphanumeric() {
+            out.push(c);
+        } else if !out.ends_with('-') && !out.is_empty() {
+            out.push('-');
+        }
+    }
+    let out = out.trim_matches('-').to_owned();
+    if out.is_empty() || !out.chars().next().is_some_and(|c| c.is_ascii_lowercase()) {
+        format!("assistant-{out}").trim_end_matches('-').to_owned()
+    } else {
+        out
     }
 }
 
@@ -164,7 +213,16 @@ impl Registry {
         for (i, (name, text)) in builtin_sources().into_iter().enumerate() {
             match validate_toml(text) {
                 Ok(spec) => {
-                    r.entries.insert(spec.id.clone(), Entry { spec, source: Source::Builtin, toml: text.to_owned(), enabled: true, sort: (i as i32) * 10 });
+                    r.entries.insert(
+                        spec.id.clone(),
+                        Entry {
+                            spec,
+                            source: Source::Builtin,
+                            toml: text.to_owned(),
+                            enabled: true,
+                            sort: (i as i32) * 10,
+                        },
+                    );
                 }
                 Err(errors) => r.problems.push(LoadProblem { origin: name, errors }),
             }
@@ -179,10 +237,26 @@ impl Registry {
     /// Add a user assistant (TOML text). A built-in id is refused: users duplicate with a new id instead.
     pub fn add_user(&mut self, toml_text: &str, enabled: bool, sort: i32) -> Result<(), Vec<FieldError>> {
         let spec = validate_toml(toml_text)?;
-        if self.entries.get(&spec.id).is_some_and(|e| e.source == Source::Builtin) {
-            return Err(vec![FieldError { path: "/id".into(), message: format!("`{}` is a built-in assistant; choose another id", spec.id) }]);
+        if self
+            .entries
+            .get(&spec.id)
+            .is_some_and(|e| e.source == Source::Builtin)
+        {
+            return Err(vec![FieldError {
+                path: "/id".into(),
+                message: format!("`{}` is a built-in assistant; choose another id", spec.id),
+            }]);
         }
-        self.entries.insert(spec.id.clone(), Entry { spec, source: Source::User, toml: toml_text.to_owned(), enabled, sort });
+        self.entries.insert(
+            spec.id.clone(),
+            Entry {
+                spec,
+                source: Source::User,
+                toml: toml_text.to_owned(),
+                enabled,
+                sort,
+            },
+        );
         Ok(())
     }
 
@@ -192,6 +266,18 @@ impl Registry {
             e.enabled = o.enabled;
             e.sort = o.sort;
         }
+    }
+
+    /// An id based on `base` that no assistant uses yet (`base`, `base-2`, `base-3`, ...).
+    pub fn unique_id(&self, base: &str) -> String {
+        let base: String = base.chars().take(36).collect();
+        if !self.entries.contains_key(&base) {
+            return base;
+        }
+        (2..)
+            .map(|n| format!("{base}-{n}"))
+            .find(|id| !self.entries.contains_key(id))
+            .unwrap_or(base)
     }
 
     pub fn remove(&mut self, id: &str) -> Option<Entry> {
@@ -254,6 +340,27 @@ mod tests {
         assert_eq!(r.get("nexus-copy").map(|e| e.source), Some(Source::User));
         assert!(r.remove("nexus").is_none());
         assert!(r.remove("nexus-copy").is_some());
+    }
+
+    #[test]
+    fn slugs_and_unique_ids() {
+        assert_eq!(slug("Regex Smith!"), "regex-smith");
+        assert_eq!(slug("  --  "), "assistant");
+        assert_eq!(slug("3D Helper"), "assistant-3d-helper");
+        let r = Registry::builtin();
+        assert_eq!(r.unique_id("tldr"), "tldr-2");
+        assert_eq!(r.unique_id("fresh"), "fresh");
+    }
+
+    #[test]
+    fn serialized_specs_validate_again() {
+        let spec = validate_toml(crate::spec::NEXUS_TOML).unwrap();
+        let text = toml::to_string(&spec).unwrap();
+        assert_eq!(validate_toml(&text).unwrap(), spec);
+        for (_, t) in builtin_sources() {
+            let s = validate_toml(t).unwrap();
+            assert_eq!(validate_toml(&toml::to_string(&s).unwrap()).unwrap(), s);
+        }
     }
 
     #[test]

@@ -52,7 +52,11 @@ fn var_names(list: &str) -> Vec<String> {
     let mut item = String::new();
     let mut out = Vec::new();
     let flush = |item: &mut String, out: &mut Vec<String>| {
-        let name: String = item.trim().chars().take_while(|c| c.is_alphanumeric() || *c == '_').collect();
+        let name: String = item
+            .trim()
+            .chars()
+            .take_while(|c| c.is_alphanumeric() || *c == '_')
+            .collect();
         if !name.is_empty() {
             out.push(name);
         }
@@ -78,10 +82,14 @@ fn var_names(list: &str) -> Vec<String> {
 pub fn parse_meta(src: &str) -> PromptMeta {
     let t = src.trim_start();
     let mut meta = PromptMeta::default();
-    let Some(rest) = t.strip_prefix("{#") else { return meta };
+    let Some(rest) = t.strip_prefix("{#") else {
+        return meta;
+    };
     let Some(end) = rest.find("#}") else { return meta };
     for line in rest[..end].lines() {
-        let Some((k, v)) = line.split_once(':') else { continue };
+        let Some((k, v)) = line.split_once(':') else {
+            continue;
+        };
         let v = v.trim();
         match k.trim() {
             "purpose" => meta.purpose = v.to_owned(),
@@ -120,7 +128,12 @@ fn sections(src: &str) -> Vec<(&str, &str)> {
 /// Split a prompt file into its (system, user) template text; example sections are ignored here.
 pub fn split_sections(src: &str) -> Result<(&str, &str), InternalPromptError> {
     let secs = sections(src);
-    let find = |n: &'static str| secs.iter().find(|(name, _)| *name == n).map(|(_, t)| *t).ok_or(InternalPromptError::MissingSection(n));
+    let find = |n: &'static str| {
+        secs.iter()
+            .find(|(name, _)| *name == n)
+            .map(|(_, t)| *t)
+            .ok_or(InternalPromptError::MissingSection(n))
+    };
     Ok((find("system")?, find("user")?))
 }
 
@@ -134,7 +147,8 @@ pub struct RenderedPrompt {
 }
 
 /// Every embedded internal prompt, by file stem (`router`, `doc_qa`, ...).
-static INTERNAL_DIR: include_dir::Dir<'static> = include_dir::include_dir!("$CARGO_MANIFEST_DIR/../../prompts/internal");
+static INTERNAL_DIR: include_dir::Dir<'static> =
+    include_dir::include_dir!("$CARGO_MANIFEST_DIR/../../prompts/internal");
 
 /// The text of the embedded prompt `name` (without `.md`).
 pub fn internal_source(name: &str) -> Option<&'static str> {
@@ -158,7 +172,8 @@ pub fn render_full<V: Serialize>(src: &str, vars: &V) -> Result<RenderedPrompt, 
     let mut value = serde_json::to_value(vars).unwrap_or(serde_json::Value::Null);
     if let Some(obj) = value.as_object_mut() {
         for name in &meta.vars {
-            obj.entry(name.clone()).or_insert_with(|| serde_json::Value::String(String::new()));
+            obj.entry(name.clone())
+                .or_insert_with(|| serde_json::Value::String(String::new()));
         }
     }
     let secs = sections(src);
@@ -173,7 +188,11 @@ pub fn render_full<V: Serialize>(src: &str, vars: &V) -> Result<RenderedPrompt, 
     let mut examples = Vec::new();
     let mut pending: Option<String> = None;
     for (i, (name, _)) in secs.iter().enumerate() {
-        let out = env.get_template(&format!("{i}:{name}"))?.render(&v)?.trim().to_owned();
+        let out = env
+            .get_template(&format!("{i}:{name}"))?
+            .render(&v)?
+            .trim()
+            .to_owned();
         match *name {
             "system" => system = Some(out),
             "user" => user = Some(out),

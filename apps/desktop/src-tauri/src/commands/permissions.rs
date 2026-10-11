@@ -18,7 +18,11 @@ pub struct PermissionRequested(pub PermissionRequest);
 /// The user's answer to a permission prompt. `false` if it was already answered or timed out.
 #[tauri::command]
 #[specta::specta]
-pub async fn permission_respond(ctx: State<'_, Arc<AppState>>, request_id: String, decision: Decision) -> CmdResult<bool> {
+pub async fn permission_respond(
+    ctx: State<'_, Arc<AppState>>,
+    request_id: String,
+    decision: Decision,
+) -> CmdResult<bool> {
     service::permissions::respond(&ctx, &request_id, decision).map_err(IpcError::from)
 }
 

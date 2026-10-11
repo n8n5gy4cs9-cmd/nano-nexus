@@ -42,6 +42,8 @@ const STATUS: Record<ChangeStatus, { label: string; tone: "neutral" | "accent" |
   failed: { label: "Failed", tone: "danger" },
 };
 
+const statusInfo = (s: string) => STATUS[s as ChangeStatus] ?? { label: s, tone: "neutral" as const };
+
 const KIND_ICON: Record<string, typeof FileText> = { create: FilePlus2, move: FolderInput, trash: Trash2 };
 
 const baseName = (p: string) => p.split(/[\\/]/).filter(Boolean).pop() ?? p;
@@ -51,7 +53,7 @@ function ChangeList({ items, selected, onSelect }: { items: ChangeSetSummary[]; 
   return (
     <ul className="flex flex-col gap-1">
       {items.map((c) => {
-        const s = STATUS[c.status];
+        const s = statusInfo(c.status);
         return (
           <li key={c.id}>
             <button
@@ -227,7 +229,7 @@ function Detail({ summary, onChanged }: { summary: ChangeSetSummary; onChanged: 
 
   const p = preview.data;
   const file = p?.files[Math.min(sel, Math.max(0, (p?.files.length ?? 1) - 1))];
-  const s = STATUS[summary.status];
+  const s = statusInfo(summary.status);
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-3">
       <header className="flex flex-wrap items-start justify-between gap-3">

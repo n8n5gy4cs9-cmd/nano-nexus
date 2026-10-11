@@ -4,9 +4,10 @@
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
+use nexus_agent::router::{RouterRequest, SchedulerRouter, run_router};
+use nexus_agent::tools::{EngineGatekeeper, ToolCx, builtin_tools};
 use nexus_agent::{
-    AttachmentBlock, HistoryMessage, PromptContext, StoredSummary, TurnInput, builtin_nexus, prompt,
-    render_system_prompt,
+    AttachmentBlock, HistoryMessage, PromptContext, StoredSummary, TurnInput, prompt, render_system_prompt,
 };
 use nexus_core::chat::{AttachmentInput, ChatEvent, Conversation, Message, MessageRole, MessageStatus};
 use nexus_core::error::NexusError;
@@ -34,6 +35,9 @@ pub struct ChatSendArgs {
     pub attachments: Vec<AttachmentInput>,
     /// "Think harder" for this turn.
     pub think: bool,
+    /// Unsaved assistant TOML from the builder's test chat; used instead of `assistant_id` when set.
+    #[serde(default)]
+    pub draft_spec: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Type)]
@@ -43,12 +47,30 @@ pub struct ChatSendResult {
     pub assistant_message_id: MessageId,
 }
 
-/// Assistants available in M04: only the built-in Nexus (the full registry arrives in M06).
-fn resolve_assistant(id: &AssistantId) -> Result<nexus_agent::AssistantSpec, NexusError> {
-    match id.as_str() {
-        "nexus" => builtin_nexus().map_err(|e| NexusError::Internal(e.to_string())),
-        _ => Err(NexusError::NotFound("assistant".into())),
-    }
+fn resolve_assistant(
+    ctx: &Ctx,
+    id: &AssistantId,
+    draft: Option<&str>,
+) -> Result<nexus_agent::AssistantSpec, NexusError> {
+    super::assistants::resolve(ctx, id.as_str(), draft)
+}
+
+/// The user's home folder (for `~` in tool paths).
+fn home_dir() -> std::path::PathBuf {
+    std::env::var_os("HOME")
+        .or_else(|| std::env::var_os("USERPROFILE"))
+        .map(std::path::PathBuf::from)
+        .unwrap_or_default()
+}
+
+/// Tools the router may use for `spec`: its allowed list, minus the ones that are not built yet.
+fn router_tools(spec: &nexus_agent::AssistantSpec) -> Vec<String> {
+    spec.tools
+        .allowed
+        .iter()
+        .filter(|t| !matches!(t.as_str(), "scan_folder" | "doc_search"))
+        .cloned()
+        .collect()
 }
 
 /// Writes the partial answer to the store at most every `every`, and forwards every event.
@@ -127,7 +149,7 @@ pub fn send(
     sink: Arc<dyn Sink<ChatEvent>>,
 ) -> Result<ChatSendResult, NexusError> {
     check_text(&args.text, !args.attachments.is_empty())?;
-    let spec = resolve_assistant(&args.assistant_id)?;
+    let spec = resolve_assistant(ctx, &args.assistant_id, args.draft_spec.as_deref())?;
     let conv = ctx
         .store
         .get_or_create_conversation(args.conversation_id.as_ref(), &args.assistant_id)?;
@@ -182,7 +204,7 @@ pub fn regenerate(
         .find(|m| m.role == MessageRole::User)
         .cloned()
         .ok_or_else(|| NexusError::InvalidInput("there is no question to answer again".into()))?;
-    let spec = resolve_assistant(&conv.assistant_id)?;
+    let spec = resolve_assistant(ctx, &conv.assistant_id, None)?;
     ctx.store.delete_messages_after(&user.id)?;
     let assistant = start_turn(ctx, &conv, &user, spec, think, sink)?;
     Ok(ChatSendResult {
@@ -220,7 +242,7 @@ pub fn edit_resend(
             return Err(NexusError::Busy("an answer is still being written".into()));
         }
     }
-    let spec = resolve_assistant(&conv.assistant_id)?;
+    let spec = resolve_assistant(ctx, &conv.assistant_id, None)?;
     ctx.store.set_message_content(&user.id, text.trim_end())?;
     ctx.store.delete_messages_after(&user.id)?;
     let user = ctx
@@ -271,12 +293,29 @@ fn start_turn(
         .collect();
 
     let settings = ctx.settings_snapshot();
-    let pctx = PromptContext::new(prompt::os_display_name(std::env::consts::OS), prompt::today_iso());
+    let mut pctx = PromptContext::new(prompt::os_display_name(std::env::consts::OS), prompt::today_iso());
+    pctx.granted_roots = ctx.perms.grants().into_iter().map(|g| g.root).collect();
+    let tool_names = router_tools(&spec);
+    pctx.tools = builtin_tools()
+        .iter()
+        .filter(|t| tool_names.iter().any(|n| n == t.name()))
+        .map(|t| prompt::PromptTool {
+            name: t.name().into(),
+            signature: t.signature().into(),
+            description: t.description().into(),
+        })
+        .collect();
     let system_prompt = render_system_prompt(&spec, &pctx).unwrap_or_else(|e| {
         tracing::warn!("prompt rendering failed, using the raw prompt: {e}");
         spec.prompt.system.clone()
     });
-    let input = TurnInput {
+    let routed = spec.workflow.kind == "router" && !tool_names.is_empty();
+    let (max_hops, always_route) = (
+        spec.workflow.max_hops.unwrap_or(3),
+        spec.workflow.always_route.unwrap_or(false),
+    );
+    let assistant_slug = spec.id.clone();
+    let mut input = TurnInput {
         assistant: spec,
         system_prompt,
         history,
@@ -316,6 +355,24 @@ fn start_turn(
         persisting.send(ChatEvent::Started {
             assistant_message_id: assistant_id.clone(),
         });
+        if routed {
+            let gate = EngineGatekeeper::new(
+                ctx.perms.clone(),
+                assistant_slug.clone(),
+                Some(Arc::new(super::permissions::BrokerAsker { ctx: ctx.clone() })),
+            );
+            let cx = ToolCx::new(Arc::new(gate));
+            let request = RouterRequest {
+                user_text: &input.user_text,
+                allowed_tools: tool_names,
+                max_hops,
+                always_route,
+                home: home_dir(),
+            };
+            let llm = SchedulerRouter(Arc::new(ctx.scheduler.clone()));
+            let routed = run_router(request, &llm, &builtin_tools(), &cx, &persisting, cancel.clone()).await;
+            input.attachments.extend(routed.as_attachments());
+        }
         let outcome = ctx.engine.run(input, &persisting, cancel).await;
         coalescing.flush();
 
@@ -557,6 +614,7 @@ mod tests {
             assistant_id: AssistantId::from("nexus"),
             text: text.into(),
             attachments: vec![],
+            draft_spec: None,
             think: false,
         }
     }

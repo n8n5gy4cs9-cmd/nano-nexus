@@ -4,7 +4,9 @@
 use specta_typescript::Typescript;
 use tauri_specta::{Builder, collect_commands, collect_events};
 
-use crate::commands::{app, attachments, chat, conversations, fs, notifications, permissions, runtime, settings};
+use crate::commands::{
+    app, assistants, attachments, chat, conversations, fs, notifications, permissions, runtime, settings,
+};
 
 /// All commands and events.
 pub fn builder() -> Builder<tauri::Wry> {
@@ -55,6 +57,16 @@ pub fn builder() -> Builder<tauri::Wry> {
             fs::debug_make_test_changeset,
             permissions::permission_respond,
             permissions::permission_requests,
+            assistants::assistants_list,
+            assistants::assistant_get,
+            assistants::assistant_validate,
+            assistants::assistant_save,
+            assistants::assistant_delete,
+            assistants::assistant_duplicate,
+            assistants::assistant_set_enabled,
+            assistants::assistant_export,
+            assistants::assistant_import,
+            assistants::assistant_render_toml,
         ])
         .events(collect_events![
             runtime::RuntimeStatus,

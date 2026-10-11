@@ -32,8 +32,12 @@ pub enum PrivacyPane {
 /// The `x-apple.systempreferences:` link for a pane (macOS).
 pub fn privacy_deep_link(pane: PrivacyPane) -> &'static str {
     match pane {
-        PrivacyPane::FilesAndFolders => "x-apple.systempreferences:com.apple.preference.security?Privacy_FilesAndFolders",
-        PrivacyPane::FullDiskAccess => "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles",
+        PrivacyPane::FilesAndFolders => {
+            "x-apple.systempreferences:com.apple.preference.security?Privacy_FilesAndFolders"
+        }
+        PrivacyPane::FullDiskAccess => {
+            "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles"
+        }
     }
 }
 
@@ -119,12 +123,25 @@ mod tests {
     fn error_classification() {
         let home = Path::new("/Users/me");
         let nf = std::io::Error::from(ErrorKind::NotFound);
-        assert_eq!(classify_error(&nf, Path::new("/x"), home, false), OsAccess::Missing);
+        assert_eq!(
+            classify_error(&nf, Path::new("/x"), home, false),
+            OsAccess::Missing
+        );
         let eacces = std::io::Error::from_raw_os_error(13);
-        assert_eq!(classify_error(&eacces, Path::new("/Users/me/Documents/a"), home, false), OsAccess::Other);
+        assert_eq!(
+            classify_error(&eacces, Path::new("/Users/me/Documents/a"), home, false),
+            OsAccess::Other
+        );
         let eperm = std::io::Error::from_raw_os_error(1);
         let r = classify_error(&eperm, Path::new("/Users/me/Documents/a"), home, false);
-        assert_eq!(r, if cfg!(target_os = "macos") { OsAccess::Denied } else { OsAccess::Other });
+        assert_eq!(
+            r,
+            if cfg!(target_os = "macos") {
+                OsAccess::Denied
+            } else {
+                OsAccess::Other
+            }
+        );
     }
 
     #[test]
@@ -136,7 +153,13 @@ mod tests {
     #[test]
     fn a_readable_folder_is_granted_and_a_missing_one_is_missing() {
         let d = std::env::temp_dir();
-        assert_eq!(probe_folder(&d, Path::new("/nonexistent-home")), OsAccess::Granted);
-        assert_eq!(probe_folder(&d.join("nn-definitely-missing-dir"), Path::new("/h")), OsAccess::Missing);
+        assert_eq!(
+            probe_folder(&d, Path::new("/nonexistent-home")),
+            OsAccess::Granted
+        );
+        assert_eq!(
+            probe_folder(&d.join("nn-definitely-missing-dir"), Path::new("/h")),
+            OsAccess::Missing
+        );
     }
 }

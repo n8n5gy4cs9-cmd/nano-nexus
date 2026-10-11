@@ -41,15 +41,72 @@ export const commands = {
 	notificationsClear: () => typedError<null, IpcError>(__TAURI_INVOKE("notifications_clear")),
 	/**  "Send test notification" (shown in dev builds). */
 	notificationsSendTest: () => typedError<NotificationPayload, IpcError>(__TAURI_INVOKE("notifications_send_test")),
+	fsGrantsList: () => typedError<Grant[], IpcError>(__TAURI_INVOKE("fs_grants_list")),
+	fsGrantAdd: (root: string, level: GrantLevel, recursive: boolean, label: string | null, expiresAt: number | null) => typedError<Grant, IpcError>(__TAURI_INVOKE("fs_grant_add", { root, level, recursive, label, expiresAt })),
+	fsGrantUpdate: (id: string, level: "read" | "read_write" | "full" | null, recursive: boolean | null, label: string | null, expiresAt: number | null) => typedError<Grant, IpcError>(__TAURI_INVOKE("fs_grant_update", { id, level, recursive, label, expiresAt })),
+	fsGrantRevoke: (id: string) => typedError<boolean, IpcError>(__TAURI_INVOKE("fs_grant_revoke", { id })),
+	fsDenyList: () => typedError<DenyRuleView[], IpcError>(__TAURI_INVOKE("fs_deny_list")),
+	fsDenyAdd: (root: string) => typedError<null, IpcError>(__TAURI_INVOKE("fs_deny_add", { root })),
+	fsDenyRemove: (root: string) => typedError<boolean, IpcError>(__TAURI_INVOKE("fs_deny_remove", { root })),
+	/**  Native folder picker. `None` when the user cancels. */
+	fsPickFolder: () => typedError<string | null, IpcError>(__TAURI_INVOKE("fs_pick_folder")),
+	fsListDir: (path: string) => typedError<DirEntryInfo[], IpcError>(__TAURI_INVOKE("fs_list_dir", { path })),
+	fsReadText: (path: string) => typedError<TextFile, IpcError>(__TAURI_INVOKE("fs_read_text", { path })),
+	fsStat: (path: string) => typedError<FileStat, IpcError>(__TAURI_INVOKE("fs_stat", { path })),
+	/**  Probe the OS-protected folders. Only runs when the Permissions page asks (macOS may prompt). */
+	osPermissionsStatus: () => typedError<OsPermissionsStatus, IpcError>(__TAURI_INVOKE("os_permissions_status")),
+	/**  Open System Settings on the right Privacy pane (`files` or `full_disk`). No-op off macOS. */
+	osOpenPrivacySettings: (pane: string) => typedError<null, IpcError>(__TAURI_INVOKE("os_open_privacy_settings", { pane })),
+	auditList: (limit: number, before: number | null) => typedError<AuditRecord[], IpcError>(__TAURI_INVOKE("audit_list", { limit, before })),
+	changesetsList: (limit: number) => typedError<ChangeSetSummary[], IpcError>(__TAURI_INVOKE("changesets_list", { limit })),
+	changesetPreview: (id: string) => typedError<ChangePreview, IpcError>(__TAURI_INVOKE("changeset_preview", { id })),
+	changesetApply: (id: string) => typedError<ChangeSetSummary, IpcError>(__TAURI_INVOKE("changeset_apply", { id })),
+	changesetUndo: (id: string, decisions: UndoDecision[]) => typedError<UndoOutcome, IpcError>(__TAURI_INVOKE("changeset_undo", { id, decisions })),
+	changesetDiscard: (id: string) => typedError<null, IpcError>(__TAURI_INVOKE("changeset_discard", { id })),
+	/**  Dev only (T05.14): plan a fixture change set to try the Changes page. */
+	debugMakeTestChangeset: () => typedError<ChangeSetId, IpcError>(__TAURI_INVOKE("debug_make_test_changeset")),
+	/**  The user's answer to a permission prompt. `false` if it was already answered or timed out. */
+	permissionRespond: (requestId: string, decision: Decision) => typedError<boolean, IpcError>(__TAURI_INVOKE("permission_respond", { requestId, decision })),
+	/**  Prompts still open (after a UI reload). */
+	permissionRequests: () => typedError<PermissionRequest[], IpcError>(__TAURI_INVOKE("permission_requests")),
+	assistantsList: () => typedError<AssistantCard[], IpcError>(__TAURI_INVOKE("assistants_list")),
+	assistantGet: (id: string) => typedError<AssistantDetail_Serialize, IpcError>(__TAURI_INVOKE("assistant_get", { id })),
+	/**  Live builder validation: field errors and the prompt's token count. */
+	assistantValidate: (toml: string) => typedError<ValidationReport, IpcError>(__TAURI_INVOKE("assistant_validate", { toml })),
+	/**  Create or update a user assistant (`previous_id` = the id being edited). */
+	assistantSave: (toml: string, previousId: string | null) => typedError<AssistantDetail_Serialize, IpcError>(__TAURI_INVOKE("assistant_save", { toml, previousId })),
+	assistantDelete: (id: string) => typedError<null, IpcError>(__TAURI_INVOKE("assistant_delete", { id })),
+	assistantDuplicate: (id: string, name: string | null) => typedError<AssistantDetail_Serialize, IpcError>(__TAURI_INVOKE("assistant_duplicate", { id, name })),
+	assistantSetEnabled: (id: string, enabled: boolean) => typedError<AssistantCard, IpcError>(__TAURI_INVOKE("assistant_set_enabled", { id, enabled })),
+	/**  The `.toml` text for export. */
+	assistantExport: (id: string) => typedError<string, IpcError>(__TAURI_INVOKE("assistant_export", { id })),
+	/**  Import `.toml` text (ids already in use get a numeric suffix). */
+	assistantImport: (toml: string) => typedError<AssistantDetail_Serialize, IpcError>(__TAURI_INVOKE("assistant_import", { toml })),
+	/**  Serialize a spec edited in the builder form to TOML. */
+	assistantRenderToml: (spec: AssistantSpec_Deserialize) => typedError<string, IpcError>(__TAURI_INVOKE("assistant_render_toml", { spec })),
 };
 
 /** Events */
 export const events = {
+	changesetUpdate: makeEvent<ChangeSetUpdate>("changeset:update"),
 	notificationNew: makeEvent<NotificationNew>("notification:new"),
 	runtimeStatus: makeEvent<RuntimeStatus>("runtime:status"),
 };
 
 /* Types */
+/**  What one operation needs. */
+export type Access = 
+/**  Read a file, list a directory, read metadata. */
+"read" | 
+/**  Modify an existing file. */
+"write" | 
+/**  Create a new file or directory. */
+"create" | 
+/**  Move or rename. */
+"move" | 
+/**  Move to the Trash. */
+"trash";
+
 /**  Static facts about this install. */
 export type AppInfo = {
 	version: string,
@@ -59,8 +116,93 @@ export type AppInfo = {
 	log_dir: string,
 };
 
+/**  What the gallery and switcher show. */
+export type AssistantCard = {
+	id: string,
+	name: string,
+	icon: string,
+	color: string,
+	category: string,
+	tagline: string,
+	description: string,
+	version: string | null,
+	source: Source,
+	enabled: boolean,
+	sort: number,
+	/**  Access the assistant may ask for (`read`, `write`, ...), shown as chips. */
+	needs: string[],
+	/**  `chat | router | pipeline` */
+	workflow: string,
+	pipeline: string | null,
+	starters: string[],
+	placeholder: string | null,
+	/**  `false` while its pipeline is not built yet (the card is disabled). */
+	available: boolean,
+	unavailable_reason: string | null,
+};
+
+/**  The full definition, for the builder. */
+export type AssistantDetail = AssistantDetail_Serialize | AssistantDetail_Deserialize;
+
+/**  The full definition, for the builder. */
+export type AssistantDetail_Deserialize = {
+	card: AssistantCard,
+	spec: AssistantSpec_Deserialize,
+	toml: string,
+};
+
+/**  The full definition, for the builder. */
+export type AssistantDetail_Serialize = {
+	card: AssistantCard,
+	spec: AssistantSpec_Serialize,
+	toml: string,
+};
+
 /**  An assistant's kebab-case id (user-chosen, not a UUID); `new()` still yields a UUID. */
 export type AssistantId = string;
+
+/**  One assistant. */
+export type AssistantSpec = AssistantSpec_Serialize | AssistantSpec_Deserialize;
+
+/**  One assistant. */
+export type AssistantSpec_Deserialize = {
+	schema_version: number,
+	id: string,
+	name: string,
+	icon: string,
+	color: string,
+	category: string,
+	tagline: string,
+	description?: string,
+	version?: string | null,
+	model?: ModelParams,
+	context?: ContextSpec,
+	permissions?: PermissionsSpec,
+	workflow: WorkflowSpec_Deserialize,
+	tools?: ToolsSpec,
+	ui?: UiSpec_Deserialize,
+	prompt: PromptSpec,
+};
+
+/**  One assistant. */
+export type AssistantSpec_Serialize = {
+	schema_version: number,
+	id: string,
+	name: string,
+	icon: string,
+	color: string,
+	category: string,
+	tagline: string,
+	description: string,
+	version?: string | null,
+	model: ModelParams,
+	context: ContextSpec,
+	permissions: PermissionsSpec,
+	workflow: WorkflowSpec_Serialize,
+	tools: ToolsSpec,
+	ui: UiSpec_Serialize,
+	prompt: PromptSpec,
+};
 
 /**  A stored attachment. `snapshot` is the text that was actually sent (truncated). */
 export type Attachment = {
@@ -83,6 +225,48 @@ export type AttachmentInput = {
 
 export type AttachmentKind = "file" | "folder" | "text" | "selection";
 
+/**  One row of the activity log. */
+export type AuditRecord = {
+	id: number,
+	/**  Unix milliseconds (UTC). */
+	ts: number,
+	/**  Assistant id, `"editor"`, or `"user"`. */
+	actor: string,
+	action: string,
+	path: string,
+	allowed: boolean,
+	detail: string | null,
+};
+
+export type ChangePreview = {
+	files: FilePreview[],
+	totals: Totals,
+	conflicts: Conflict[],
+	missing_grants: MissingGrant[],
+};
+
+/**  A journaled change set. */
+export type ChangeSetId = string;
+
+export type ChangeSetSummary = {
+	id: ChangeSetId,
+	title: string,
+	origin: string,
+	/**  `planned | applied | rolled_back | undone | discarded | failed` */
+	status: string,
+	created_at: number,
+	applied_at: number | null,
+	undone_at: number | null,
+	totals: Totals | null,
+	error: string | null,
+};
+
+/**  Global event `changeset:update`: a change set was planned, applied, undone, or discarded. */
+export type ChangeSetUpdate = {
+	id: ChangeSetId,
+	status: string,
+};
+
 /**  Streamed to the UI while a turn runs (a `Channel<ChatEvent>`). */
 export type ChatEvent = { type: "started"; assistant_message_id: MessageId } | 
 /**  "Reading ~/Downloads…" */
@@ -98,12 +282,40 @@ export type ChatSendArgs = {
 	attachments: AttachmentInput[],
 	/**  "Think harder" for this turn. */
 	think: boolean,
+	/**  Unsaved assistant TOML from the builder's test chat; used instead of `assistant_id` when set. */
+	draft_spec?: string | null,
 };
 
 export type ChatSendResult = {
 	conversation_id: ConversationId,
 	user_message_id: MessageId,
 	assistant_message_id: MessageId,
+};
+
+export type Conflict = {
+	op_index: number,
+	path: string,
+	kind: ConflictKind,
+	message: string,
+};
+
+export type ConflictKind = 
+/**  The file changed since the plan was made. */
+"hash_mismatch" | 
+/**  The file (or its parent) does not exist. */
+"missing" | 
+/**  The target already exists. */
+"exists" | 
+/**  A protected location. */
+"denied" | 
+/**  Malformed: overlapping edits, bad offsets, the same path twice, and so on. */
+"invalid";
+
+export type ContextSpec = {
+	/**  `text | file | folder | selection | none` */
+	attach?: string[],
+	max_attach_tokens?: number,
+	history_turns?: number,
 };
 
 export type Conversation = {
@@ -145,8 +357,85 @@ export type ConversationWithMessages = {
 	messages: Message[],
 };
 
+export type Decision = { decision: "deny" } | { decision: "allow_once" } | 
+/**  Persistent grant on the folder at this level. */
+{ decision: "allow_folder"; level: GrantLevel };
+
+export type DenyRuleView = {
+	root: string,
+	label: string,
+	/**  Built-in entries cannot be removed. */
+	builtin: boolean,
+};
+
+export type DirEntryInfo = {
+	name: string,
+	path: string,
+	is_dir: boolean,
+	size: number,
+	/**  Unix milliseconds. */
+	modified: number | null,
+};
+
 /**  Stable machine-readable error code (see DATA-AND-IPC §4). Serialized as snake_case. */
 export type ErrorCode = "runtime_unavailable" | "model_missing" | "permission_denied" | "os_permission_denied" | "path_denied" | "not_found" | "invalid_input" | "llm_invalid_output" | "context_overflow" | "cancelled" | "conflict" | "checksum_mismatch" | "insufficient_disk" | "network" | "busy" | "port_in_use" | "unauthorized" | "forbidden_remote" | "internal";
+
+/**  One problem found in an assistant file, tied to the field it concerns. */
+export type FieldError = {
+	/**  JSON-pointer-like path (`/model/temperature`); empty for the whole file. */
+	path: string,
+	message: string,
+};
+
+/**  What the Preview shows for one operation. */
+export type FilePreview = {
+	op_index: number,
+	kind: string,
+	path: string,
+	/**  Destination of a move. */
+	to: string | null,
+	needs: Access,
+	size_before: number | null,
+	size_after: number | null,
+	insertions: number,
+	deletions: number,
+	/**  Unified diff (3 lines of context) for text edits, writes, and creates. */
+	diff: string | null,
+	/**  Binary content: no diff, sizes only. */
+	binary: boolean,
+};
+
+export type FileStat = {
+	path: string,
+	is_dir: boolean,
+	is_symlink: boolean,
+	size: number,
+	modified: number | null,
+};
+
+/**  A folder (or single file) the app may use. */
+export type Grant = {
+	id: GrantId,
+	/**  Canonical, absolute path (no trailing separator). */
+	root: string,
+	level: GrantLevel,
+	/**  `false`: only direct children (and the root itself) match. */
+	recursive: boolean,
+	scope: GrantScope,
+	/**  Unix milliseconds (UTC); `None` = never. */
+	expires_at: number | null,
+	label: string | null,
+	created_at: number,
+};
+
+/**  A filesystem permission grant. */
+export type GrantId = string;
+
+/**  What a grant allows. `Full` = read, write, create, move, and trash. */
+export type GrantLevel = "read" | "read_write" | "full";
+
+/**  Persistent grants live in the database; session grants vanish when the app quits. */
+export type GrantScope = "persistent" | "session";
 
 /**  Error sent to the frontend. `detail` holds the debug chain (shown only under "Details"). */
 export type IpcError = {
@@ -183,6 +472,27 @@ export type MessageRole = "system" | "user" | "assistant" | "tool" | "event";
 
 export type MessageStatus = "streaming" | "done" | "stopped" | "error";
 
+/**  Access the plan needs but no grant gives. The UI asks for permission before Apply is enabled. */
+export type MissingGrant = {
+	op_index: number,
+	path: string,
+	needed: Access,
+};
+
+/**
+ *  Sampling for the final (streamed) answer. Values are relative intents; the effective temperature
+ *  is also capped by the model's recommendation.
+ */
+export type ModelParams = {
+	thinking?: boolean,
+	temperature?: number | null,
+	top_p?: number | null,
+	min_p?: number | null,
+	top_k?: number,
+	repeat_penalty?: number | null,
+	max_tokens?: number,
+};
+
 /**  A click action attached to a notification. */
 export type NotificationAction = {
 	label: string,
@@ -210,6 +520,42 @@ export type NotificationPayload = {
 	read: boolean,
 	/**  Unix milliseconds (UTC). */
 	created_at: number,
+};
+
+/**  One protected macOS folder and whether the OS lets us in. */
+export type OsFolderStatus = {
+	path: string,
+	/**  `granted`, `denied`, `missing`, or `other`. */
+	state: string,
+};
+
+export type OsPermissionsStatus = {
+	/**  `macos`, `windows`, or `linux`. */
+	platform: string,
+	folders: OsFolderStatus[],
+	/**  Full Disk Access (macOS only); `None` elsewhere. */
+	full_disk_access: string | null,
+};
+
+/**  Shown in the permission modal ("Folder Scout wants to read ~/Downloads"). */
+export type PermissionRequest = {
+	id: string,
+	assistant: string,
+	path: string,
+	needed: Access,
+	/**  Why ("to build a size and clutter report"). */
+	reason: string | null,
+	/**  Set when a paired LAN device asked. */
+	requested_by: string | null,
+};
+
+export type PermissionsSpec = {
+	/**  `read | write | create | move | trash` */
+	needs?: string[],
+};
+
+export type PromptSpec = {
+	system: string,
 };
 
 /**  State of the llama-server supervisor (published as `runtime:status`). */
@@ -246,7 +592,6 @@ export type Settings = {
 	"notifications.kinds"?: { [key in string]: boolean },
 	"journal.retention_days"?: number,
 	"journal.max_bytes"?: number,
-	/**  `None` = auto-detect. */
 	"models.extra_dirs"?: string[],
 	"share.enabled"?: boolean,
 	"share.autostart"?: boolean,
@@ -265,8 +610,100 @@ export type Settings = {
 /**  What a paired LAN device may do. */
 export type SharePolicy = "chat_only" | "chat_read" | "full";
 
+/**  Where an assistant came from. */
+export type Source = "builtin" | "user";
+
+export type TextFile = {
+	path: string,
+	text: string,
+	truncated: boolean,
+	/**  blake3 of the *whole* file on disk (the base hash for edits). */
+	hash: string,
+};
+
 /**  UI colour theme. */
 export type Theme = "light" | "dark" | "system";
+
+/**  Prompt size state for the builder's meter: green <= 350, amber <= 450, red above. */
+export type TokenLevel = "green" | "amber" | "red";
+
+export type ToolsSpec = {
+	allowed?: string[],
+};
+
+export type Totals = {
+	files: number,
+	insertions: number,
+	deletions: number,
+	creates: number,
+	moves: number,
+	trashes: number,
+	bytes: number,
+};
+
+export type UiSpec = UiSpec_Serialize | UiSpec_Deserialize;
+
+export type UiSpec_Deserialize = {
+	starters?: string[],
+	placeholder?: string | null,
+	output?: string | null,
+};
+
+export type UiSpec_Serialize = {
+	starters?: string[],
+	placeholder?: string | null,
+	output?: string | null,
+};
+
+export type UndoChoice = "keep_current" | "restore_anyway";
+
+export type UndoConflictView = {
+	op_index: number,
+	path: string,
+	message: string,
+};
+
+export type UndoDecision = {
+	op_index: number,
+	choice: UndoChoice,
+};
+
+export type UndoOutcome = {
+	restored: number,
+	skipped: number,
+	conflicts: UndoConflictView[],
+	problems: string[],
+	/**  `undone` when finished; `applied` when conflicts or problems remain. */
+	status: string,
+};
+
+/**  Result of `assistant_validate`. */
+export type ValidationReport = {
+	ok: boolean,
+	errors: FieldError[],
+	/**  Estimated tokens of the system prompt (the runtime's tokenizer is used by the caller when up). */
+	prompt_tokens: number,
+	level: TokenLevel,
+	id: string | null,
+};
+
+export type WorkflowSpec = WorkflowSpec_Serialize | WorkflowSpec_Deserialize;
+
+export type WorkflowSpec_Deserialize = {
+	/**  `chat | router | pipeline` */
+	kind: string,
+	pipeline: string | null,
+	max_hops: number | null,
+	always_route: boolean | null,
+};
+
+export type WorkflowSpec_Serialize = {
+	/**  `chat | router | pipeline` */
+	kind: string,
+	pipeline?: string | null,
+	max_hops?: number | null,
+	always_route?: boolean | null,
+};
 
 /* Tauri Specta runtime */
 async function typedError<T, E>(result: Promise<T>): Promise<{ status: "ok"; data: T } | { status: "error"; error: E }> {

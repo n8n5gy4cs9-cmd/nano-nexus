@@ -94,8 +94,16 @@ pub struct EngineGatekeeper {
 }
 
 impl EngineGatekeeper {
-    pub fn new(engine: Arc<PermissionEngine>, actor: impl Into<String>, asker: Option<Arc<dyn PermissionAsker>>) -> Self {
-        Self { engine, actor: actor.into(), asker }
+    pub fn new(
+        engine: Arc<PermissionEngine>,
+        actor: impl Into<String>,
+        asker: Option<Arc<dyn PermissionAsker>>,
+    ) -> Self {
+        Self {
+            engine,
+            actor: actor.into(),
+            asker,
+        }
     }
 }
 
@@ -110,7 +118,10 @@ impl Gatekeeper for EngineGatekeeper {
             Err(FsError::NoGrant { path: p, .. }) => {
                 let shown = p.display().to_string();
                 let Some(asker) = &self.asker else {
-                    return Err(ToolError::NotGranted { path: shown, needed: access });
+                    return Err(ToolError::NotGranted {
+                        path: shown,
+                        needed: access,
+                    });
                 };
                 match asker.ask(&self.actor, &p, access, reason).await {
                     AskOutcome::Denied => Err(ToolError::Declined(shown)),
@@ -118,7 +129,10 @@ impl Gatekeeper for EngineGatekeeper {
                         .engine
                         .check(&self.actor, path, access)
                         .map(|c| c.into_path_buf())
-                        .map_err(|_| ToolError::NotGranted { path: shown, needed: access }),
+                        .map_err(|_| ToolError::NotGranted {
+                            path: shown,
+                            needed: access,
+                        }),
                 }
             }
         }
@@ -129,7 +143,11 @@ impl Gatekeeper for EngineGatekeeper {
     }
 
     fn granted_roots(&self) -> Vec<PathBuf> {
-        self.engine.grants().into_iter().map(|g| PathBuf::from(g.root)).collect()
+        self.engine
+            .grants()
+            .into_iter()
+            .map(|g| PathBuf::from(g.root))
+            .collect()
     }
 }
 
@@ -143,7 +161,11 @@ pub struct ToolCx {
 
 impl ToolCx {
     pub fn new(gate: Arc<dyn Gatekeeper>) -> Self {
-        Self { gate, reason: String::new(), budget_tokens: DEFAULT_TOOL_BUDGET }
+        Self {
+            gate,
+            reason: String::new(),
+            budget_tokens: DEFAULT_TOOL_BUDGET,
+        }
     }
 }
 
@@ -176,12 +198,16 @@ fn io_err(path: &Path, e: std::io::Error) -> ToolError {
     if e.kind() == std::io::ErrorKind::NotFound {
         ToolError::NotFound(path.display().to_string())
     } else {
-        ToolError::Io { path: path.display().to_string(), message: e.to_string() }
+        ToolError::Io {
+            path: path.display().to_string(),
+            message: e.to_string(),
+        }
     }
 }
 
 fn base(p: &Path) -> String {
-    p.file_name().map_or_else(|| p.display().to_string(), |n| n.to_string_lossy().into_owned())
+    p.file_name()
+        .map_or_else(|| p.display().to_string(), |n| n.to_string_lossy().into_owned())
 }
 
 /// Largest prefix of `text` within `tokens` (estimated), cut on a line boundary when possible.
@@ -203,11 +229,18 @@ fn is_binary(bytes: &[u8]) -> bool {
 }
 
 fn skip_dir(name: &str) -> bool {
-    name.starts_with('.') || matches!(name, "node_modules" | "target" | "__pycache__" | "venv" | "dist" | "build")
+    name.starts_with('.')
+        || matches!(
+            name,
+            "node_modules" | "target" | "__pycache__" | "venv" | "dist" | "build"
+        )
 }
 
 fn modified_ms(meta: &std::fs::Metadata) -> Option<i64> {
-    meta.modified().ok().and_then(|m| m.duration_since(UNIX_EPOCH).ok()).map(|d| d.as_millis() as i64)
+    meta.modified()
+        .ok()
+        .and_then(|m| m.duration_since(UNIX_EPOCH).ok())
+        .map(|d| d.as_millis() as i64)
 }
 
 // ---- read_file ----------------------------------------------------------------------------------
@@ -226,30 +259,54 @@ impl Tool for ReadFile {
         "read_file(path)"
     }
     fn required_access(&self, args: &ToolArgs) -> Vec<(PathBuf, Access)> {
-        arg_path(args).map(|p| vec![(p, Access::Read)]).unwrap_or_default()
+        arg_path(args)
+            .map(|p| vec![(p, Access::Read)])
+            .unwrap_or_default()
     }
     async fn run(&self, args: ToolArgs, cx: &ToolCx) -> Result<ToolOutput, ToolError> {
         let given = arg_path(&args)?;
-        let path = cx.gate.authorize(&given, Access::Read, &format!("to read {}", base(&given))).await?;
+        let path = cx
+            .gate
+            .authorize(&given, Access::Read, &format!("to read {}", base(&given)))
+            .await?;
         let meta = std::fs::metadata(&path).map_err(|e| io_err(&path, e))?;
         if !meta.is_file() {
-            return Err(ToolError::Invalid(format!("{} is a folder; use list_dir.", path.display())));
+            return Err(ToolError::Invalid(format!(
+                "{} is a folder; use list_dir.",
+                path.display()
+            )));
         }
         if meta.len() > MAX_FILE_BYTES {
-            return Err(ToolError::Invalid(format!("{} is larger than {} MB; use grep_text to search inside it.", base(&path), MAX_FILE_BYTES / 1024 / 1024)));
+            return Err(ToolError::Invalid(format!(
+                "{} is larger than {} MB; use grep_text to search inside it.",
+                base(&path),
+                MAX_FILE_BYTES / 1024 / 1024
+            )));
         }
         let bytes = std::fs::read(&path).map_err(|e| io_err(&path, e))?;
         if is_binary(&bytes) {
-            return Err(ToolError::Invalid(format!("{} is a binary file, not text.", base(&path))));
+            return Err(ToolError::Invalid(format!(
+                "{} is a binary file, not text.",
+                base(&path)
+            )));
         }
         let text = String::from_utf8_lossy(&bytes);
         let total_lines = text.lines().count();
         let (body, truncated) = truncate_to_tokens(&text, cx.budget_tokens);
         let shown_lines = body.lines().count();
-        let note = if truncated { format!("\n[truncated: {} more lines]", total_lines.saturating_sub(shown_lines)) } else { String::new() };
+        let note = if truncated {
+            format!(
+                "\n[truncated: {} more lines]",
+                total_lines.saturating_sub(shown_lines)
+            )
+        } else {
+            String::new()
+        };
         Ok(ToolOutput {
             llm_text: format!("<file path=\"{}\">\n{body}{note}\n</file>", path.display()),
-            ui: Some(serde_json::json!({"path": path.display().to_string(), "lines": total_lines, "truncated": truncated})),
+            ui: Some(
+                serde_json::json!({"path": path.display().to_string(), "lines": total_lines, "truncated": truncated}),
+            ),
             summary: format!("Read {}", base(&path)),
         })
     }
@@ -271,23 +328,39 @@ impl Tool for ListDir {
         "list_dir(path)"
     }
     fn required_access(&self, args: &ToolArgs) -> Vec<(PathBuf, Access)> {
-        arg_path(args).map(|p| vec![(p, Access::Read)]).unwrap_or_default()
+        arg_path(args)
+            .map(|p| vec![(p, Access::Read)])
+            .unwrap_or_default()
     }
     async fn run(&self, args: ToolArgs, cx: &ToolCx) -> Result<ToolOutput, ToolError> {
         let given = arg_path(&args)?;
-        let path = cx.gate.authorize(&given, Access::Read, &format!("to list {}", base(&given))).await?;
+        let path = cx
+            .gate
+            .authorize(&given, Access::Read, &format!("to list {}", base(&given)))
+            .await?;
         let mut entries: Vec<(bool, String, u64)> = Vec::new();
         for e in std::fs::read_dir(&path).map_err(|e| io_err(&path, e))? {
             let Ok(e) = e else { continue };
             let Ok(meta) = e.metadata() else { continue };
-            entries.push((meta.is_dir(), e.file_name().to_string_lossy().into_owned(), if meta.is_dir() { 0 } else { meta.len() }));
+            entries.push((
+                meta.is_dir(),
+                e.file_name().to_string_lossy().into_owned(),
+                if meta.is_dir() { 0 } else { meta.len() },
+            ));
         }
-        entries.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.to_lowercase().cmp(&b.1.to_lowercase())));
+        entries.sort_by(|a, b| {
+            b.0.cmp(&a.0)
+                .then_with(|| a.1.to_lowercase().cmp(&b.1.to_lowercase()))
+        });
         let total = entries.len();
         let mut out = String::new();
         let mut shown = 0usize;
         for (is_dir, name, size) in &entries {
-            let line = if *is_dir { format!("{name}/\n") } else { format!("{name} ({})\n", human_size(*size)) };
+            let line = if *is_dir {
+                format!("{name}/\n")
+            } else {
+                format!("{name} ({})\n", human_size(*size))
+            };
             if estimate_tokens(&out) + estimate_tokens(&line) > cx.budget_tokens {
                 break;
             }
@@ -301,7 +374,10 @@ impl Tool for ListDir {
             out.push_str("(empty folder)\n");
         }
         Ok(ToolOutput {
-            llm_text: format!("<tool_result name=\"list_dir\" path=\"{}\">\n{out}</tool_result>", path.display()),
+            llm_text: format!(
+                "<tool_result name=\"list_dir\" path=\"{}\">\n{out}</tool_result>",
+                path.display()
+            ),
             ui: Some(serde_json::json!({"path": path.display().to_string(), "items": total})),
             summary: format!("Listed {} ({total} items)", base(&path)),
         })
@@ -316,7 +392,11 @@ fn human_size(b: u64) -> String {
         v /= 1024.0;
         i += 1;
     }
-    if i == 0 { format!("{b} B") } else { format!("{v:.1} {}", U[i]) }
+    if i == 0 {
+        format!("{b} B")
+    } else {
+        format!("{v:.1} {}", U[i])
+    }
 }
 
 // ---- search_files -------------------------------------------------------------------------------
@@ -340,7 +420,9 @@ fn name_matches(name: &str, pattern: &str) -> bool {
             _ => return false,
         }
     }
-    !(parts.last().is_some_and(|l| !l.is_empty()) && !rest.is_empty() && !name.ends_with(parts.last().copied().unwrap_or("")))
+    !(parts.last().is_some_and(|l| !l.is_empty())
+        && !rest.is_empty()
+        && !name.ends_with(parts.last().copied().unwrap_or("")))
 }
 
 /// Walk `root` (not following symlinks), skipping hidden/build folders and anything the gate refuses.
@@ -386,16 +468,27 @@ impl Tool for SearchFiles {
         "search_files(path, query)"
     }
     fn required_access(&self, args: &ToolArgs) -> Vec<(PathBuf, Access)> {
-        arg_path(args).map(|p| vec![(p, Access::Read)]).unwrap_or_default()
+        arg_path(args)
+            .map(|p| vec![(p, Access::Read)])
+            .unwrap_or_default()
     }
     async fn run(&self, args: ToolArgs, cx: &ToolCx) -> Result<ToolOutput, ToolError> {
         let given = arg_path(&args)?;
         let query = arg_str(&args, "query")?.to_owned();
-        let root = cx.gate.authorize(&given, Access::Read, &format!("to search {}", base(&given))).await?;
+        let root = cx
+            .gate
+            .authorize(&given, Access::Read, &format!("to search {}", base(&given)))
+            .await?;
         let gate = cx.gate.clone();
         let (r, q) = (root.clone(), query.clone());
         let hits: Vec<PathBuf> = tokio::task::spawn_blocking(move || {
-            walk_files(gate.as_ref(), &r, 8).into_iter().filter(|p| p.file_name().is_some_and(|n| name_matches(&n.to_string_lossy(), &q))).collect()
+            walk_files(gate.as_ref(), &r, 8)
+                .into_iter()
+                .filter(|p| {
+                    p.file_name()
+                        .is_some_and(|n| name_matches(&n.to_string_lossy(), &q))
+                })
+                .collect()
         })
         .await
         .map_err(|e| ToolError::Invalid(e.to_string()))?;
@@ -418,9 +511,17 @@ impl Tool for SearchFiles {
             out.push_str("(no matching files)\n");
         }
         Ok(ToolOutput {
-            llm_text: format!("<tool_result name=\"search_files\" path=\"{}\" query=\"{query}\">\n{out}</tool_result>", root.display()),
-            ui: Some(serde_json::json!({"path": root.display().to_string(), "query": query, "matches": total})),
-            summary: format!("Found {total} file{} matching “{query}”", if total == 1 { "" } else { "s" }),
+            llm_text: format!(
+                "<tool_result name=\"search_files\" path=\"{}\" query=\"{query}\">\n{out}</tool_result>",
+                root.display()
+            ),
+            ui: Some(
+                serde_json::json!({"path": root.display().to_string(), "query": query, "matches": total}),
+            ),
+            summary: format!(
+                "Found {total} file{} matching “{query}”",
+                if total == 1 { "" } else { "s" }
+            ),
         })
     }
 }
@@ -443,16 +544,29 @@ impl Tool for GrepText {
         "grep_text(path, query)"
     }
     fn required_access(&self, args: &ToolArgs) -> Vec<(PathBuf, Access)> {
-        arg_path(args).map(|p| vec![(p, Access::Read)]).unwrap_or_default()
+        arg_path(args)
+            .map(|p| vec![(p, Access::Read)])
+            .unwrap_or_default()
     }
     async fn run(&self, args: ToolArgs, cx: &ToolCx) -> Result<ToolOutput, ToolError> {
         let given = arg_path(&args)?;
         let query = arg_str(&args, "query")?.to_owned();
-        let root = cx.gate.authorize(&given, Access::Read, &format!("to search inside {}", base(&given))).await?;
+        let root = cx
+            .gate
+            .authorize(
+                &given,
+                Access::Read,
+                &format!("to search inside {}", base(&given)),
+            )
+            .await?;
         let gate = cx.gate.clone();
         let (r, q) = (root.clone(), query.to_lowercase());
         let (matches, files_scanned) = tokio::task::spawn_blocking(move || {
-            let files = if r.is_file() { vec![r.clone()] } else { walk_files(gate.as_ref(), &r, 8) };
+            let files = if r.is_file() {
+                vec![r.clone()]
+            } else {
+                walk_files(gate.as_ref(), &r, 8)
+            };
             let mut found: Vec<(PathBuf, usize, String)> = Vec::new();
             let mut scanned = 0usize;
             for f in files {
@@ -495,15 +609,26 @@ impl Tool for GrepText {
             shown += 1;
         }
         if capped || shown < total {
-            out.push_str(&format!("[truncated: showing {shown} matches; narrow the query for more]\n"));
+            out.push_str(&format!(
+                "[truncated: showing {shown} matches; narrow the query for more]\n"
+            ));
         }
         if total == 0 {
             out.push_str("(no matches)\n");
         }
         Ok(ToolOutput {
-            llm_text: format!("<tool_result name=\"grep_text\" path=\"{}\" query=\"{query}\">\n{out}</tool_result>", root.display()),
-            ui: Some(serde_json::json!({"path": root.display().to_string(), "query": query, "matches": total, "files_scanned": files_scanned})),
-            summary: format!("Found {}{total} match{} for “{query}”", if capped { "over " } else { "" }, if total == 1 { "" } else { "es" }),
+            llm_text: format!(
+                "<tool_result name=\"grep_text\" path=\"{}\" query=\"{query}\">\n{out}</tool_result>",
+                root.display()
+            ),
+            ui: Some(
+                serde_json::json!({"path": root.display().to_string(), "query": query, "matches": total, "files_scanned": files_scanned}),
+            ),
+            summary: format!(
+                "Found {}{total} match{} for “{query}”",
+                if capped { "over " } else { "" },
+                if total == 1 { "" } else { "es" }
+            ),
         })
     }
 }
@@ -524,15 +649,31 @@ impl Tool for FileInfo {
         "file_info(path)"
     }
     fn required_access(&self, args: &ToolArgs) -> Vec<(PathBuf, Access)> {
-        arg_path(args).map(|p| vec![(p, Access::Read)]).unwrap_or_default()
+        arg_path(args)
+            .map(|p| vec![(p, Access::Read)])
+            .unwrap_or_default()
     }
     async fn run(&self, args: ToolArgs, cx: &ToolCx) -> Result<ToolOutput, ToolError> {
         let given = arg_path(&args)?;
-        let path = cx.gate.authorize(&given, Access::Read, &format!("to inspect {}", base(&given))).await?;
+        let path = cx
+            .gate
+            .authorize(&given, Access::Read, &format!("to inspect {}", base(&given)))
+            .await?;
         let meta = std::fs::symlink_metadata(&path).map_err(|e| io_err(&path, e))?;
-        let kind = if meta.is_dir() { "folder" } else if meta.file_type().is_symlink() { "symlink" } else { "file" };
-        let ext = path.extension().map(|e| e.to_string_lossy().into_owned()).unwrap_or_default();
-        let modified = modified_ms(&meta).map(format_ms).unwrap_or_else(|| "unknown".into());
+        let kind = if meta.is_dir() {
+            "folder"
+        } else if meta.file_type().is_symlink() {
+            "symlink"
+        } else {
+            "file"
+        };
+        let ext = path
+            .extension()
+            .map(|e| e.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        let modified = modified_ms(&meta)
+            .map(format_ms)
+            .unwrap_or_else(|| "unknown".into());
         let text = format!(
             "<tool_result name=\"file_info\">\nname: {}\npath: {}\nkind: {kind}\nsize: {} ({} bytes)\nextension: {}\nmodified: {modified}\n</tool_result>",
             base(&path),
@@ -543,7 +684,9 @@ impl Tool for FileInfo {
         );
         Ok(ToolOutput {
             llm_text: text,
-            ui: Some(serde_json::json!({"path": path.display().to_string(), "kind": kind, "size": meta.len()})),
+            ui: Some(
+                serde_json::json!({"path": path.display().to_string(), "kind": kind, "size": meta.len()}),
+            ),
             summary: format!("Checked {}", base(&path)),
         })
     }
@@ -552,7 +695,14 @@ impl Tool for FileInfo {
 /// `YYYY-MM-DD HH:MM UTC` from Unix milliseconds.
 pub fn format_ms(ms: i64) -> String {
     match time::OffsetDateTime::from_unix_timestamp(ms.div_euclid(1000)) {
-        Ok(t) => format!("{:04}-{:02}-{:02} {:02}:{:02} UTC", t.year(), u8::from(t.month()), t.day(), t.hour(), t.minute()),
+        Ok(t) => format!(
+            "{:04}-{:02}-{:02} {:02}:{:02} UTC",
+            t.year(),
+            u8::from(t.month()),
+            t.day(),
+            t.hour(),
+            t.minute()
+        ),
         Err(_) => "unknown".into(),
     }
 }
@@ -636,17 +786,26 @@ pub fn evaluate(expr: &str) -> Result<f64, String> {
                 }
                 Some(c) if c.is_ascii_digit() || c == b'.' => {
                     let start = self.i;
-                    while self.s.get(self.i).is_some_and(|c| c.is_ascii_digit() || *c == b'.') {
+                    while self
+                        .s
+                        .get(self.i)
+                        .is_some_and(|c| c.is_ascii_digit() || *c == b'.')
+                    {
                         self.i += 1;
                     }
-                    std::str::from_utf8(&self.s[start..self.i]).map_err(|e| e.to_string())?.parse::<f64>().map_err(|_| "bad number".to_string())
+                    std::str::from_utf8(&self.s[start..self.i])
+                        .map_err(|e| e.to_string())?
+                        .parse::<f64>()
+                        .map_err(|_| "bad number".to_string())
                 }
                 Some(c) if c.is_ascii_alphabetic() => {
                     let start = self.i;
                     while self.s.get(self.i).is_some_and(u8::is_ascii_alphabetic) {
                         self.i += 1;
                     }
-                    let name = std::str::from_utf8(&self.s[start..self.i]).map_err(|e| e.to_string())?.to_owned();
+                    let name = std::str::from_utf8(&self.s[start..self.i])
+                        .map_err(|e| e.to_string())?
+                        .to_owned();
                     if self.peek() != Some(b'(') {
                         return Err(format!("unknown name `{name}`"));
                     }
@@ -671,16 +830,27 @@ pub fn evaluate(expr: &str) -> Result<f64, String> {
     if expr.len() > 200 {
         return Err("expression too long".into());
     }
-    let mut p = P { s: expr.as_bytes(), i: 0 };
+    let mut p = P {
+        s: expr.as_bytes(),
+        i: 0,
+    };
     let v = p.expr()?;
     if p.peek().is_some() {
         return Err("unexpected trailing characters".into());
     }
-    if v.is_finite() { Ok(v) } else { Err("result is not a finite number".into()) }
+    if v.is_finite() {
+        Ok(v)
+    } else {
+        Err("result is not a finite number".into())
+    }
 }
 
 fn fmt_num(v: f64) -> String {
-    if v.fract() == 0.0 && v.abs() < 1e15 { format!("{v:.0}") } else { format!("{v}") }
+    if v.fract() == 0.0 && v.abs() < 1e15 {
+        format!("{v:.0}")
+    } else {
+        format!("{v}")
+    }
 }
 
 #[async_trait]
@@ -701,7 +871,10 @@ impl Tool for Calculate {
         let expr = arg_str(&args, "expression")?;
         let v = evaluate(expr).map_err(|e| ToolError::Invalid(format!("Cannot calculate `{expr}`: {e}.")))?;
         Ok(ToolOutput {
-            llm_text: format!("<tool_result name=\"calculate\">\n{expr} = {}\n</tool_result>", fmt_num(v)),
+            llm_text: format!(
+                "<tool_result name=\"calculate\">\n{expr} = {}\n</tool_result>",
+                fmt_num(v)
+            ),
             ui: Some(serde_json::json!({"expression": expr, "result": v})),
             summary: format!("{expr} = {}", fmt_num(v)),
         })
@@ -728,7 +901,11 @@ impl Tool for Now {
     }
     async fn run(&self, _args: ToolArgs, _cx: &ToolCx) -> Result<ToolOutput, ToolError> {
         let t = format_ms(time::OffsetDateTime::now_utc().unix_timestamp() * 1000);
-        Ok(ToolOutput { llm_text: format!("<tool_result name=\"now\">\n{t}\n</tool_result>"), ui: None, summary: "Checked the time".into() })
+        Ok(ToolOutput {
+            llm_text: format!("<tool_result name=\"now\">\n{t}\n</tool_result>"),
+            ui: None,
+            summary: "Checked the time".into(),
+        })
     }
 }
 
@@ -749,7 +926,9 @@ impl Tool for ScanFolder {
         "scan_folder(path)"
     }
     fn required_access(&self, args: &ToolArgs) -> Vec<(PathBuf, Access)> {
-        arg_path(args).map(|p| vec![(p, Access::Read)]).unwrap_or_default()
+        arg_path(args)
+            .map(|p| vec![(p, Access::Read)])
+            .unwrap_or_default()
     }
     async fn run(&self, _args: ToolArgs, _cx: &ToolCx) -> Result<ToolOutput, ToolError> {
         Err(ToolError::Unavailable("scan_folder"))
@@ -827,11 +1006,22 @@ mod tests {
     }
 
     fn engine() -> Arc<PermissionEngine> {
-        Arc::new(PermissionEngine::new(DenyList::default(), Arc::new(MemoryAudit::default())))
+        Arc::new(PermissionEngine::new(
+            DenyList::default(),
+            Arc::new(MemoryAudit::default()),
+        ))
     }
 
     fn grant(e: &PermissionEngine, root: &Path, recursive: bool) {
-        e.add_grant(NewGrant { root: root.to_owned(), level: GrantLevel::Read, recursive, scope: GrantScope::Session, expires_at: None, label: None }).unwrap();
+        e.add_grant(NewGrant {
+            root: root.to_owned(),
+            level: GrantLevel::Read,
+            recursive,
+            scope: GrantScope::Session,
+            expires_at: None,
+            label: None,
+        })
+        .unwrap();
     }
 
     fn cx(e: Arc<PermissionEngine>) -> ToolCx {
@@ -839,7 +1029,10 @@ mod tests {
     }
 
     fn args(pairs: &[(&str, &str)]) -> ToolArgs {
-        pairs.iter().map(|(k, v)| ((*k).to_owned(), Value::String((*v).to_owned()))).collect()
+        pairs
+            .iter()
+            .map(|(k, v)| ((*k).to_owned(), Value::String((*v).to_owned())))
+            .collect()
     }
 
     fn fixture() -> tempfile::TempDir {
@@ -858,7 +1051,13 @@ mod tests {
         let d = fixture();
         let e = engine();
         grant(&e, d.path(), true);
-        let out = ReadFile.run(args(&[("path", d.path().join("notes.md").to_str().unwrap())]), &cx(e)).await.unwrap();
+        let out = ReadFile
+            .run(
+                args(&[("path", d.path().join("notes.md").to_str().unwrap())]),
+                &cx(e),
+            )
+            .await
+            .unwrap();
         assert!(out.llm_text.starts_with("<file path="));
         assert!(out.llm_text.contains("buy milk"));
         assert_eq!(out.summary, "Read notes.md");
@@ -867,11 +1066,19 @@ mod tests {
     #[tokio::test]
     async fn read_file_truncates_to_the_budget() {
         let d = fixture();
-        let big = (0..2000).map(|i| format!("line number {i}\n")).collect::<String>();
+        let big = (0..2000)
+            .map(|i| format!("line number {i}\n"))
+            .collect::<String>();
         std::fs::write(d.path().join("big.txt"), big).unwrap();
         let e = engine();
         grant(&e, d.path(), true);
-        let out = ReadFile.run(args(&[("path", d.path().join("big.txt").to_str().unwrap())]), &cx(e)).await.unwrap();
+        let out = ReadFile
+            .run(
+                args(&[("path", d.path().join("big.txt").to_str().unwrap())]),
+                &cx(e),
+            )
+            .await
+            .unwrap();
         assert!(out.llm_text.contains("[truncated:"));
         assert!(estimate_tokens(&out.llm_text) < DEFAULT_TOOL_BUDGET + 60);
     }
@@ -881,9 +1088,21 @@ mod tests {
         let d = fixture();
         let e = engine();
         grant(&e, d.path(), true);
-        let err = ReadFile.run(args(&[("path", d.path().join("sub/report.pdf").to_str().unwrap())]), &cx(e.clone())).await.unwrap_err();
+        let err = ReadFile
+            .run(
+                args(&[("path", d.path().join("sub/report.pdf").to_str().unwrap())]),
+                &cx(e.clone()),
+            )
+            .await
+            .unwrap_err();
         assert!(err.for_model().contains("binary"));
-        let err = ReadFile.run(args(&[("path", d.path().join("nope.txt").to_str().unwrap())]), &cx(e)).await.unwrap_err();
+        let err = ReadFile
+            .run(
+                args(&[("path", d.path().join("nope.txt").to_str().unwrap())]),
+                &cx(e),
+            )
+            .await
+            .unwrap_err();
         assert!(matches!(err, ToolError::NotFound(_)));
     }
 
@@ -892,7 +1111,10 @@ mod tests {
         let d = fixture();
         let e = engine();
         grant(&e, d.path(), true);
-        let out = ListDir.run(args(&[("path", d.path().to_str().unwrap())]), &cx(e)).await.unwrap();
+        let out = ListDir
+            .run(args(&[("path", d.path().to_str().unwrap())]), &cx(e))
+            .await
+            .unwrap();
         let body = &out.llm_text;
         assert!(body.find("sub/").unwrap() < body.find("notes.md").unwrap());
         assert!(out.summary.contains("(3 items)"), "{}", out.summary);
@@ -908,8 +1130,15 @@ mod tests {
         grant(&e, d.path(), true);
         let mut c = cx(e);
         c.budget_tokens = 200;
-        let out = ListDir.run(args(&[("path", d.path().to_str().unwrap())]), &c).await.unwrap();
-        assert!(out.llm_text.contains("[truncated:") && out.llm_text.contains("more entries]"), "{}", out.llm_text);
+        let out = ListDir
+            .run(args(&[("path", d.path().to_str().unwrap())]), &c)
+            .await
+            .unwrap();
+        assert!(
+            out.llm_text.contains("[truncated:") && out.llm_text.contains("more entries]"),
+            "{}",
+            out.llm_text
+        );
     }
 
     #[tokio::test]
@@ -917,9 +1146,21 @@ mod tests {
         let d = fixture();
         let e = engine();
         grant(&e, d.path(), true);
-        let out = SearchFiles.run(args(&[("path", d.path().to_str().unwrap()), ("query", "*.txt")]), &cx(e.clone())).await.unwrap();
+        let out = SearchFiles
+            .run(
+                args(&[("path", d.path().to_str().unwrap()), ("query", "*.txt")]),
+                &cx(e.clone()),
+            )
+            .await
+            .unwrap();
         assert!(out.llm_text.contains("todo.txt") && !out.llm_text.contains("skip.txt"));
-        let out = SearchFiles.run(args(&[("path", d.path().to_str().unwrap()), ("query", "REPORT")]), &cx(e)).await.unwrap();
+        let out = SearchFiles
+            .run(
+                args(&[("path", d.path().to_str().unwrap()), ("query", "REPORT")]),
+                &cx(e),
+            )
+            .await
+            .unwrap();
         assert!(out.llm_text.contains("report.pdf"));
     }
 
@@ -928,7 +1169,13 @@ mod tests {
         let d = fixture();
         let e = engine();
         grant(&e, d.path(), true);
-        let out = GrepText.run(args(&[("path", d.path().to_str().unwrap()), ("query", "milk")]), &cx(e)).await.unwrap();
+        let out = GrepText
+            .run(
+                args(&[("path", d.path().to_str().unwrap()), ("query", "milk")]),
+                &cx(e),
+            )
+            .await
+            .unwrap();
         assert!(out.llm_text.contains("notes.md:2: buy milk"), "{}", out.llm_text);
         assert!(out.llm_text.contains("todo.txt:1: milk again"));
         assert!(!out.llm_text.contains("skip.txt"));
@@ -939,8 +1186,18 @@ mod tests {
         let d = fixture();
         let e = engine();
         grant(&e, d.path(), false);
-        let out = GrepText.run(args(&[("path", d.path().to_str().unwrap()), ("query", "milk")]), &cx(e)).await.unwrap();
-        assert!(out.llm_text.contains("notes.md") && !out.llm_text.contains("todo.txt"), "{}", out.llm_text);
+        let out = GrepText
+            .run(
+                args(&[("path", d.path().to_str().unwrap()), ("query", "milk")]),
+                &cx(e),
+            )
+            .await
+            .unwrap();
+        assert!(
+            out.llm_text.contains("notes.md") && !out.llm_text.contains("todo.txt"),
+            "{}",
+            out.llm_text
+        );
     }
 
     #[tokio::test]
@@ -951,7 +1208,13 @@ mod tests {
             Arc::new(MemoryAudit::default()),
         ));
         grant(&e, d.path(), true);
-        let out = GrepText.run(args(&[("path", d.path().to_str().unwrap()), ("query", "milk")]), &cx(e)).await.unwrap();
+        let out = GrepText
+            .run(
+                args(&[("path", d.path().to_str().unwrap()), ("query", "milk")]),
+                &cx(e),
+            )
+            .await
+            .unwrap();
         assert!(!out.llm_text.contains("todo.txt"));
     }
 
@@ -960,7 +1223,13 @@ mod tests {
         let d = fixture();
         let e = engine();
         grant(&e, d.path(), true);
-        let out = FileInfo.run(args(&[("path", d.path().join("notes.md").to_str().unwrap())]), &cx(e)).await.unwrap();
+        let out = FileInfo
+            .run(
+                args(&[("path", d.path().join("notes.md").to_str().unwrap())]),
+                &cx(e),
+            )
+            .await
+            .unwrap();
         assert!(out.llm_text.contains("kind: file") && out.llm_text.contains("extension: md"));
     }
 
@@ -983,17 +1252,32 @@ mod tests {
     #[tokio::test]
     async fn calculate_and_now_need_no_files() {
         let c = cx(engine());
-        let out = Calculate.run(args(&[("expression", "1200 * 0.15")]), &c).await.unwrap();
+        let out = Calculate
+            .run(args(&[("expression", "1200 * 0.15")]), &c)
+            .await
+            .unwrap();
         assert!(out.llm_text.contains("= 180"));
-        assert!(Now.run(ToolArgs::new(), &c).await.unwrap().llm_text.contains("UTC"));
+        assert!(
+            Now.run(ToolArgs::new(), &c)
+                .await
+                .unwrap()
+                .llm_text
+                .contains("UTC")
+        );
         assert!(Calculate.required_access(&ToolArgs::new()).is_empty());
     }
 
     #[tokio::test]
     async fn stubs_say_they_are_unavailable() {
         let c = cx(engine());
-        assert!(matches!(ScanFolder.run(args(&[("path", "/x")]), &c).await, Err(ToolError::Unavailable(_))));
-        assert!(matches!(DocSearch.run(args(&[("query", "x")]), &c).await, Err(ToolError::Unavailable(_))));
+        assert!(matches!(
+            ScanFolder.run(args(&[("path", "/x")]), &c).await,
+            Err(ToolError::Unavailable(_))
+        ));
+        assert!(matches!(
+            DocSearch.run(args(&[("query", "x")]), &c).await,
+            Err(ToolError::Unavailable(_))
+        ));
     }
 
     #[test]
@@ -1007,7 +1291,10 @@ mod tests {
     #[tokio::test]
     async fn missing_grant_without_a_prompt_tells_the_model_to_ask() {
         let d = fixture();
-        let err = ListDir.run(args(&[("path", d.path().to_str().unwrap())]), &cx(engine())).await.unwrap_err();
+        let err = ListDir
+            .run(args(&[("path", d.path().to_str().unwrap())]), &cx(engine()))
+            .await
+            .unwrap_err();
         assert!(matches!(err, ToolError::NotGranted { .. }));
         assert!(err.for_model().contains("Ask the user to grant access"));
     }
@@ -1016,9 +1303,20 @@ mod tests {
     async fn allow_creates_the_grant_and_the_tool_proceeds() {
         let d = fixture();
         let e = engine();
-        let asker = Arc::new(Scripted { answer: AskOutcome::Allowed, engine: e.clone(), asked: Mutex::new(vec![]) });
-        let c = ToolCx::new(Arc::new(EngineGatekeeper::new(e, "folder-scout", Some(asker.clone()))));
-        let out = ListDir.run(args(&[("path", d.path().to_str().unwrap())]), &c).await.unwrap();
+        let asker = Arc::new(Scripted {
+            answer: AskOutcome::Allowed,
+            engine: e.clone(),
+            asked: Mutex::new(vec![]),
+        });
+        let c = ToolCx::new(Arc::new(EngineGatekeeper::new(
+            e,
+            "folder-scout",
+            Some(asker.clone()),
+        )));
+        let out = ListDir
+            .run(args(&[("path", d.path().to_str().unwrap())]), &c)
+            .await
+            .unwrap();
         assert!(out.llm_text.contains("notes.md"));
         assert_eq!(asker.asked.lock().unwrap().len(), 1);
     }
@@ -1027,9 +1325,16 @@ mod tests {
     async fn deny_is_reported_without_reading_anything() {
         let d = fixture();
         let e = engine();
-        let asker = Arc::new(Scripted { answer: AskOutcome::Denied, engine: e.clone(), asked: Mutex::new(vec![]) });
+        let asker = Arc::new(Scripted {
+            answer: AskOutcome::Denied,
+            engine: e.clone(),
+            asked: Mutex::new(vec![]),
+        });
         let c = ToolCx::new(Arc::new(EngineGatekeeper::new(e, "nexus", Some(asker))));
-        let err = ReadFile.run(args(&[("path", d.path().join("notes.md").to_str().unwrap())]), &c).await.unwrap_err();
+        let err = ReadFile
+            .run(args(&[("path", d.path().join("notes.md").to_str().unwrap())]), &c)
+            .await
+            .unwrap_err();
         assert!(matches!(err, ToolError::Declined(_)));
         assert!(err.for_model().contains("declined"));
     }
@@ -1041,9 +1346,16 @@ mod tests {
             DenyList::new([nexus_fs::DenyRule::user(d.path().to_owned(), "private")]),
             Arc::new(MemoryAudit::default()),
         ));
-        let asker = Arc::new(Scripted { answer: AskOutcome::Allowed, engine: e.clone(), asked: Mutex::new(vec![]) });
+        let asker = Arc::new(Scripted {
+            answer: AskOutcome::Allowed,
+            engine: e.clone(),
+            asked: Mutex::new(vec![]),
+        });
         let c = ToolCx::new(Arc::new(EngineGatekeeper::new(e, "nexus", Some(asker.clone()))));
-        let err = ListDir.run(args(&[("path", d.path().to_str().unwrap())]), &c).await.unwrap_err();
+        let err = ListDir
+            .run(args(&[("path", d.path().to_str().unwrap())]), &c)
+            .await
+            .unwrap_err();
         assert!(matches!(err, ToolError::Protected(_)));
         assert!(asker.asked.lock().unwrap().is_empty());
     }

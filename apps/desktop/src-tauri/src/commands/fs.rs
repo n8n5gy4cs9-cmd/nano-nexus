@@ -106,7 +106,9 @@ pub async fn fs_pick_folder(app: AppHandle) -> CmdResult<Option<String>> {
     let picked = tauri::async_runtime::spawn_blocking(move || app.dialog().file().blocking_pick_folder())
         .await
         .map_err(|e| ipc(NexusError::Internal(e.to_string())))?;
-    Ok(picked.and_then(|p| p.into_path().ok()).map(|p| p.display().to_string()))
+    Ok(picked
+        .and_then(|p| p.into_path().ok())
+        .map(|p| p.display().to_string()))
 }
 
 // ---- permission-checked reads ---------------------------------------------------------------
@@ -167,7 +169,10 @@ pub async fn os_permissions_status(app: AppHandle) -> CmdResult<OsPermissionsSta
         let folders = if mac {
             os::tcc_folder_paths(&home)
                 .into_iter()
-                .map(|p| OsFolderStatus { state: state_name(os::probe_folder(&p, &home)).into(), path: p.display().to_string() })
+                .map(|p| OsFolderStatus {
+                    state: state_name(os::probe_folder(&p, &home)).into(),
+                    path: p.display().to_string(),
+                })
                 .collect()
         } else {
             Vec::new()
@@ -235,12 +240,18 @@ pub async fn changeset_apply(ctx: Ctx<'_>, id: String) -> CmdResult<ChangeSetSum
 
 #[tauri::command]
 #[specta::specta]
-pub async fn changeset_undo(ctx: Ctx<'_>, id: String, decisions: Vec<UndoDecision>) -> CmdResult<UndoOutcome> {
+pub async fn changeset_undo(
+    ctx: Ctx<'_>,
+    id: String,
+    decisions: Vec<UndoDecision>,
+) -> CmdResult<UndoOutcome> {
     let ctx = ctx.inner().clone();
-    tauri::async_runtime::spawn_blocking(move || service::fs::changeset_undo(&ctx, &Caller::Desktop, &id, decisions))
-        .await
-        .map_err(join_err)?
-        .map_err(ipc)
+    tauri::async_runtime::spawn_blocking(move || {
+        service::fs::changeset_undo(&ctx, &Caller::Desktop, &id, decisions)
+    })
+    .await
+    .map_err(join_err)?
+    .map_err(ipc)
 }
 
 #[tauri::command]

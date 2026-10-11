@@ -65,7 +65,10 @@ fn bridge_app_events(app: &tauri::AppHandle) {
                     }
                 }
                 state::AppEvent::PermissionRequest(req) => {
-                    let focused = app.get_webview_window("main").and_then(|w| w.is_focused().ok()).unwrap_or(false);
+                    let focused = app
+                        .get_webview_window("main")
+                        .and_then(|w| w.is_focused().ok())
+                        .unwrap_or(false);
                     if !focused {
                         let _ = notify::notify(
                             &app,
@@ -112,11 +115,18 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     // The writer task needs the async runtime, like the scheduler.
     let audit = tauri::async_runtime::block_on(async { audit::AuditWriter::start(store.clone()) });
     let perms = AppState::build_permissions(&store, &home, &paths.data, audit.clone());
-    let journal = Arc::new(nexus_fs::Journal::new(paths.journal.clone(), Arc::new(nexus_fs::SystemTrash)));
+    let journal = Arc::new(nexus_fs::Journal::new(
+        paths.journal.clone(),
+        Arc::new(nexus_fs::SystemTrash),
+    ));
     let recovered = journal.recover_interrupted();
     if !recovered.is_empty() {
-        tracing::warn!(count = recovered.len(), "rolled back change sets interrupted by a crash");
+        tracing::warn!(
+            count = recovered.len(),
+            "rolled back change sets interrupted by a crash"
+        );
     }
+    let registry = RwLock::new(service::assistants::load_registry(&store));
     app.manage(Ctx::new(AppState {
         paths,
         store,
@@ -126,6 +136,7 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         chats: Default::default(),
         perms,
         broker: Default::default(),
+        registry,
         journal,
         audit,
         summarizing: Default::default(),

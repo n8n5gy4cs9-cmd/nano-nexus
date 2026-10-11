@@ -16,6 +16,36 @@ use tokio::sync::oneshot;
 
 use crate::state::{AppCtx, AppEvent};
 
+/// Lets tools raise permission prompts through the broker (the user's answer already created any grant).
+pub struct BrokerAsker {
+    pub ctx: std::sync::Arc<AppCtx>,
+}
+
+#[async_trait::async_trait]
+impl nexus_agent::tools::PermissionAsker for BrokerAsker {
+    async fn ask(
+        &self,
+        assistant: &str,
+        path: &Path,
+        needed: Access,
+        reason: &str,
+    ) -> nexus_agent::tools::AskOutcome {
+        use nexus_agent::tools::AskOutcome;
+        let req = PermissionRequest {
+            id: nexus_core::ids::MessageId::new().0,
+            assistant: assistant.to_owned(),
+            path: path.display().to_string(),
+            needed,
+            reason: (!reason.is_empty()).then(|| reason.to_owned()),
+            requested_by: None,
+        };
+        match ask(&self.ctx, req).await {
+            Decision::Deny => AskOutcome::Denied,
+            Decision::AllowOnce | Decision::AllowFolder { .. } => AskOutcome::Allowed,
+        }
+    }
+}
+
 pub const REQUEST_TIMEOUT: Duration = Duration::from_secs(300);
 
 /// Shown in the permission modal ("Folder Scout wants to read ~/Downloads").
@@ -37,7 +67,9 @@ pub enum Decision {
     Deny,
     AllowOnce,
     /// Persistent grant on the folder at this level.
-    AllowFolder { level: GrantLevel },
+    AllowFolder {
+        level: GrantLevel,
+    },
 }
 
 struct Pending {
@@ -67,7 +99,10 @@ impl PermissionBroker {
 
     /// Prompts still waiting (for the UI to re-show after a reload).
     pub fn open_requests(&self) -> Vec<PermissionRequest> {
-        self.pending.lock().map(|m| m.values().map(|p| p.req.clone()).collect()).unwrap_or_default()
+        self.pending
+            .lock()
+            .map(|m| m.values().map(|p| p.req.clone()).collect())
+            .unwrap_or_default()
     }
 }
 
@@ -98,7 +133,9 @@ pub async fn ask(ctx: &AppCtx, req: PermissionRequest) -> Decision {
 /// The UI's answer. Creates the grant (if any) and wakes the waiting tool. `false` if the prompt was
 /// already answered or timed out.
 pub fn respond(ctx: &AppCtx, id: &str, decision: Decision) -> Result<bool, NexusError> {
-    let Some(p) = ctx.broker.take(id) else { return Ok(false) };
+    let Some(p) = ctx.broker.take(id) else {
+        return Ok(false);
+    };
     match decision {
         Decision::Deny => {}
         Decision::AllowOnce => {
@@ -115,7 +152,11 @@ pub fn respond(ctx: &AppCtx, id: &str, decision: Decision) -> Result<bool, Nexus
         }
         Decision::AllowFolder { level } => {
             let path = Path::new(&p.req.path);
-            let root = if path.is_dir() { path.to_owned() } else { path.parent().unwrap_or(path).to_owned() };
+            let root = if path.is_dir() {
+                path.to_owned()
+            } else {
+                path.parent().unwrap_or(path).to_owned()
+            };
             let grant = ctx.perms.add_grant(NewGrant {
                 root,
                 level: level.max(level_for(p.req.needed)),
@@ -137,7 +178,14 @@ mod tests {
     use crate::state::AppState;
 
     fn req(path: &Path, needed: Access) -> PermissionRequest {
-        PermissionRequest { id: "r1".into(), assistant: "folder-scout".into(), path: path.display().to_string(), needed, reason: None, requested_by: None }
+        PermissionRequest {
+            id: "r1".into(),
+            assistant: "folder-scout".into(),
+            path: path.display().to_string(),
+            needed,
+            reason: None,
+            requested_by: None,
+        }
     }
 
     #[tokio::test]
@@ -152,8 +200,22 @@ mod tests {
         let waiter = tokio::spawn(async move { ask(&c2, req(&t, Access::Read)).await });
         let ev = events.recv().await.unwrap();
         assert!(matches!(ev, AppEvent::PermissionRequest(r) if r.id == "r1"));
-        assert!(respond(&ctx, "r1", Decision::AllowFolder { level: GrantLevel::Read }).unwrap());
-        assert_eq!(waiter.await.unwrap(), Decision::AllowFolder { level: GrantLevel::Read });
+        assert!(
+            respond(
+                &ctx,
+                "r1",
+                Decision::AllowFolder {
+                    level: GrantLevel::Read
+                }
+            )
+            .unwrap()
+        );
+        assert_eq!(
+            waiter.await.unwrap(),
+            Decision::AllowFolder {
+                level: GrantLevel::Read
+            }
+        );
         assert!(ctx.perms.check("t", &target, Access::Read).is_ok());
         assert_eq!(ctx.store.list_grants().unwrap().len(), 1);
         assert!(!respond(&ctx, "r1", Decision::Deny).unwrap(), "already answered");
@@ -168,7 +230,12 @@ mod tests {
         let _rx = ctx.broker.open(req(&f, Access::Read));
         respond(&ctx, "r1", Decision::AllowOnce).unwrap();
         assert!(ctx.perms.check("t", &f, Access::Read).is_ok());
-        assert!(ctx.perms.check("t", &dir.path().join("other.txt"), Access::Read).is_err(), "only that file");
+        assert!(
+            ctx.perms
+                .check("t", &dir.path().join("other.txt"), Access::Read)
+                .is_err(),
+            "only that file"
+        );
         assert!(ctx.store.list_grants().unwrap().is_empty());
 
         let g = dir.path().join("secret.txt");

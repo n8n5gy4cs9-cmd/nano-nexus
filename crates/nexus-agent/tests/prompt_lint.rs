@@ -6,7 +6,11 @@ use nexus_agent::{PromptContext, estimate_tokens, render_system_prompt};
 const ICONS: &str = include_str!("../../../schemas/assistant-icons.txt");
 
 fn icons() -> Vec<&'static str> {
-    ICONS.lines().map(str::trim).filter(|l| !l.is_empty() && !l.starts_with('#')).collect()
+    ICONS
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty() && !l.starts_with('#'))
+        .collect()
 }
 
 #[test]
@@ -31,13 +35,21 @@ fn every_builtin_passes_prompt_lint() {
         }
         let tokens = estimate_tokens(&spec.prompt.system);
         if tokens > MAX_PROMPT_TOKENS {
-            failures.push(format!("{file}: system prompt is {tokens} tokens (max {MAX_PROMPT_TOKENS})"));
+            failures.push(format!(
+                "{file}: system prompt is {tokens} tokens (max {MAX_PROMPT_TOKENS})"
+            ));
         }
         if !(1..=4).contains(&spec.ui.starters.len()) {
-            failures.push(format!("{file}: needs 1-4 starters, has {}", spec.ui.starters.len()));
+            failures.push(format!(
+                "{file}: needs 1-4 starters, has {}",
+                spec.ui.starters.len()
+            ));
         }
         if !icons.contains(&spec.icon.as_str()) {
-            failures.push(format!("{file}: icon `{}` is not in schemas/assistant-icons.txt", spec.icon));
+            failures.push(format!(
+                "{file}: icon `{}` is not in schemas/assistant-icons.txt",
+                spec.icon
+            ));
         }
         if spec.workflow.kind == "pipeline" && spec.workflow.pipeline.is_none() {
             failures.push(format!("{file}: pipeline workflow without a pipeline id"));
@@ -48,7 +60,11 @@ fn every_builtin_passes_prompt_lint() {
             failures.push(format!("{file}: template variables do not resolve: {e}"));
         }
     }
-    assert!(failures.is_empty(), "prompt_lint failures:\n{}", failures.join("\n"));
+    assert!(
+        failures.is_empty(),
+        "prompt_lint failures:\n{}",
+        failures.join("\n")
+    );
 }
 
 #[test]

@@ -60,7 +60,10 @@ pub enum AppEvent {
     /// A tool needs a folder grant; the UI shows the permission modal.
     PermissionRequest(crate::service::permissions::PermissionRequest),
     /// A change set was planned, applied, undone, or discarded.
-    ChangeSetUpdated { id: nexus_core::ids::ChangeSetId, status: String },
+    ChangeSetUpdated {
+        id: nexus_core::ids::ChangeSetId,
+        status: String,
+    },
 }
 
 /// Everything services need. Later milestones add jobs, permissions, and the assistant registry.
@@ -75,6 +78,8 @@ pub struct AppState {
     /// Every file access is decided here (grants + deny list + audit).
     pub perms: Arc<PermissionEngine>,
     pub broker: crate::service::permissions::PermissionBroker,
+    /// Built-in and user assistants.
+    pub registry: RwLock<nexus_agent::registry::Registry>,
     /// The only writer of user files (apply / undo with backups).
     pub journal: Arc<nexus_fs::Journal>,
     /// Queues audit entries and writes them in batches.
@@ -149,8 +154,9 @@ impl AppState {
         let perms = Self::build_permissions(&store, &root.join("home"), &paths.data, audit.clone());
         let journal = Arc::new(nexus_fs::Journal::new(
             paths.journal.clone(),
-            Arc::new(nexus_fs::MoveToDirTrash(root.join("trash"))),
+            Arc::new(nexus_fs::MoveToDirTrash::new(root.join("trash"))),
         ));
+        let registry = RwLock::new(crate::service::assistants::load_registry(&store));
         Arc::new(AppState {
             paths,
             store,
@@ -160,6 +166,7 @@ impl AppState {
             chats: ChatJobs::default(),
             perms,
             broker: Default::default(),
+            registry,
             journal,
             audit,
             summarizing: Default::default(),
