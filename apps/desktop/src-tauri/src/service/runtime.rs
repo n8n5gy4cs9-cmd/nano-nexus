@@ -31,7 +31,20 @@ pub fn build_config(ctx: &AppCtx) -> Option<RuntimeConfig> {
         vendor_dir: cfg!(debug_assertions)
             .then(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../vendor")),
     };
-    let model = runtime_paths::resolve_model(&search)?;
+    // The developer override wins; then the model chosen in the Models page (or the bundle default, via
+    // the registry); then whatever the bundle manifest or the dev vendor folder offers.
+    let registered = search
+        .env_override
+        .is_none()
+        .then(|| super::models::active_model_id(ctx))
+        .flatten()
+        .and_then(|id| ctx.store.get_model(&id).ok().flatten())
+        .filter(|m| std::path::Path::new(&m.path).is_file())
+        .map(|m| runtime_paths::ModelChoice {
+            id: m.id,
+            path: PathBuf::from(m.path),
+        });
+    let model = registered.or_else(|| runtime_paths::resolve_model(&search))?;
     let mut cfg = RuntimeConfig::from_settings(
         &settings,
         runtime_paths::server_binary(&ctx.resource_dir, &ctx.exe_dir),

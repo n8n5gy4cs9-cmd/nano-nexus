@@ -53,7 +53,7 @@ impl ChatJobs {
 }
 
 /// App-internal events that the shell forwards to the webview.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug)]
 pub enum AppEvent {
     /// A conversation's title or summary changed.
     ConversationUpdated(ConversationId),
@@ -64,6 +64,12 @@ pub enum AppEvent {
         id: nexus_core::ids::ChangeSetId,
         status: String,
     },
+    /// Progress of a model download (also sent on every status change).
+    DownloadProgress(crate::service::models::DownloadView),
+    /// The active model changed (the runtime is restarting on it).
+    ModelChanged(String),
+    /// Show an in-app (and maybe OS) notification.
+    Notify(nexus_store::NewNotification),
 }
 
 /// Everything services need. Later milestones add jobs, permissions, and the assistant registry.
@@ -78,6 +84,10 @@ pub struct AppState {
     /// Every file access is decided here (grants + deny list + audit).
     pub perms: Arc<PermissionEngine>,
     pub broker: crate::service::permissions::PermissionBroker,
+    /// Hugging Face API client (endpoint and token come from the environment).
+    pub hf: Arc<nexus_models::hf::HfClient>,
+    /// One download at a time.
+    pub downloads: crate::service::models::DownloadManager,
     /// Built-in and user assistants.
     pub registry: RwLock<nexus_agent::registry::Registry>,
     /// The only writer of user files (apply / undo with backups).
@@ -144,6 +154,23 @@ impl AppState {
     /// Like [`AppState::for_tests`], with a scripted turn runner.
     #[cfg(test)]
     pub fn for_tests_with(root: &std::path::Path, engine: Option<Arc<dyn TurnRunner>>) -> Ctx {
+        Self::for_tests_full(root, engine, None)
+    }
+
+    /// Like [`AppState::for_tests_with`], with the Hugging Face API pointed at `hf_endpoint`.
+    #[cfg(test)]
+    pub fn for_tests_full(
+        root: &std::path::Path,
+        engine: Option<Arc<dyn TurnRunner>>,
+        hf_endpoint: Option<String>,
+    ) -> Ctx {
+        let hf_client = Arc::new(
+            nexus_models::hf::HfClient::new(
+                Some(hf_endpoint.unwrap_or_else(|| "http://127.0.0.1:1".into())),
+                None,
+            )
+            .expect("hf"),
+        );
         let paths = AppPaths::from_roots(root.join("data"), root.join("logs"));
         paths.ensure_dirs().expect("dirs");
         let store = Arc::new(Store::open(&paths.db_file()).expect("store"));
@@ -166,6 +193,8 @@ impl AppState {
             chats: ChatJobs::default(),
             perms,
             broker: Default::default(),
+            hf: hf_client,
+            downloads: Default::default(),
             registry,
             journal,
             audit,

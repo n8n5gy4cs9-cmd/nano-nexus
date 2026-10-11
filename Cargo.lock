@@ -2676,9 +2676,11 @@ dependencies = [
  "nexus-core",
  "nexus-fs",
  "nexus-llm",
+ "nexus-models",
  "nexus-store",
  "serde",
  "serde_json",
+ "sha2",
  "specta",
  "specta-typescript",
  "tauri",
@@ -2692,6 +2694,7 @@ dependencies = [
  "tokio-util",
  "toml 1.1.8+spec-1.1.0",
  "tracing",
+ "wiremock",
 ]
 
 [[package]]
@@ -2825,6 +2828,7 @@ dependencies = [
  "futures-util",
  "jsonschema",
  "nexus-core",
+ "nexus-store",
  "regex",
  "reqwest",
  "serde",

@@ -6,6 +6,7 @@ pub mod attachments;
 pub mod chat;
 pub mod conversations;
 pub mod fs;
+pub mod models;
 pub mod notifications;
 pub mod permissions;
 pub mod runtime;

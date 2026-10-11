@@ -10,6 +10,7 @@ workspace = true
 
 [dependencies]
 nexus-core = { path = "../nexus-core" }
+nexus-store = { path = "../nexus-store" }
 reqwest = { workspace = true, features = ["rustls"] }
 tokio.workspace = true
 tokio-util.workspace = true

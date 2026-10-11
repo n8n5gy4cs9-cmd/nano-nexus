@@ -7,6 +7,7 @@ pub mod assistants;
 pub mod chat;
 pub mod fs;
 mod migrate;
+pub mod models;
 pub mod notifications;
 pub mod settings;
 
@@ -20,6 +21,7 @@ pub use assistants::AssistantRow;
 pub use chat::{ConversationPatch, MessageFinish};
 pub use fs::{ChangeSetRow, NewAudit};
 pub use migrate::{MIGRATIONS, schema_version};
+pub use models::{DownloadRow, ModelRow};
 pub use notifications::NewNotification;
 
 /// Current time as unix milliseconds (UTC).

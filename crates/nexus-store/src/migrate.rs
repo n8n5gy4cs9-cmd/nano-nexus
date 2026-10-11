@@ -6,6 +6,10 @@ use crate::StoreError;
 pub const MIGRATIONS: &[(&str, &str)] = &[
     ("0001_init", include_str!("../migrations/0001_init.sql")),
     ("0002_fs", include_str!("../migrations/0002_fs.sql")),
+    (
+        "0003_models_jobs",
+        include_str!("../migrations/0003_models_jobs.sql"),
+    ),
 ];
 
 /// Current `PRAGMA user_version`.

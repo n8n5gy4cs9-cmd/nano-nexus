@@ -38,3 +38,19 @@ in a dialog now; the file save goes through a Journal "create file" op once M05 
 B) Allow a narrow exception: a command that writes one file to a path the user just chose in a native save dialog.
 Recommendation: A now, then B-via-Journal in M05 (the save dialog path becomes a granted single-file create).
 Answer (owner): _pending_
+
+## Q-4: Hugging Face token storage (2026-10-11, task T07.08)
+Context: MODEL-MANAGER §3 stores the HF token in the OS keychain via `keyring`. That crate pulls in
+platform secret-service/keychain bindings that this build has not vetted (and it is untestable in the Linux container).
+Options: A) Read the token from the `HF_TOKEN` environment variable only (never persisted by the app) and show a clear
+"set HF_TOKEN" message for gated repos. B) Add `keyring` and a Settings field.
+Recommendation: A now (gated repos are rare for GGUF); B as a follow-up once the Mac build can test it.
+Answer (owner): _pending_
+
+## Q-5: Split (multi-file) GGUF downloads (2026-10-11, task T07.08)
+Context: MODEL-MANAGER §3 says split models download all parts. The downloader handles one file per job and none of the
+catalog models are split.
+Options: A) Show split models in search but refuse to download them with a clear message (current). B) Queue each shard
+as its own download and register the model when the last one verifies.
+Recommendation: A until a split model is actually needed.
+Answer (owner): _pending_

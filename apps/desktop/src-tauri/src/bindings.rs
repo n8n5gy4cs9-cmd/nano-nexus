@@ -5,7 +5,8 @@ use specta_typescript::Typescript;
 use tauri_specta::{Builder, collect_commands, collect_events};
 
 use crate::commands::{
-    app, assistants, attachments, chat, conversations, fs, notifications, permissions, runtime, settings,
+    app, assistants, attachments, chat, conversations, fs, models, notifications, permissions, runtime,
+    settings,
 };
 
 /// All commands and events.
@@ -68,11 +69,30 @@ pub fn builder() -> Builder<tauri::Wry> {
             assistants::assistant_import,
             assistants::assistant_render_toml,
             assistants::assistant_draft,
+            models::models_list,
+            models::models_catalog,
+            models::models_memory,
+            models::models_search,
+            models::models_repo_files,
+            models::models_downloads,
+            models::models_download_catalog,
+            models::models_download_hf,
+            models::models_download_pause,
+            models::models_download_resume,
+            models::models_download_cancel,
+            models::models_activate,
+            models::models_delete,
+            models::models_pick_file,
+            models::models_import,
+            models::models_rescan,
+            models::models_verify_bundled,
         ])
         .events(collect_events![
             runtime::RuntimeStatus,
             crate::notify::NotificationNew,
-            fs::ChangeSetUpdate
+            fs::ChangeSetUpdate,
+            models::DownloadProgressEvent,
+            models::ModelChanged
         ])
         // Timestamps (ms) and byte counts stay far below 2^53, so numbers are exact.
         .dangerously_cast_bigints_to_number()

@@ -713,9 +713,8 @@ mod tests {
             .await
             .expect("title event")
             .unwrap();
-        assert_eq!(
-            event,
-            crate::state::AppEvent::ConversationUpdated(r.conversation_id.clone())
+        assert!(
+            matches!(&event, crate::state::AppEvent::ConversationUpdated(id) if *id == r.conversation_id)
         );
         // No model runs in tests, so the deterministic fallback names the chat.
         let conv = ctx.store.get_conversation(&r.conversation_id).unwrap().unwrap();

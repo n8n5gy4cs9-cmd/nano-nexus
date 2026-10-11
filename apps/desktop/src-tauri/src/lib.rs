@@ -64,6 +64,21 @@ fn bridge_app_events(app: &tauri::AppHandle) {
                         tracing::warn!("could not emit changeset:update: {e}");
                     }
                 }
+                state::AppEvent::DownloadProgress(v) => {
+                    if let Err(e) = commands::models::DownloadProgressEvent(v).emit(&app) {
+                        tracing::warn!("could not emit download:progress: {e}");
+                    }
+                }
+                state::AppEvent::ModelChanged(id) => {
+                    if let Err(e) = commands::models::ModelChanged(id).emit(&app) {
+                        tracing::warn!("could not emit model:changed: {e}");
+                    }
+                }
+                state::AppEvent::Notify(n) => {
+                    if let Err(e) = notify::notify(&app, n) {
+                        tracing::warn!("could not show a notification: {e}");
+                    }
+                }
                 state::AppEvent::PermissionRequest(req) => {
                     let focused = app
                         .get_webview_window("main")
@@ -136,6 +151,11 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         chats: Default::default(),
         perms,
         broker: Default::default(),
+        hf: Arc::new(nexus_models::hf::HfClient::new(
+            None,
+            std::env::var("HF_TOKEN").ok().filter(|t| !t.is_empty()),
+        )?),
+        downloads: Default::default(),
         registry,
         journal,
         audit,
@@ -147,6 +167,7 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     }));
     bridge_runtime_status(app.handle());
     bridge_app_events(app.handle());
+    service::models::init(&app.state::<Ctx>());
     runtime::start_in_background(app.handle());
     Ok(())
 }

@@ -86,11 +86,33 @@ export const commands = {
 	assistantRenderToml: (spec: AssistantSpec_Deserialize) => typedError<string, IpcError>(__TAURI_INVOKE("assistant_render_toml", { spec })),
 	/**  Parse TOML into a spec for the builder (nothing is saved). */
 	assistantDraft: (toml: string) => typedError<AssistantSpec_Serialize, IpcError>(__TAURI_INVOKE("assistant_draft", { toml })),
+	modelsList: () => typedError<InstalledModel[], IpcError>(__TAURI_INVOKE("models_list")),
+	modelsCatalog: () => typedError<CatalogCard[], IpcError>(__TAURI_INVOKE("models_catalog")),
+	modelsMemory: () => typedError<MemoryInfo, IpcError>(__TAURI_INVOKE("models_memory")),
+	modelsSearch: (query: string) => typedError<SearchHit[], IpcError>(__TAURI_INVOKE("models_search", { query })),
+	modelsRepoFiles: (repo: string) => typedError<RepoFiles, IpcError>(__TAURI_INVOKE("models_repo_files", { repo })),
+	modelsDownloads: () => typedError<DownloadView[], IpcError>(__TAURI_INVOKE("models_downloads")),
+	modelsDownloadCatalog: (catalogId: string) => typedError<DownloadView, IpcError>(__TAURI_INVOKE("models_download_catalog", { catalogId })),
+	modelsDownloadHf: (repo: string, file: string) => typedError<DownloadView, IpcError>(__TAURI_INVOKE("models_download_hf", { repo, file })),
+	modelsDownloadPause: (id: string) => typedError<null, IpcError>(__TAURI_INVOKE("models_download_pause", { id })),
+	modelsDownloadResume: (id: string) => typedError<null, IpcError>(__TAURI_INVOKE("models_download_resume", { id })),
+	modelsDownloadCancel: (id: string) => typedError<null, IpcError>(__TAURI_INVOKE("models_download_cancel", { id })),
+	modelsActivate: (id: string) => typedError<ActivateResult, IpcError>(__TAURI_INVOKE("models_activate", { id })),
+	modelsDelete: (id: string) => typedError<null, IpcError>(__TAURI_INVOKE("models_delete", { id })),
+	/**  Native picker for a `.gguf` file; `None` when cancelled. */
+	modelsPickFile: () => typedError<string | null, IpcError>(__TAURI_INVOKE("models_pick_file")),
+	modelsImport: (path: string, copy: boolean) => typedError<InstalledModel, IpcError>(__TAURI_INVOKE("models_import", { path, copy })),
+	/**  Re-scan the extra model folders (after changing `models.extra_dirs`). Returns how many models they hold. */
+	modelsRescan: () => typedError<number, IpcError>(__TAURI_INVOKE("models_rescan")),
+	/**  Re-hash the bundled models. */
+	modelsVerifyBundled: () => typedError<VerifyResult[], IpcError>(__TAURI_INVOKE("models_verify_bundled")),
 };
 
 /** Events */
 export const events = {
 	changesetUpdate: makeEvent<ChangeSetUpdate>("changeset:update"),
+	downloadProgress: makeEvent<DownloadProgressEvent>("download:progress"),
+	modelChanged: makeEvent<ModelChanged>("model:changed"),
 	notificationNew: makeEvent<NotificationNew>("notification:new"),
 	runtimeStatus: makeEvent<RuntimeStatus>("runtime:status"),
 };
@@ -108,6 +130,12 @@ export type Access =
 "move" | 
 /**  Move to the Trash. */
 "trash";
+
+export type ActivateResult = {
+	id: string,
+	/**  For example "This model has no chat template; replies may be poor." */
+	warning: string | null,
+};
 
 /**  Static facts about this install. */
 export type AppInfo = {
@@ -238,6 +266,48 @@ export type AuditRecord = {
 	path: string,
 	allowed: boolean,
 	detail: string | null,
+};
+
+export type Badge = 
+/**  Comfortably fits. */
+"great" | 
+/**  Fits, with little headroom. */
+"tight" | 
+/**  Will not fit. */
+"too_big";
+
+export type CatalogCard = {
+	entry: CatalogEntry,
+	installed_id: string | null,
+	download: DownloadView | null,
+	fit: Fit,
+};
+
+/**  One catalog entry. */
+export type CatalogEntry = {
+	id: string,
+	name: string,
+	family: string,
+	params_b: number | null,
+	quant: string,
+	repo: string,
+	revision: string,
+	file?: string | null,
+	file_pattern: string,
+	approx_bytes: number,
+	license: string,
+	context_max?: number | null,
+	context_default: number,
+	capabilities: string[],
+	supports_thinking_toggle?: boolean,
+	sampling: SamplingPresets,
+	min_ram_gb?: number | null,
+	tier: string,
+	tags?: string[],
+	isDefault?: boolean,
+	verified: boolean,
+	why?: string | null,
+	notes?: string | null,
 };
 
 export type ChangePreview = {
@@ -379,6 +449,25 @@ export type DirEntryInfo = {
 	modified: number | null,
 };
 
+/**  Global event `download:progress`: sent about 4 times a second while a download runs, and on every status change. */
+export type DownloadProgressEvent = DownloadView;
+
+/**  A download as the UI shows it. */
+export type DownloadView = {
+	id: string,
+	catalog_id: string | null,
+	repo: string,
+	file: string,
+	bytes: number,
+	done_bytes: number,
+	/**  `queued | running | paused | failed | done | cancelled` */
+	status: string,
+	error: string | null,
+	bytes_per_sec: number | null,
+	eta_secs: number | null,
+	phase: Phase | null,
+};
+
 /**  Stable machine-readable error code (see DATA-AND-IPC §4). Serialized as snake_case. */
 export type ErrorCode = "runtime_unavailable" | "model_missing" | "permission_denied" | "os_permission_denied" | "path_denied" | "not_found" | "invalid_input" | "llm_invalid_output" | "context_overflow" | "cancelled" | "conflict" | "checksum_mismatch" | "insufficient_disk" | "network" | "busy" | "port_in_use" | "unauthorized" | "forbidden_remote" | "internal";
 
@@ -415,6 +504,47 @@ export type FileStat = {
 	modified: number | null,
 };
 
+export type Fit = {
+	weights_bytes: number,
+	kv_cache_bytes: number,
+	need_bytes: number,
+	budget_bytes: number,
+	badge: Badge,
+};
+
+/**  A downloadable model: one GGUF, or all shards of a split one. */
+export type GgufFile = {
+	/**  File name to show and to load (the first shard for split models). */
+	name: string,
+	quant: string | null,
+	bytes: number,
+	/**  Every part in order (a single file has one). */
+	parts: TreeFile[],
+};
+
+/**  What the app needs to know about a model file. */
+export type GgufMeta = {
+	version: number,
+	tensor_count: number,
+	kv_count: number,
+	architecture: string | null,
+	name: string | null,
+	/**  Human name of `general.file_type` (`Q4_K_M`, `Q8_0`, ...), when known. */
+	quant: string | null,
+	file_type: number | null,
+	context_length: number | null,
+	block_count: number | null,
+	embedding_length: number | null,
+	head_count: number | null,
+	head_count_kv: number | null,
+	license: string | null,
+	/**  `tokenizer.chat_template` exists. */
+	has_chat_template: boolean,
+	chat_template_len: number | null,
+	/**  The template mentions `enable_thinking`. */
+	supports_thinking_toggle: boolean,
+};
+
 /**  A folder (or single file) the app may use. */
 export type Grant = {
 	id: GrantId,
@@ -439,11 +569,41 @@ export type GrantLevel = "read" | "read_write" | "full";
 /**  Persistent grants live in the database; session grants vanish when the app quits. */
 export type GrantScope = "persistent" | "session";
 
+export type InstalledModel = {
+	id: string,
+	/**  `builtin | download | import | discovered` */
+	source: string,
+	name: string,
+	repo: string | null,
+	file: string | null,
+	path: string,
+	file_exists: boolean,
+	bytes: number,
+	quant: string | null,
+	catalog_id: string | null,
+	license: string | null,
+	capabilities: string[],
+	supports_thinking_toggle: boolean,
+	has_chat_template: boolean,
+	context_length: number | null,
+	active: boolean,
+	removal: Removal,
+	fit: Fit,
+	gguf: GgufMeta | null,
+};
+
 /**  Error sent to the frontend. `detail` holds the debug chain (shown only under "Details"). */
 export type IpcError = {
 	code: ErrorCode,
 	message: string,
 	detail: string | null,
+};
+
+export type MemoryInfo = {
+	total_bytes: number,
+	available_bytes: number,
+	/**  Apple Silicon: GPU and CPU share RAM, and Metal may use about 70% of it. */
+	unified: boolean,
 };
 
 export type Message = {
@@ -480,6 +640,9 @@ export type MissingGrant = {
 	path: string,
 	needed: Access,
 };
+
+/**  Global event `model:changed`: the active model id (the runtime is restarting on it). */
+export type ModelChanged = string;
 
 /**
  *  Sampling for the final (streamed) answer. Values are relative intents; the effective temperature
@@ -556,8 +719,27 @@ export type PermissionsSpec = {
 	needs?: string[],
 };
 
+export type Phase = "preparing" | "downloading" | "verifying" | "finalizing";
+
 export type PromptSpec = {
 	system: string,
+};
+
+/**  How a model can be removed. */
+export type Removal = 
+/**  The file is deleted. */
+"delete" | 
+/**  Only the entry goes away (the file is somewhere the user keeps it). */
+"unlink" | 
+/**  Part of the install (the bundle). */
+"protected";
+
+export type RepoFiles = {
+	repo: string,
+	sha: string,
+	license: string | null,
+	gated: boolean,
+	files: GgufFile[],
 };
 
 /**  State of the llama-server supervisor (published as `runtime:status`). */
@@ -565,6 +747,28 @@ export type RuntimeState = { state: "stopped" } | { state: "starting"; attempt: 
 
 /**  Global event `runtime:status`: sent on every supervisor state change. */
 export type RuntimeStatus = RuntimeState;
+
+/**  Sampling for one mode (thinking on or off). Unset values use the server defaults. */
+export type Sampling = {
+	temperature: number | null,
+	top_p: number | null,
+	top_k: number | null,
+	min_p: number | null,
+	repeat_penalty: number | null,
+};
+
+export type SamplingPresets = {
+	no_think: Sampling,
+	think?: Sampling | null,
+};
+
+export type SearchHit = {
+	id: string,
+	downloads: number,
+	likes: number,
+	last_modified: string | null,
+	tags: string[],
+};
 
 /**
  *  A setting's new value. Typed instead of `serde_json::Value`, which specta rc.25 cannot export
@@ -643,6 +847,14 @@ export type Totals = {
 	bytes: number,
 };
 
+/**  One file in a repo. */
+export type TreeFile = {
+	path: string,
+	size: number,
+	/**  SHA-256 of the content (the LFS oid); `None` for small non-LFS files. */
+	sha256: string | null,
+};
+
 export type UiSpec = UiSpec_Serialize | UiSpec_Deserialize;
 
 export type UiSpec_Deserialize = {
@@ -687,6 +899,14 @@ export type ValidationReport = {
 	prompt_tokens: number,
 	level: TokenLevel,
 	id: string | null,
+};
+
+/**  Result of re-hashing one model. */
+export type VerifyResult = {
+	id: string,
+	ok: boolean,
+	missing: boolean,
+	actual_sha256: string | null,
 };
 
 export type WorkflowSpec = WorkflowSpec_Serialize | WorkflowSpec_Deserialize;
