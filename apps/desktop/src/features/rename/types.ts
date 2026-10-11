@@ -82,7 +82,7 @@ export interface Checker {
   available: boolean;
 }
 
-export interface VerifyResult {
+export interface RenameVerifyResult {
   ok: boolean;
   exit_code: number | null;
   cancelled: boolean;

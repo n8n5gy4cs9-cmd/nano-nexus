@@ -83,7 +83,7 @@ export function SettingsPage() {
         <SelectRow
           label="Accent color"
           value={str(s, "ui.accent", "violet")}
-          options={ACCENTS.map((a) => ({ value: a, label: a[0]?.toUpperCase() + a.slice(1) }))}
+          options={ACCENTS.map((a) => ({ value: a, label: a.charAt(0).toUpperCase() + a.slice(1) }))}
           onChange={(v) => {
             if (isAccent(v)) setAccent(v);
             set("ui.accent", v);

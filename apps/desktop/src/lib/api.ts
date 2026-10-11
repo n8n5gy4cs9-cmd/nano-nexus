@@ -60,7 +60,7 @@ import type { KbIndexResult, KbLibrary, KbLibraryDetail, KbPassage, KbProgress }
 import { getTransport } from "./transport";
 import type { ReportDelta, WatchSchedule, WatchView } from "@/features/analyzer/watches";
 import type { JobSummary } from "@/features/jobs/types";
-import type { Checker, Found, RenameItem, RenamePlan, RenamePlanOptions, RenameProgress, RenameSession, Usage, VerifyResult } from "@/features/rename/types";
+import type { Checker, Found, RenameItem, RenamePlan, RenamePlanOptions, RenameProgress, RenameSession, RenameVerifyResult, Usage } from "@/features/rename/types";
 import type { Unsubscribe } from "./transport";
 
 /** Value accepted by `settings.set`. */
@@ -139,7 +139,7 @@ export const api = {
     plan: (sessionId: string, options: RenamePlanOptions) => getTransport().call<RenamePlan>("rename_plan", { sessionId, options }),
     checkers: (sessionId: string) => getTransport().call<Checker[]>("rename_checkers", { sessionId }),
     verify: (jobId: string, sessionId: string, checkerId: string, onLine: (line: string) => void) =>
-      getTransport().stream<string, VerifyResult>("rename_verify", { jobId, sessionId, checkerId }, onLine),
+      getTransport().stream<string, RenameVerifyResult>("rename_verify", { jobId, sessionId, checkerId }, onLine),
     usages: (sessionId: string, symbolId: string) => getTransport().call<Usage[]>("rename_usages", { sessionId, symbolId }),
     find: (sessionId: string, query: string) => getTransport().call<Found[]>("rename_find", { sessionId, query }),
     cancel: (jobId: string) => getTransport().call<boolean>("rename_cancel", { jobId }),

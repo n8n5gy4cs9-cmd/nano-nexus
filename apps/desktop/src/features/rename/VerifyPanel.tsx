@@ -7,7 +7,7 @@ import { Badge, Button } from "@/components/ui";
 import { api } from "@/lib/api";
 import { toIpcException } from "@/lib/ipc";
 
-import type { VerifyResult } from "./types";
+import type { RenameVerifyResult } from "./types";
 
 const MAX_LINES = 400;
 
@@ -15,7 +15,7 @@ const MAX_LINES = 400;
 export function VerifyPanel({ sessionId }: { sessionId: string }) {
   const checkers = useQuery({ queryKey: ["rename", "checkers", sessionId], queryFn: () => api.rename.checkers(sessionId), retry: false });
   const [lines, setLines] = useState<string[]>([]);
-  const [result, setResult] = useState<VerifyResult | null>(null);
+  const [result, setResult] = useState<RenameVerifyResult | null>(null);
   const job = useRef<string | null>(null);
 
   const run = useMutation({
