@@ -10,7 +10,10 @@ workspace = true
 
 [dependencies]
 nexus-core = { path = "../nexus-core" }
+blake3.workspace = true
 dunce.workspace = true
+serde_json.workspace = true
+similar.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 

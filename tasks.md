@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 68/229 tasks done (29%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 69/229 tasks done (30%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -107,7 +107,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T05.02** Deny list (per OS, user entries) + check algorithm + exhaustive tests (boundaries, symlinks, expiry, max level) (2026-10-11)
 - [x] **T05.03** Store migration 0002 (grants, deny_rules, audit_log, changesets) + repos; load grants on startup (2026-10-11)
 - [x] **T05.04** Batched async audit writer + tests (2026-10-11)
-- [ ] **T05.05** ChangeSet model + preview (diffs via `similar`, conflicts, missing grants, validation)
+- [x] **T05.05** ChangeSet model + preview (diffs via `similar`, conflicts, missing grants, validation) (2026-10-11)
 - [ ] **T05.06** Journal apply (atomic writes, backups, rollback on failure) + Trash (`trash` crate, small-file copies)
 - [ ] **T05.07** Journal undo (conflict detection, restore) + proptest (≥ 256 cases, byte-identical)
 - [ ] **T05.08** OS probes: macOS TCC EPERM detection + deep links; Windows Controlled Folder Access detection
