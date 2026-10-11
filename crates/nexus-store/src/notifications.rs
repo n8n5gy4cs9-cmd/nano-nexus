@@ -177,7 +177,7 @@ mod tests {
         let s = Store::open_in_memory().unwrap();
         let a = s.insert_notification(new("a")).unwrap();
         s.insert_notification(new("b")).unwrap();
-        s.mark_notifications_read(&[a.id.0.clone()]).unwrap();
+        s.mark_notifications_read(std::slice::from_ref(&a.id.0)).unwrap();
         assert_eq!(s.unread_notification_count().unwrap(), 1);
         s.mark_notifications_read(&[]).unwrap();
         assert_eq!(s.unread_notification_count().unwrap(), 0);
