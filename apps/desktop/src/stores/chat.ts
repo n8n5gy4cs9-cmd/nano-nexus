@@ -1,6 +1,8 @@
 import { create } from "zustand";
 
 import type { ChatEvent, ErrorCode } from "@/bindings";
+import { api } from "@/lib/api";
+import { logActivity } from "@/stores/activity";
 
 /** One tool call shown as a chip. `ok` is `null` while it runs. */
 export interface ToolChip {
@@ -36,6 +38,8 @@ export interface LiveTurn {
   error: { code: ErrorCode; message: string } | null;
   statusText: string | null;
   tools: ToolChip[];
+  /** Stop was pressed: the UI already shows the turn as stopped and drops late text. */
+  stopRequested?: boolean;
 }
 
 /** Key of the conversation a turn belongs to; `NEW` until the backend assigns an id. */
@@ -155,14 +159,21 @@ export function handleChatEvent(getKey: () => string, e: ChatEvent): void {
   const st = useChat.getState();
   switch (e.type) {
     case "reasoning":
-      bufferDelta(key, "reasoning", e.delta);
+      if (!st.turns[key]?.stopRequested) bufferDelta(key, "reasoning", e.delta);
       return;
     case "content":
-      bufferDelta(key, "content", e.delta);
+      if (!st.turns[key]?.stopRequested) bufferDelta(key, "content", e.delta);
       return;
     case "started":
       flushDeltas();
-      st.apply(key, { assistantId: e.assistant_message_id, status: "streaming" });
+      if (st.turns[key]?.stopRequested) {
+        // Stop was pressed before the backend told us the message id: cancel it now.
+        st.apply(key, { assistantId: e.assistant_message_id });
+        void api.chat.stop(e.assistant_message_id).catch(() => undefined);
+        logActivity("chat", "stop sent as soon as the answer started");
+      } else {
+        st.apply(key, { assistantId: e.assistant_message_id, status: "streaming" });
+      }
       return;
     case "status":
       st.apply(key, { statusText: e.text });
@@ -173,7 +184,8 @@ export function handleChatEvent(getKey: () => string, e: ChatEvent): void {
       return;
     case "error":
       flushDeltas();
-      st.apply(key, { status: "error", error: { code: e.code, message: e.message }, statusText: null });
+      if (st.turns[key]?.stopRequested) st.apply(key, { status: "stopped", statusText: null });
+      else st.apply(key, { status: "error", error: { code: e.code, message: e.message }, statusText: null });
       return;
     case "tool_call": {
       const t = st.turns[key];
