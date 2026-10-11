@@ -14,8 +14,13 @@
 apps/desktop/src-tauri/binaries/
 apps/desktop/src-tauri/resources/models/
 
-# --- Tauri generated ---
-apps/desktop/src-tauri/gen/schemas/
+# --- Tauri generated + staged bundle overlays ---
+apps/desktop/src-tauri/gen/
+apps/desktop/dist-web/
+
+# --- Your own bundle profiles ---
+bundles/local/*
+!bundles/local/.gitkeep
 
 # --- OS / editor noise ---
 .DS_Store

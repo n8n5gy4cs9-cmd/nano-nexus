@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "name": "basic",
+  "description": "The basic build: only the default model inside. ~1.1 GB on macOS, ~1.2 GB on Windows (fits in a normal installer).",
+  "models": ["minicpm5-1b-fable5-v2-q8"],
+  "default": "minicpm5-1b-fable5-v2-q8",
+  "targets": ["macos-arm64", "windows-x64"],
+  "windows": { "format": "auto", "webview": "embedBootstrapper", "runtime": "vulkan" }
+}

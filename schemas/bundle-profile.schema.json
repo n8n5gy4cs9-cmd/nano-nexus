@@ -15,9 +15,9 @@
         "oneOf": [
           { "type": "string", "description": "catalog id" },
           { "type": "object", "additionalProperties": false, "required": ["repo", "as"],
-            "properties": { "repo": { "type": "string" }, "quant": { "type": "string" }, "file": { "type": "string" }, "revision": { "type": "string" }, "as": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9.]+)*$" }, "name": { "type": "string" } } },
+            "properties": { "repo": { "type": "string" }, "quant": { "type": "string" }, "file": { "type": "string" }, "revision": { "type": "string" }, "as": { "type": "string", "pattern": "^[a-z0-9][a-z0-9.]*(-[a-z0-9.]+)*$" }, "name": { "type": "string" } } },
           { "type": "object", "additionalProperties": false, "required": ["local", "as"],
-            "properties": { "local": { "type": "string" }, "as": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9.]+)*$" }, "name": { "type": "string" } } }
+            "properties": { "local": { "type": "string" }, "as": { "type": "string", "pattern": "^[a-z0-9][a-z0-9.]*(-[a-z0-9.]+)*$" }, "name": { "type": "string" } } }
         ]
       }
     },

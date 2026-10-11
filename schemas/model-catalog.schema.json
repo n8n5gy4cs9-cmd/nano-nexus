@@ -20,7 +20,7 @@
       "type": "object", "additionalProperties": false,
       "required": ["id", "name", "family", "params_b", "quant", "repo", "revision", "file_pattern", "approx_bytes", "license", "context_default", "capabilities", "sampling", "tier", "verified"],
       "properties": {
-        "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9.]+)*$" },
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9.]*(-[a-z0-9.]+)*$" },
         "name": { "type": "string" },
         "family": { "type": "string" },
         "params_b": { "type": "number", "exclusiveMinimum": 0 },

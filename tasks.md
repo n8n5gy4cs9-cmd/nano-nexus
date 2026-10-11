@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 9/233 tasks done (3%) · **Next:** TP.09 Model catalog (`catalog/models.json`) + bundle profiles (`bundles/`)
+**Progress:** 10/233 tasks done (4%) · **Next:** TP.10 AI agent handbook (`AGENTS.md`, `CLAUDE.md`, `docs/agent-playbook/`, `.claude/skills/`)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -22,7 +22,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **TP.06** This task list (2026-10-11)
 - [x] **TP.07** 18 built-in assistants with researched system prompts (`assistants/`) (2026-10-11)
 - [x] **TP.08** Internal pipeline prompts (`prompts/internal/`) and JSON Schemas (`schemas/`) (2026-10-11)
-- [ ] **TP.09** Model catalog (`catalog/models.json`) + bundle profiles (`bundles/`)
+- [x] **TP.09** Model catalog (`catalog/models.json`) + bundle profiles (`bundles/`) (2026-10-11)
 - [ ] **TP.10** AI agent handbook (`AGENTS.md`, `CLAUDE.md`, `docs/agent-playbook/`, `.claude/skills/`)
 - [ ] **TP.11** Helper scripts: `doctor.sh`, `progress.sh`, `check.sh`, `setup-runtime.sh`, `fetch-model.mjs`
 - [ ] **TP.12** User guide `guide.html` (builds, offline bundles, Windows from Mac, LAN share)

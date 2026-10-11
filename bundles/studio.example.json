@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "name": "studio",
+  "description": "Example multi-model OFFLINE build for a studio PC with no internet. Copy to bundles/local/studio.json and edit it (or use the App Builder). Windows uses the offline kit because the payload is over 1.8 GB.",
+  "models": [
+    "minicpm5-1b-fable5-v2-q8",
+    "minicpm5-2b-q4",
+    "qwen3.5-4b-q4",
+    { "repo": "Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF", "quant": "Q8_0", "as": "coder-1.5b", "name": "Qwen Coder 1.5B" },
+    { "local": "~/Models/my-finetune.Q4_K_M.gguf", "as": "my-finetune", "name": "My fine-tune (local file)" }
+  ],
+  "default": "minicpm5-1b-fable5-v2-q8",
+  "targets": ["windows-x64", "macos-arm64"],
+  "windows": { "format": "kit", "webview": "offlineInstaller", "runtime": "vulkan" },
+  "share": { "port": 9889, "autostart": false }
+}
