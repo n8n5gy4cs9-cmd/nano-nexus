@@ -94,6 +94,17 @@ export function profileFromArgs(o) {
   };
 }
 
+/** The lock of a model already in vendor/models whose file is present with the right size, else null. */
+function existingLock(id) {
+  try {
+    const lock = readJson(path.join(VENDOR_MODELS, id, 'lock.json'));
+    const file = path.join(VENDOR_MODELS, id, lock.file);
+    return fs.statSync(file).size === lock.bytes ? lock : null;
+  } catch {
+    return null;
+  }
+}
+
 function hostTarget() {
   return process.platform === 'darwin' ? 'mac' : process.platform === 'win32' ? 'windows' : null;
 }
@@ -239,7 +250,17 @@ async function main() {
   step('Preparing models');
   const catalog = loadCatalog();
   const locks = [];
-  for (const entry of profile.models) locks.push(await ensureProfileEntry(entry, catalog, {}));
+  for (const entry of profile.models) {
+    // Already downloaded (by run.sh or an earlier build)? Reuse it: no network, no re-hash.
+    const id = typeof entry === 'string' ? entry : entry.as;
+    const have = id && !entry.local ? existingLock(id) : null;
+    if (have) {
+      say(`✔ ${id} already downloaded (${fmt(have.bytes)}); reusing it`);
+      locks.push(have);
+    } else {
+      locks.push(await ensureProfileEntry(entry, catalog, {}));
+    }
+  }
   const total = locks.reduce((n, l) => n + l.bytes, 0);
   say(`${locks.length} model(s), ${fmt(total)}; default: ${profile.default}`);
 
