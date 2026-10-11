@@ -91,6 +91,18 @@ export function ChatView() {
   const activeId = conv.data?.conversation.assistant_id ?? selectedId;
   const card = byId.get(activeId) ?? (activeId === FALLBACK_CARD.id ? FALLBACK_CARD : (byId.get("nexus") ?? FALLBACK_CARD));
   const { turn, streaming, send, regenerate, editResend, stop } = useChatStream(conversationId, card.id);
+  // Duo: tell which model answered by comparing the stored model id with the two configured ones.
+  const duoSettings = useQuery({ queryKey: ["settings", "duo"], queryFn: api.settings.get, enabled: card.id === "duo", retry: false });
+  const duoTier = useCallback(
+    (modelId: string | null): "light" | "strong" | null => {
+      const s = duoSettings.data as unknown as Record<string, unknown> | undefined;
+      const light = String(s?.["duo.light_model_id"] ?? "");
+      const strong = String(s?.["duo.strong_model_id"] ?? "");
+      if (!modelId || !light || !strong || light === strong) return null;
+      return modelId === strong ? "strong" : modelId === light ? "light" : null;
+    },
+    [duoSettings.data],
+  );
   const badgeFor = useCallback(
     (id: string | null): AssistantBadge => {
       const c = (id ? byId.get(id) : undefined) ?? card;
@@ -165,7 +177,17 @@ export function ChatView() {
         if (m.assistant_id) lastAssistant = m.assistant_id;
         out.push({
           key: m.id,
-          node: <AssistantMessage v={storedView(m)} assistant={badgeFor(m.assistant_id)} onRegenerate={streaming ? undefined : () => void regenerate(m.id, think)} onRestart={restart} />,
+          node: (
+            <AssistantMessage
+              v={storedView(m)}
+              assistant={badgeFor(m.assistant_id)}
+              onRegenerate={streaming ? undefined : () => void regenerate(m.id, think)}
+              onRestart={restart}
+              tier={m.assistant_id === "duo" ? duoTier(m.model_id) : null}
+              // "Think harder" always routes Duo to the strong model.
+              onUseStrong={streaming ? undefined : () => void regenerate(m.id, true)}
+            />
+          ),
         });
       }
     }
@@ -179,7 +201,7 @@ export function ChatView() {
       });
     }
     return out;
-  }, [messages, liveSlot, streaming, think, editResend, regenerate, editingId, badgeFor, card.id]);
+  }, [messages, liveSlot, streaming, think, duoTier, editResend, regenerate, editingId, badgeFor, card.id]);
 
   const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
   const lastAnswer = [...messages].reverse().find((m) => m.role === "assistant" && m.content);

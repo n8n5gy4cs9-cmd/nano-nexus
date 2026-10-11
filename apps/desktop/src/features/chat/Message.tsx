@@ -110,11 +110,17 @@ export function AssistantMessage({
   assistant,
   onRegenerate,
   onRestart,
+  tier,
+  onUseStrong,
 }: {
   v: AssistantView;
   assistant: AssistantBadge;
   onRegenerate?: (() => void) | undefined;
   onRestart?: (() => void) | undefined;
+  /** Duo: which model answered. */
+  tier?: "light" | "strong" | null | undefined;
+  /** Duo: ask the strong model to answer again (shown on light answers). */
+  onUseStrong?: (() => void) | undefined;
 }) {
   const [copied, setCopied] = useState(false);
   const [passage, setPassage] = useState<number | null>(null);
@@ -140,6 +146,11 @@ export function AssistantMessage({
       <div className="mb-1 flex items-center gap-2 text-small font-medium text-muted">
         <AssistantIcon icon={assistant.icon} color={assistant.color} size={20} />
         {assistant.name}
+        {tier ? (
+          <span data-testid="duo-tier" className="rounded-control border border-border px-1.5 text-caption text-muted">
+            {tier === "light" ? "Light" : "Strong"}
+          </span>
+        ) : null}
       </div>
       <ToolChips chips={v.tools ?? []} />
       {v.reasoning ? <ThoughtsBlock text={v.reasoning} streaming={v.streaming && v.content === ""} startedAt={v.thinkingStartedAt} /> : null}
@@ -173,6 +184,11 @@ export function AssistantMessage({
             <IconButton aria-label="Regenerate answer" size="sm" onClick={onRegenerate}>
               <RotateCw />
             </IconButton>
+          ) : null}
+          {tier === "light" && onUseStrong ? (
+            <Button size="sm" variant="ghost" onClick={onUseStrong}>
+              Use strong model
+            </Button>
           ) : null}
           {v.stats ? <span className="tnum ml-1">{formatStats(v.stats)}</span> : null}
         </div>

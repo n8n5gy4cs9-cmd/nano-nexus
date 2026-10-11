@@ -300,6 +300,6 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 ## M18: Duo assistant (light + strong model) · [spec](docs/milestones/M18-duo.md)
 - [x] **T18.01** v0.1: `duo` assistant, heuristic tier classifier (`nexus-agent::duo`), settings `duo.light_model_id` / `duo.strong_model_id`, per-message model swap in chat, Duo panel on the Models page (2026-10-11) — one model runs at a time (swap on demand); classifier + settings + prompt_lint tested; app crate + UI not built here
 - [ ] **T18.02** 🍎 Try Duo with two real models; tune `HARD_WORDS` / thresholds; note swap latency in SPIKES.md
-- [ ] **T18.03** Show the chosen tier on the message ("light" / "strong") and a "Use strong model" button on light answers
+- [x] **T18.03** Show the chosen tier on the message ("light" / "strong") and a "Use strong model" button on light answers (2026-10-11) — `AssistantMessage` gets `tier` + `onUseStrong`; `ChatView` derives the tier by comparing the stored `model_id` with `duo.light_model_id` / `duo.strong_model_id` (no badge when unset or equal); the button regenerates with Think harder, which Duo always routes to the strong model. **Frontend written but not linted/typechecked/tested (owner asked for no runs); no component test added yet**
 - [ ] **T18.04** (v0.2) Run both models at the same time (second `Supervisor` + port, memory check via `MemoryInfo`) to remove swap latency
 - [ ] **T18.05** (v0.2) Optional model-based classifier (light model scores difficulty 1–5) and automatic escalation when the light answer looks unsure
