@@ -120,7 +120,7 @@ export function ChatView() {
         streaming={streaming}
         think={think}
         onThinkChange={setThink}
-        onSend={(text) => void send(text, [], think)}
+        onSend={(text, attachments) => void send(text, attachments, think)}
         onStop={() => void stop()}
         usedTokens={usedTokens}
         ctxSize={ctxSize}

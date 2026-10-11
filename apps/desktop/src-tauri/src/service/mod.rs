@@ -2,6 +2,7 @@
 //! LAN Share will call the same functions with `Caller::Remote` over WebSocket (M14).
 
 pub mod app;
+pub mod attachments;
 pub mod chat;
 pub mod coalesce;
 pub mod conversations;

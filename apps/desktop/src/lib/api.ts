@@ -5,6 +5,7 @@
  */
 import type {
   AppInfo,
+  AttachmentInput,
   ChatEvent,
   ChatSendArgs,
   ChatSendResult,
@@ -35,6 +36,22 @@ export const api = {
     /** Subscribe to `runtime:status`. */
     onStatus: (handler: (state: RuntimeState) => void): Promise<Unsubscribe> =>
       getTransport().on<RuntimeState>("runtime:status", handler),
+  },
+  attachments: {
+    /** Read dropped files (text only, <= 256 KB each). */
+    read: (paths: string[]) => getTransport().call<AttachmentInput[]>("attachments_read", { paths }),
+    /** Native file picker; empty when cancelled. */
+    pick: () => getTransport().call<AttachmentInput[]>("attachments_pick"),
+    /** OS file drag-and-drop over the window: hover state and the dropped paths. */
+    onDrag: async (handlers: { enter: () => void; leave: () => void; drop: (paths: string[]) => void }): Promise<Unsubscribe> => {
+      const t = getTransport();
+      const offs = await Promise.all([
+        t.on("tauri://drag-enter", handlers.enter),
+        t.on("tauri://drag-leave", handlers.leave),
+        t.on<{ paths: string[] }>("tauri://drag-drop", (p) => handlers.drop(p.paths)),
+      ]);
+      return () => offs.forEach((off) => off());
+    },
   },
   conversations: {
     list: (query: string | null, limit: number, before: number | null = null) =>

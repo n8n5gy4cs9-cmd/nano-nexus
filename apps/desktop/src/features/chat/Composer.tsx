@@ -1,7 +1,12 @@
-import { ArrowUp, Square } from "lucide-react";
-import { useState } from "react";
+import { ArrowUp, Paperclip, Square, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
-import { Button, Switch, Textarea } from "@/components/ui";
+import type { AttachmentInput } from "@/bindings";
+
+import { Button, IconButton, Switch, Textarea } from "@/components/ui";
+import { api } from "@/lib/api";
+import { toIpcException } from "@/lib/ipc";
 import { cn } from "@/lib/cn";
 import { formatTokens } from "@/lib/tokens";
 
@@ -10,7 +15,7 @@ export interface ComposerProps {
   streaming: boolean;
   think: boolean;
   onThinkChange: (on: boolean) => void;
-  onSend: (text: string) => void;
+  onSend: (text: string, attachments: AttachmentInput[]) => void;
   onStop: () => void;
   /** Tokens already used by the conversation (last request + answer). */
   usedTokens: number;
@@ -19,23 +24,95 @@ export interface ComposerProps {
   initialText?: string;
 }
 
+const MAX_ATTACHMENTS = 5;
+
+/** Token estimate for an attachment chip (the real cost is measured when the turn runs). */
+export function estimateAttachmentTokens(a: AttachmentInput): number {
+  return Math.ceil((a.text ?? "").length / 3.2);
+}
+
+export function isTruncated(a: AttachmentInput): boolean {
+  return (a.text ?? "").includes("[… truncated");
+}
+
 /** Message box: Enter sends, Shift+Enter adds a line; becomes Stop while an answer streams. */
 export function Composer({ placeholder, streaming, think, onThinkChange, onSend, onStop, usedTokens, ctxSize, disabledReason, initialText = "" }: ComposerProps) {
   const [text, setText] = useState(initialText);
-  const draftTokens = Math.ceil(text.length / 3.2);
+  const [files, setFiles] = useState<AttachmentInput[]>([]);
+  const [dragging, setDragging] = useState(false);
+
+  const add = (incoming: AttachmentInput[]) =>
+    setFiles((cur) => {
+      const merged = [...cur, ...incoming.filter((n) => !cur.some((c) => c.path !== null && c.path === n.path))];
+      if (merged.length > MAX_ATTACHMENTS) toast.message(`Up to ${MAX_ATTACHMENTS} files per message.`);
+      return merged.slice(0, MAX_ATTACHMENTS);
+    });
+  const readPaths = (paths: string[]) => {
+    api.attachments
+      .read(paths)
+      .then(add)
+      .catch((e: unknown) => toast.error(toIpcException(e).message));
+  };
+  const pick = () => {
+    api.attachments
+      .pick()
+      .then(add)
+      .catch((e: unknown) => toast.error(toIpcException(e).message));
+  };
+
+  // OS drag-and-drop onto the window (Tauri delivers paths, not HTML5 files).
+  useEffect(() => {
+    let cancelled = false;
+    let off: (() => void) | undefined;
+    api.attachments
+      .onDrag({ enter: () => setDragging(true), leave: () => setDragging(false), drop: (p) => { setDragging(false); readPaths(p); } })
+      .then((u) => (cancelled ? u() : (off = u)))
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+      off?.();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- handlers only use stable setters
+  }, []);
+  const draftTokens = Math.ceil(text.length / 3.2) + files.reduce((n, f) => n + estimateAttachmentTokens(f), 0);
   const used = usedTokens + draftTokens;
   const fraction = ctxSize > 0 ? Math.min(1, used / ctxSize) : 0;
-  const canSend = text.trim().length > 0 && !streaming && !disabledReason;
+  const canSend = (text.trim().length > 0 || files.length > 0) && !streaming && !disabledReason;
 
   const submit = () => {
     if (!canSend) return;
-    onSend(text);
+    onSend(text, files);
     setText("");
+    setFiles([]);
   };
 
   return (
     <div className="mx-auto w-full max-w-[760px] px-4 pb-4">
-      <div className="rounded-modal border border-border bg-surface p-3 shadow-1 focus-within:border-border-strong">
+      <div
+        className={cn(
+          "relative rounded-modal border border-border bg-surface p-3 shadow-1 focus-within:border-border-strong",
+          dragging && "border-dashed border-accent",
+        )}
+      >
+        {dragging ? (
+          <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center rounded-modal bg-surface/90 text-body font-medium text-accent">
+            Drop to attach
+          </div>
+        ) : null}
+        {files.length > 0 ? (
+          <ul className="mb-2 flex flex-wrap gap-1.5" aria-label="Attachments">
+            {files.map((f) => (
+              <li key={f.path ?? f.label} className="flex items-center gap-1.5 rounded-full border border-border bg-surface-2 py-0.5 pr-1 pl-2.5 text-small">
+                <span>📎 {f.label}</span>
+                <span className="tnum text-caption text-faint">~{estimateAttachmentTokens(f).toLocaleString()} tok</span>
+                {isTruncated(f) ? <span className="text-caption text-warning">truncated</span> : null}
+                <button type="button" aria-label={`Remove ${f.label}`} className="rounded-full p-0.5 text-muted hover:bg-surface-3 hover:text-text" onClick={() => setFiles((cur) => cur.filter((x) => x !== f))}>
+                  <X className="size-3" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
         <Textarea
           aria-label="Message"
           placeholder={disabledReason ?? placeholder}
@@ -51,6 +128,9 @@ export function Composer({ placeholder, streaming, think, onThinkChange, onSend,
           }}
         />
         <div className="mt-2 flex items-center gap-3">
+          <IconButton aria-label="Attach files" size="sm" onClick={pick}>
+            <Paperclip />
+          </IconButton>
           <label className="flex items-center gap-2 text-small text-muted">
             <Switch checked={think} onCheckedChange={onThinkChange} aria-label="Think harder" />
             Think harder

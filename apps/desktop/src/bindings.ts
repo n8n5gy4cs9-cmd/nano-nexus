@@ -8,6 +8,10 @@ export const commands = {
 	appInfo: () => typedError<AppInfo, IpcError>(__TAURI_INVOKE("app_info")),
 	/**  Open a web link in the OS browser (https/http only). */
 	openExternal: (url: string) => typedError<null, IpcError>(__TAURI_INVOKE("open_external", { url })),
+	/**  Read files the user dropped onto the window (paths come from the OS drop event). */
+	attachmentsRead: (paths: string[]) => typedError<AttachmentInput[], IpcError>(__TAURI_INVOKE("attachments_read", { paths })),
+	/**  Open the native file picker and read the chosen files. Empty when the user cancels. */
+	attachmentsPick: () => typedError<AttachmentInput[], IpcError>(__TAURI_INVOKE("attachments_pick")),
 	runtimeStatus: () => typedError<RuntimeState, IpcError>(__TAURI_INVOKE("runtime_status")),
 	runtimeRestart: () => typedError<null, IpcError>(__TAURI_INVOKE("runtime_restart")),
 	runtimeLogs: (lines: number) => typedError<string[], IpcError>(__TAURI_INVOKE("runtime_logs", { lines })),
