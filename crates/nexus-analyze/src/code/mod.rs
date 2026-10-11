@@ -12,6 +12,7 @@ pub mod propose;
 pub mod reserved;
 pub mod rules;
 pub mod tags;
+pub mod verify;
 
 pub use index::{CodeIndex, IndexError, IndexOptions, Symbol, SymbolId, build_index};
 pub use lang::Lang;
