@@ -4,6 +4,14 @@
  * (an ESLint rule enforces this). Types come from the generated `bindings.ts`.
  */
 import type {
+  ActivateResult,
+  CatalogCard,
+  DownloadView,
+  InstalledModel,
+  MemoryInfo,
+  RepoFiles,
+  SearchHit,
+  VerifyResult,
   AppInfo,
   AssistantCard,
   AssistantDetail,
@@ -116,6 +124,29 @@ export const api = {
     importToml: (toml: string) => getTransport().call<AssistantDetail>("assistant_import", { toml }),
     draft: (toml: string) => getTransport().call<AssistantSpec_Serialize>("assistant_draft", { toml }),
     renderToml: (spec: AssistantSpec) => getTransport().call<string>("assistant_render_toml", { spec }),
+  },
+  models: {
+    list: () => getTransport().call<InstalledModel[]>("models_list"),
+    catalog: () => getTransport().call<CatalogCard[]>("models_catalog"),
+    memory: () => getTransport().call<MemoryInfo>("models_memory"),
+    search: (query: string) => getTransport().call<SearchHit[]>("models_search", { query }),
+    repoFiles: (repo: string) => getTransport().call<RepoFiles>("models_repo_files", { repo }),
+    downloads: () => getTransport().call<DownloadView[]>("models_downloads"),
+    downloadCatalog: (catalogId: string) => getTransport().call<DownloadView>("models_download_catalog", { catalogId }),
+    downloadHf: (repo: string, file: string) => getTransport().call<DownloadView>("models_download_hf", { repo, file }),
+    pause: (id: string) => getTransport().call<null>("models_download_pause", { id }),
+    resume: (id: string) => getTransport().call<null>("models_download_resume", { id }),
+    cancel: (id: string) => getTransport().call<null>("models_download_cancel", { id }),
+    activate: (id: string) => getTransport().call<ActivateResult>("models_activate", { id }),
+    delete: (id: string) => getTransport().call<null>("models_delete", { id }),
+    pickFile: () => getTransport().call<string | null>("models_pick_file"),
+    import: (path: string, copy: boolean) => getTransport().call<InstalledModel>("models_import", { path, copy }),
+    rescan: () => getTransport().call<number>("models_rescan"),
+    verifyBundled: () => getTransport().call<VerifyResult[]>("models_verify_bundled"),
+    /** Subscribe to `download:progress`. */
+    onProgress: (handler: (d: DownloadView) => void): Promise<Unsubscribe> => getTransport().on<DownloadView>("download:progress", handler),
+    /** Subscribe to `model:changed`. */
+    onChanged: (handler: (id: string) => void): Promise<Unsubscribe> => getTransport().on<string>("model:changed", handler),
   },
   fs: {
     grants: () => getTransport().call<Grant[]>("fs_grants_list"),

@@ -16,6 +16,7 @@ import { AppShell } from "@/components/shell/AppShell";
 import { ChatView } from "@/features/chat/ChatView";
 import { AssistantsPage } from "@/features/assistants/AssistantsPage";
 import { ChangesPage } from "@/features/changes/ChangesPage";
+import { ModelsPage } from "@/features/models/ModelsPage";
 import { PermissionsPage } from "@/features/permissions/PermissionsPage";
 import { PlaceholderPage } from "@/features/placeholders/PlaceholderPage";
 
@@ -50,6 +51,7 @@ export const SETTINGS_SECTION: NavSection = {
 function pageFor(s: NavSection) {
   if (s.path === "/") return <ChatView />;
   if (s.path === "/assistants") return <AssistantsPage />;
+  if (s.path === "/models") return <ModelsPage />;
   if (s.path === "/changes") return <ChangesPage />;
   if (s.path === "/permissions") return <PermissionsPage />;
   return <PlaceholderPage section={s} />;

@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 98/229 tasks done (42%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 100/229 tasks done (43%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -143,8 +143,8 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T07.06** Store migration 0003 (models, downloads, jobs) + registry (2026-10-11)
 - [x] **T07.07** Bundled models from `manifest.json` (1..n) + extra model folders scan + `models_verify_bundled` (2026-10-11)
 - [x] **T07.08** Commands `models_*`, one-at-a-time queue, activation → supervisor restart, `model:changed`, notifications (2026-10-11) — HF token via `HF_TOKEN` env only (Q-4); split GGUFs refused (Q-5)
-- [ ] **T07.09** UI Models page: runtime panel, Installed (Bundled / Downloaded / Imported+Discovered), Discover, Search HF
-- [ ] **T07.10** UI model cards (RAM badge, capabilities, progress ring, pause/resume/cancel/use/delete) + detail drawer (GGUF meta)
+- [x] **T07.09** UI Models page: runtime panel, Installed (Bundled / Downloaded / Imported+Discovered), Discover, Search HF (2026-10-11)
+- [x] **T07.10** UI model cards (RAM badge, capabilities, progress ring, pause/resume/cancel/use/delete) + detail drawer (GGUF meta) (2026-10-11)
 - [ ] ⭐ **T07.11** 🍎 Exit check: pause → quit → resume → verify → use → chat; corrupted part → checksum error; offline states
 
 ## M08: Analyzer and reports · [spec](docs/milestones/M08-analyzer.md) · [contract](docs/architecture/ANALYZER.md)
