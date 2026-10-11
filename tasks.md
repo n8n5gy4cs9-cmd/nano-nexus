@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 90/229 tasks done (39%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 95/229 tasks done (41%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -135,11 +135,11 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [ ] ⭐ **T06.13** 🍎 Exit check: router eval 20 prompts ≥ 80% correct tool choice (SPIKES.md §router); denied path graceful
 
 ## M07: Model manager and downloads · [spec](docs/milestones/M07-models.md) · [contract](docs/architecture/MODEL-MANAGER.md)
-- [ ] **T07.01** GGUF header parser (guards) + fixture writer + tests (+ ignored real-model test)
-- [ ] **T07.02** Catalog loader + schema validation test (exactly one default)
-- [ ] **T07.03** HF client (revision, tree w/ lfs, search, gated) + wiremock tests
-- [ ] **T07.04** Downloader (Range resume, streaming SHA-256, retries, pause/cancel, manual redirects, token stripping) + axum tests
-- [ ] **T07.05** RAM-fit estimator (sysinfo, Metal 70% rule) + tests
+- [x] **T07.01** GGUF header parser (guards) + fixture writer + tests (+ ignored real-model test) (2026-10-11)
+- [x] **T07.02** Catalog loader + schema validation test (exactly one default) (2026-10-11)
+- [x] **T07.03** HF client (revision, tree w/ lfs, search, gated) + wiremock tests (2026-10-11)
+- [x] **T07.04** Downloader (Range resume, streaming SHA-256, retries, pause/cancel, manual redirects, token stripping) + axum tests (2026-10-11)
+- [x] **T07.05** RAM-fit estimator (sysinfo, Metal 70% rule) + tests (2026-10-11)
 - [ ] **T07.06** Store migration 0003 (models, downloads, jobs) + registry
 - [ ] **T07.07** Bundled models from `manifest.json` (1..n) + extra model folders scan + `models_verify_bundled`
 - [ ] **T07.08** Commands `models_*`, one-at-a-time queue, activation → supervisor restart, `model:changed`, notifications

@@ -9,3 +9,23 @@ license.workspace = true
 workspace = true
 
 [dependencies]
+nexus-core = { path = "../nexus-core" }
+reqwest = { workspace = true, features = ["rustls"] }
+tokio.workspace = true
+tokio-util.workspace = true
+futures-util.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+specta.workspace = true
+sha2.workspace = true
+regex.workspace = true
+jsonschema.workspace = true
+sysinfo = { workspace = true, features = ["disk"] }
+
+[dev-dependencies]
+bytes.workspace = true
+axum.workspace = true
+tempfile.workspace = true
+wiremock.workspace = true
