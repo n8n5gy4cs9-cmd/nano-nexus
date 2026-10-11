@@ -23,6 +23,8 @@ tauri = { workspace = true, features = ["macos-private-api"] }
 tauri.workspace = true
 nexus-core = { path = "../../../crates/nexus-core" }
 nexus-llm = { path = "../../../crates/nexus-llm" }
+nexus-store = { path = "../../../crates/nexus-store" }
+tokio-util.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tokio.workspace = true

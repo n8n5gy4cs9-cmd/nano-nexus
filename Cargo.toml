@@ -40,3 +40,4 @@ win32job = "2" # Windows Job Object (KILL_ON_JOB_CLOSE) for llama-server, ADR-01
 sysinfo = { version = "0.39", default-features = false, features = ["system"] } # verify a stale server pid still belongs to our llama-server before killing
 tauri = "2.12" # never 3.x (ADR-001)
 tauri-build = "2.7"
+rusqlite = { version = "0.40", features = ["bundled"] } # bundled SQLite incl. FTS5 (DATA-AND-IPC §1)
