@@ -437,10 +437,24 @@ pub async fn run_router(
         }
         msgs.push(ChatMessage::user(user));
 
-        let decision = llm
-            .decide(msgs, &schema, &allowed_actions, cancel.clone())
-            .await
-            .unwrap_or_else(RouterAction::answer);
+        // A library assistant exists to search: do not let a small model decide to skip the search or
+        // rephrase the question badly. The first hop searches with the user's own words.
+        let forced_library_search = req.always_route
+            && outcome.runs.is_empty()
+            && req.allowed_tools.len() == 1
+            && req.allowed_tools[0] == "kb_search"
+            && !req.user_text.trim().is_empty();
+        let decision = if forced_library_search {
+            RouterAction {
+                action: "kb_search".into(),
+                query: Some(req.user_text.trim().to_owned()),
+                ..RouterAction::default()
+            }
+        } else {
+            llm.decide(msgs, &schema, &allowed_actions, cancel.clone())
+                .await
+                .unwrap_or_else(RouterAction::answer)
+        };
         if decision.action == "answer" {
             outcome.stopped = "answer".into();
             break;

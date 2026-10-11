@@ -137,7 +137,8 @@ pub fn pipeline_ready(pipeline: &str) -> Result<(), &'static str> {
     match pipeline {
         "folder_report" | "file_report" | "doc_qa" | "doc_summarize" | "tidy_plan" | "secrets_report"
         | "log_triage" | "data_profile" | "commit_message" => Ok(()),
-        "rename_propose" | "strings_improve" => Err("Available in M09"),
+        // Their work happens on the Rename Forge page; in chat the assistant answers naming questions.
+        "rename_propose" | "strings_improve" => Ok(()),
         _ => Err("Not available yet"),
     }
 }

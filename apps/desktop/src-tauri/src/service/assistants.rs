@@ -280,15 +280,8 @@ mod tests {
         assert!(cards[0].available);
         let scout = cards.iter().find(|c| c.id == "folder-scout").unwrap();
         assert!(scout.available);
-        assert_eq!(
-            cards
-                .iter()
-                .find(|c| c.id == "rename-forge")
-                .unwrap()
-                .unavailable_reason
-                .as_deref(),
-            Some("Available in M09")
-        );
+        let forge = cards.iter().find(|c| c.id == "rename-forge").unwrap();
+        assert!(forge.available, "Rename Forge is selectable (its pipeline lives on the Rename Forge page)");
     }
 
     #[tokio::test]
