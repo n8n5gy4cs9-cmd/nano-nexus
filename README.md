@@ -54,6 +54,8 @@ nano-nexus/
 
 ```bash
 scripts/doctor.sh                       # check toolchain (Xcode CLT, Rust, Node 22, pnpm, CMake)
+scripts/run.sh                          # one command: build runtime + fetch model + install deps, then `tauri dev`
+# ...or do it step by step:
 scripts/setup-runtime.sh                # build pinned llama.cpp llama-server (Metal, arm64, static)
 node scripts/fetch-model.mjs            # download + verify the default GGUF into vendor/models
 pnpm install && pnpm -C apps/desktop tauri dev            # run the app
