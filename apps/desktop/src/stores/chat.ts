@@ -7,6 +7,19 @@ export interface ToolChip {
   tool: string;
   summary: string | null;
   ok: boolean | null;
+  /** The call's arguments (a `report` chip carries `report_id` or `changeset_id`). */
+  args?: Record<string, unknown>;
+}
+
+/** Parse a tool call's JSON arguments; anything that is not an object gives `undefined`. */
+export function parseArgs(raw: string | null | undefined): Record<string, unknown> | undefined {
+  if (!raw) return undefined;
+  try {
+    const v: unknown = JSON.parse(raw);
+    return typeof v === "object" && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /** A turn that is (or just was) streaming. Lives in a store so it survives navigation. */
@@ -164,7 +177,7 @@ export function handleChatEvent(getKey: () => string, e: ChatEvent): void {
       return;
     case "tool_call": {
       const t = st.turns[key];
-      if (t) st.apply(key, { tools: [...t.tools, { tool: e.tool, summary: null, ok: null }], statusText: toolStatus(e.tool) });
+      if (t) st.apply(key, { tools: [...t.tools, { tool: e.tool, summary: null, ok: null, args: parseArgs(e.args_json) }], statusText: toolStatus(e.tool) });
       return;
     }
     case "tool_result": {

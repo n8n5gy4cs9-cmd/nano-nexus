@@ -4,6 +4,12 @@
  * (an ESLint rule enforces this). Types come from the generated `bindings.ts`.
  */
 import type {
+  CleanupPlan,
+  ExportFile,
+  ExportFormat,
+  FolderReportView,
+  ReportSummary,
+  ScanProgress,
   ActivateResult,
   CatalogCard,
   DownloadView,
@@ -125,6 +131,22 @@ export const api = {
     draft: (toml: string) => getTransport().call<AssistantSpec_Serialize>("assistant_draft", { toml }),
     renderToml: (spec: AssistantSpec) => getTransport().call<string>("assistant_render_toml", { spec }),
   },
+  analyzer: {
+    /** Scan a folder; resolves with the saved report's id. `duplicates`: off | fast | full. */
+    analyze: (jobId: string, root: string, duplicates: "off" | "fast" | "full", onProgress: (p: ScanProgress) => void) =>
+      getTransport().stream<ScanProgress, string>("analyze_folder", { jobId, root, duplicates }, onProgress),
+    cancel: (jobId: string) => getTransport().call<boolean>("analyze_cancel", { jobId }),
+    reports: (kind: string | null = null, limit = 100) => getTransport().call<ReportSummary[]>("reports_list", { kind, limit }),
+    folderReport: (id: string) => getTransport().call<FolderReportView>("report_folder", { id }),
+    /** JSON body of a file / secrets / logs report. */
+    body: (id: string) => getTransport().call<string>("report_body", { id }),
+    remove: (id: string) => getTransport().call<boolean>("report_delete", { id }),
+    saveNarrative: (id: string, text: string) => getTransport().call<null>("report_narrative_save", { id, text }),
+    exportReport: (id: string, format: ExportFormat) => getTransport().call<ExportFile>("report_export", { id, format }),
+    fileReport: (path: string) => getTransport().call<string>("file_report", { path }),
+    cleanupPlan: (id: string, includeDuplicates: boolean, includeJunk: boolean) =>
+      getTransport().call<CleanupPlan>("report_cleanup_plan", { id, includeDuplicates, includeJunk }),
+  },
   models: {
     list: () => getTransport().call<InstalledModel[]>("models_list"),
     catalog: () => getTransport().call<CatalogCard[]>("models_catalog"),
@@ -166,6 +188,8 @@ export const api = {
     denyRemove: (root: string) => getTransport().call<boolean>("fs_deny_remove", { root }),
     /** Native folder picker; `null` when cancelled. */
     pickFolder: () => getTransport().call<string | null>("fs_pick_folder"),
+    /** Native picker for any one file (the Analyzer); `null` when cancelled. */
+    pickAnyFile: () => getTransport().call<string | null>("fs_pick_any_file"),
     audit: (limit: number, before: number | null = null) => getTransport().call<AuditRecord[]>("audit_list", { limit, before }),
   },
   os: {

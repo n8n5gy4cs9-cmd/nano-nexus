@@ -15,6 +15,8 @@ import { createHashRouter, type RouteObject } from "react-router-dom";
 import { AppShell } from "@/components/shell/AppShell";
 import { ChatView } from "@/features/chat/ChatView";
 import { AssistantsPage } from "@/features/assistants/AssistantsPage";
+import { AnalyzerPage } from "@/features/analyzer/AnalyzerPage";
+import { ReportPage } from "@/features/analyzer/ReportPage";
 import { ChangesPage } from "@/features/changes/ChangesPage";
 import { ModelsPage } from "@/features/models/ModelsPage";
 import { PermissionsPage } from "@/features/permissions/PermissionsPage";
@@ -52,6 +54,7 @@ function pageFor(s: NavSection) {
   if (s.path === "/") return <ChatView />;
   if (s.path === "/assistants") return <AssistantsPage />;
   if (s.path === "/models") return <ModelsPage />;
+  if (s.path === "/analyzer") return <AnalyzerPage />;
   if (s.path === "/changes") return <ChangesPage />;
   if (s.path === "/permissions") return <PermissionsPage />;
   return <PlaceholderPage section={s} />;
@@ -61,7 +64,7 @@ export const routes: RouteObject[] = [
   {
     path: "/",
     element: <AppShell />,
-    children: [{ path: "c/:conversationId", element: <ChatView /> }, ...[...NAV, SETTINGS_SECTION].map((s) => ({
+    children: [{ path: "c/:conversationId", element: <ChatView /> }, { path: "analyzer/:id", element: <ReportPage /> }, ...[...NAV, SETTINGS_SECTION].map((s) => ({
       ...(s.path === "/" ? { index: true as const } : { path: s.path.slice(1) }),
       element: pageFor(s),
     }))],

@@ -111,6 +111,18 @@ pub async fn fs_pick_folder(app: AppHandle) -> CmdResult<Option<String>> {
         .map(|p| p.display().to_string()))
 }
 
+/// Native picker for any one file. `None` when the user cancels.
+#[tauri::command]
+#[specta::specta]
+pub async fn fs_pick_any_file(app: AppHandle) -> CmdResult<Option<String>> {
+    let picked = tauri::async_runtime::spawn_blocking(move || app.dialog().file().blocking_pick_file())
+        .await
+        .map_err(|e| ipc(NexusError::Internal(e.to_string())))?;
+    Ok(picked
+        .and_then(|p| p.into_path().ok())
+        .map(|p| p.display().to_string()))
+}
+
 // ---- permission-checked reads ---------------------------------------------------------------
 
 #[tauri::command]

@@ -44,6 +44,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             fs::fs_deny_add,
             fs::fs_deny_remove,
             fs::fs_pick_folder,
+            fs::fs_pick_any_file,
             fs::fs_list_dir,
             fs::fs_read_text,
             fs::fs_stat,

@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 115/229 tasks done (50%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 119/229 tasks done (51%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -164,10 +164,10 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T08.14** Pipelines `doc_summarize` (map-reduce) + `doc_qa` (BM25 + citations) + `doc_search` tool (2026-10-11)
 - [x] **T08.15** Pipelines `tidy_plan`, `secrets_report`, `log_triage`, `data_profile`, `commit_message` + `scan_folder` tool (2026-10-11) — pipelines return a `StreamPlan` + artifact; app wiring is T08.16/T08.20
 - [x] **T08.16** Store migration 0004 (reports, watches) + commands `analyze_folder`, `reports_*`, `report_*`, `report_cleanup_plan`, `file_report`; chat runs pipelines (2026-10-11) — untested by owner request (no build run); narrative saved via `report_narrative_save`, not a separate streaming command; bindings.ts needs regeneration
-- [ ] **T08.17** UI Analyzer home + scan flow (pick folder → grant → progress → report)
-- [ ] **T08.18** UI report view: KPI cards, canvas treemap (zoom, breadcrumb), category bars, virtualized tabs, AI summary card
-- [ ] **T08.19** UI file report views per type + export menu + "Plan cleanup" → Changes
-- [ ] **T08.20** Enable pipeline assistants in the gallery; "Open full report" links from chat
+- [x] **T08.17** UI Analyzer home + scan flow (pick folder → grant → progress → report) (2026-10-11) — written without running a build/tests (owner request); regenerate bindings.ts and run `scripts/check.sh` before relying on it
+- [x] **T08.18** UI report view: KPI cards, canvas treemap (zoom, breadcrumb), category bars, virtualized tabs, AI summary card (2026-10-11) — written without running a build/tests (owner request); regenerate bindings.ts and run `scripts/check.sh` before relying on it
+- [x] **T08.19** UI file report views per type + export menu + "Plan cleanup" → Changes (2026-10-11) — written without running a build/tests (owner request); regenerate bindings.ts and run `scripts/check.sh` before relying on it
+- [x] **T08.20** Enable pipeline assistants in the gallery; "Open full report" links from chat (2026-10-11) — written without running a build/tests (owner request); regenerate bindings.ts and run `scripts/check.sh` before relying on it
 - [ ] ⭐ **T08.21** 🍎 Exit check: 100k files < 10 s; narrative numbers validated; DocLens cites correct pages 5/5; no raw secrets anywhere
 
 ## M09: Rename Forge · [spec](docs/milestones/M09-rename-forge.md) · [contract](docs/architecture/ANALYZER.md#5-rename-forge)

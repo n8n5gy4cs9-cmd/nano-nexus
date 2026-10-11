@@ -18,7 +18,7 @@ fn ipc(e: NexusError) -> IpcError {
     IpcError::from(e)
 }
 
-/// Scan a folder (`duplicates`: `off | fast | full`). Progress arrives on `on_progress` (about 10 times a second).
+/// Scan a folder (`duplicates`: `off | fast | full`). Progress arrives on `on_event` (about 10 times a second).
 /// Returns the saved report's id.
 #[tauri::command]
 #[specta::specta]
@@ -27,7 +27,7 @@ pub async fn analyze_folder(
     job_id: String,
     root: String,
     duplicates: String,
-    on_progress: Channel<ScanProgress>,
+    on_event: Channel<ScanProgress>,
 ) -> CmdResult<String> {
     let mode = match duplicates.as_str() {
         "off" => DupMode::Off,
@@ -35,7 +35,7 @@ pub async fn analyze_folder(
         _ => DupMode::Fast,
     };
     let progress: Arc<dyn Fn(ScanProgress) + Send + Sync> = Arc::new(move |p| {
-        let _ = on_progress.send(p);
+        let _ = on_event.send(p);
     });
     service::analyzer::analyze_folder(&ctx, &job_id, &root, mode, progress).await.map_err(ipc)
 }
