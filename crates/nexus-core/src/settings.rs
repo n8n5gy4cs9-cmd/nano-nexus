@@ -62,6 +62,12 @@ pub struct Settings {
     /// Per-kind switches; a kind that is absent counts as enabled (see [`Settings::notification_kind_enabled`]).
     #[serde(rename = "notifications.kinds")]
     pub notifications_kinds: BTreeMap<String, bool>,
+    /// Quiet hours start, local time `"HH:MM"`. Empty = no quiet hours.
+    #[serde(rename = "notifications.quiet_start")]
+    pub notifications_quiet_start: String,
+    /// Quiet hours end, local time `"HH:MM"` (may be earlier than the start: overnight).
+    #[serde(rename = "notifications.quiet_end")]
+    pub notifications_quiet_end: String,
     #[serde(rename = "journal.retention_days")]
     pub journal_retention_days: u32,
     #[serde(rename = "journal.max_bytes")]
@@ -123,6 +129,8 @@ impl Default for Settings {
             privacy_allow_network_downloads: true,
             notifications_os_when_unfocused: true,
             notifications_kinds: BTreeMap::new(),
+            notifications_quiet_start: String::new(),
+            notifications_quiet_end: String::new(),
             journal_retention_days: 30,
             journal_max_bytes: 2_147_483_648,
             models_extra_dirs: Vec::new(),
@@ -146,6 +154,13 @@ impl Default for Settings {
     }
 }
 
+/// `"HH:MM"` → minutes since midnight.
+fn parse_hhmm(s: &str) -> Option<u32> {
+    let (h, m) = s.trim().split_once(':')?;
+    let (h, m): (u32, u32) = (h.parse().ok()?, m.parse().ok()?);
+    (h < 24 && m < 60).then_some(h * 60 + m)
+}
+
 /// A set of `dotted.key -> JSON value` changes.
 pub type SettingsPatch = BTreeMap<String, Value>;
 
@@ -153,6 +168,30 @@ impl Settings {
     /// Whether notifications of `kind` are enabled (absent = enabled).
     pub fn notification_kind_enabled(&self, kind: &str) -> bool {
         self.notifications_kinds.get(kind).copied().unwrap_or(true)
+    }
+
+    /// Is `minute_of_day` (local time, 0..1440) inside the quiet hours?
+    pub fn in_quiet_hours(&self, minute_of_day: u32) -> bool {
+        let (Some(start), Some(end)) = (
+            parse_hhmm(&self.notifications_quiet_start),
+            parse_hhmm(&self.notifications_quiet_end),
+        ) else {
+            return false;
+        };
+        match start.cmp(&end) {
+            std::cmp::Ordering::Equal => false,
+            std::cmp::Ordering::Less => (start..end).contains(&minute_of_day),
+            std::cmp::Ordering::Greater => minute_of_day >= start || minute_of_day < end,
+        }
+    }
+
+    /// Should a notification of `kind` also be shown by the OS? Needs the master switch, the kind
+    /// enabled, an unfocused window (an in-app bell is enough otherwise), and no quiet hours.
+    pub fn wants_os_notification(&self, kind: &str, window_focused: bool, minute_of_day: u32) -> bool {
+        self.notifications_os_when_unfocused
+            && self.notification_kind_enabled(kind)
+            && !window_focused
+            && !self.in_quiet_hours(minute_of_day)
     }
 
     /// The value of one key as JSON, or `None` for an unknown key.
@@ -203,6 +242,40 @@ mod tests {
         assert_eq!(s.share_default_policy, SharePolicy::ChatRead);
         assert_eq!(s.journal_max_bytes, 2_147_483_648);
         assert!(s.notification_kind_enabled("anything"));
+    }
+
+    #[test]
+    fn os_notification_routing() {
+        let mut s = Settings::default();
+        assert!(s.wants_os_notification("download", false, 600));
+        assert!(
+            !s.wants_os_notification("download", true, 600),
+            "focused: bell only"
+        );
+        s.notifications_kinds.insert("download".into(), false);
+        assert!(!s.wants_os_notification("download", false, 600), "kind off");
+        assert!(s.wants_os_notification("job", false, 600));
+        s.notifications_os_when_unfocused = false;
+        assert!(!s.wants_os_notification("job", false, 600), "master switch");
+    }
+
+    #[test]
+    fn quiet_hours_overnight_and_same_day() {
+        let mut s = Settings::default();
+        assert!(!s.in_quiet_hours(0), "off by default");
+        s.notifications_quiet_start = "22:00".into();
+        s.notifications_quiet_end = "07:30".into();
+        assert!(s.in_quiet_hours(23 * 60));
+        assert!(s.in_quiet_hours(3 * 60));
+        assert!(!s.in_quiet_hours(7 * 60 + 30));
+        assert!(!s.in_quiet_hours(12 * 60));
+        assert!(!s.wants_os_notification("job", false, 23 * 60));
+        s.notifications_quiet_start = "13:00".into();
+        s.notifications_quiet_end = "14:00".into();
+        assert!(s.in_quiet_hours(13 * 60 + 30));
+        assert!(!s.in_quiet_hours(14 * 60));
+        s.notifications_quiet_end = "garbage".into();
+        assert!(!s.in_quiet_hours(13 * 60 + 30), "invalid = off");
     }
 
     #[test]

@@ -42,6 +42,7 @@ toml.workspace = true
 async-trait.workspace = true
 tokio = { workspace = true, features = ["signal"] }
 tracing.workspace = true
+time.workspace = true
 
 [dev-dependencies]
 wiremock.workspace = true

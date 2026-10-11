@@ -23,10 +23,16 @@ use crate::state::AppState;
 #[tauri_specta(event_name = "notification:new")]
 pub struct NotificationNew(pub NotificationPayload);
 
-/// Should this notification also go to the OS? Only when the user wants it, the kind is enabled, and
-/// the window is not focused (an in-app bell is enough while they are looking at the app).
+/// Minutes since local midnight (UTC when the local offset is unknown, e.g. multi-threaded Linux).
+fn local_minute_of_day() -> u32 {
+    let now = time::OffsetDateTime::now_local().unwrap_or_else(|_| time::OffsetDateTime::now_utc());
+    u32::from(now.hour()) * 60 + u32::from(now.minute())
+}
+
+/// Should this notification also go to the OS? The rules live in [`Settings::wants_os_notification`]:
+/// enabled kind, window not focused, outside quiet hours.
 pub fn wants_os_notification(settings: &Settings, kind: &str, window_focused: bool) -> bool {
-    settings.notifications_os_when_unfocused && settings.notification_kind_enabled(kind) && !window_focused
+    settings.wants_os_notification(kind, window_focused, local_minute_of_day())
 }
 
 /// Store, emit, and maybe show an OS notification.
