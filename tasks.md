@@ -38,7 +38,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T00.07** Root `package.json`, `pnpm-workspace.yaml`, `.nvmrc`, `.editorconfig` (2026-10-11)
 - [ ] **T00.08** 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 - [x] **T00.09** (optional) GitHub Actions: `scripts/check.sh` on macos-14 (2026-10-11)
-- [ ] ⭐ **T00.10** Exit check: `scripts/check.sh` green; `cargo doc -p nexus-core` has no warnings
+- [x] ⭐ **T00.10** Exit check: `scripts/check.sh` green; `cargo doc -p nexus-core` has no warnings (2026-10-11)
 
 ## M01: Runtime and model pipeline · [spec](docs/milestones/M01-runtime-model.md)
 - [ ] **T01.01** 🍎 Run `scripts/setup-runtime.sh`; fix any issue; confirm `runtime.lock.json`, arm64-only, system-libs-only
