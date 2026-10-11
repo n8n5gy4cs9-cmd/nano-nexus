@@ -35,6 +35,18 @@ Rules:
   stray `LLAMA_ARG_*` env vars from your shell can't change behavior.
 - On macOS, call `process_group(0)` (Unix `CommandExt`) so a kill can target the whole group.
 - Write `<data>/runtime/server.json = {pid, port, started_at, exe}` after spawn. Delete it on clean stop.
+- **Windows (must, ADR-014):**
+  - Binary: `resource_dir()/runtime/llama-server.exe` (its DLLs sit in the same folder).
+  - Spawn with `creation_flags(CREATE_NO_WINDOW /* 0x08000000 */)` so no console window flashes.
+  - Right after spawn, assign the child to a **Job Object** created with
+    `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` (crate `win32job` or `windows`). The app holds the job
+    handle, and when the app dies for any reason, Windows kills the server.
+  - Graceful stop: there's no SIGTERM, so call `child.kill()` (TerminateProcess). llama-server has
+    no state to flush.
+  - The env must include `SystemRoot` and `TEMP` (Windows DLL loading and temp files need them)
+    in addition to `PATH`.
+  - Backend detection: parse the stderr lines (`ggml_vulkan: Found N Vulkan devices` / `using device`) →
+    show "GPU (Vulkan)" or "CPU" in the runtime panel.
 
 ## 2. Readiness and ownership
 

@@ -4,7 +4,10 @@
 
 | Source | Where it lives | Deletable |
 |---|---|---|
-| **Built-in** (bundled at build time) | `NanoNexus.app/Contents/Resources/models/model.gguf` + `lock.json` | No (read-only bundle) |
+| **Bundled** (1..n models, chosen by the bundle profile at build time) | `<resources>/models/manifest.json` + `<resources>/models/<id>/<file>.gguf` | No (read-only bundle) |
+| **Offline kit extras** | `<exe_dir>/models-extra/pack.json` + files (Windows offline kit); verified and registered on first launch | No (part of the install) |
+| **Model pack import** (USB, offline) | copied into `<data>/models/<id>/`, or referenced in place | Yes |
+| **Extra folders** (user-added, e.g. a NAS share) | referenced in place (Read grant), discovered by scanning for `*.gguf` (+ optional `pack.json`) | Unlink only |
 | **Downloaded** (catalog or HF search) | `<data>/models/<owner>__<repo>/<file>.gguf` | Yes |
 | **Imported** (user picked a local `.gguf`) | copied into `<data>/models/local/`, or referenced in place (requires a Read grant) | Yes (copy) / Unlink (reference) |
 
@@ -129,3 +132,32 @@ size, RAM-fit badge, capabilities chips, license, and Download / Pause / Resume 
 Delete. A progress ring + bar shows speed and ETA. The active model gets a glowing "Active" pill.
 The runtime panel at the top shows status, ctx size, GPU layers, tokens/s from the last answer,
 and Restart / Logs buttons.
+
+## 9. Bundled-model manifest and model packs (ADR-015)
+
+### `models/manifest.json` (inside the app; written by `scripts/stage-bundle.mjs`)
+```json
+{
+  "schema": 1, "profile": "studio", "built_at": "2026-10-20T12:00:00Z", "app_version": "0.1.0",
+  "default": "minicpm5-1b-fable5-v2-q8",
+  "models": [
+    { "id": "minicpm5-1b-fable5-v2-q8", "name": "MiniCPM5 1B · Opus-Fable5 V2", "path": "minicpm5-1b-fable5-v2-q8/MiniCPM5-1B-Claude-Opus-Fable5-V2-Thinking-Q8_0.gguf",
+      "sha256": "<64 hex>", "bytes": 1100000000, "repo": "GnLOLot/…", "revision": "<commit>", "license": "…",
+      "catalog_id": "minicpm5-1b-fable5-v2-q8", "sampling": { "no_think": {…}, "think": {…} }, "capabilities": ["chat","code","thinking"] }
+  ]
+}
+```
+Startup: read the manifest → upsert `models` rows (source `builtin`, path absolute) → if
+`settings.active_model_id` is missing or invalid, use `default`. Hashes are **not** recomputed at
+every launch (1+ GB). "Verify bundled models" in the Models page does it on demand.
+
+### Model pack (`NanoNexus-ModelPack-<name>/pack.json` + `models/<id>/<file>.gguf`)
+Same `models[]` entries as the manifest (paths relative to the pack folder), plus `"kind": "model-pack"`.
+- **Export** (app): select installed models → choose a destination folder → copy with progress →
+  write `pack.json` (+ `README.txt` with import steps) → notification.
+- **Export** (CLI, from `vendor/models`): `node scripts/make-model-pack.mjs --profile <p> | --id <id>… --out <dir>`.
+- **Import** (app, offline): pick the folder → validate `pack.json` (schema `schemas/model-pack.schema.json`)
+  → for each model: free space check → stream-copy while hashing (or hash in place for "reference")
+  → reject any mismatch → register (`source = 'import'`) → notification "3 models imported".
+- **Offline kit (Windows):** the NSIS hook copies `models-extra/` next to the exe, and the first
+  launch runs the same import pipeline in "reference in place" mode.

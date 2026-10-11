@@ -17,7 +17,8 @@
 | Code parsing | `tree-sitter` 0.27 + grammars (gdscript 6.1, rust, python, js, ts, c-sharp, lua) | |
 | Templates | `minijinja` 3 | |
 | Dev tooling | Rust stable (≥ 1.90), Node 22 + pnpm, CMake ≥ 3.21, Xcode CLT, git | |
-| Packaging | `tauri build --bundles app` + overlay config with model resources + `codesign` (stable self-signed identity) | |
+| Packaging | macOS: `tauri build --bundles app` + generated overlay (bundle profile) + `codesign` · Windows (**built on the Mac**): `tauri build --runner cargo-xwin --target x86_64-pc-windows-msvc --bundles nsis` | cargo-xwin, NSIS (brew) |
+| LAN Share | `axum` 0.8 server (WebSocket RPC + embedded web UI), `mdns-sd`, optional `rcgen` TLS | off by default, port 9889 |
 
 **The single most important architectural decision** (same as the Godot project): the AI is
 **not linked into the app**. It's an owned child process that speaks OpenAI-compatible HTTP on
@@ -64,7 +65,8 @@ Only Rust talks to it. The webview never does.
 | `nexus-fs` | `crates/nexus-fs` | core | `PermissionEngine` (grants + deny list + canonicalization), `SafeFs` (read-only helpers that check grants), `ChangeSet` model, diff generation, `Journal` (apply/undo), Trash, audit events, OS-permission probes (TCC) |
 | `nexus-analyze` | `crates/nexus-analyze` | core, fs | Folder scanner, categorizer, duplicates, naming checks, text extraction (txt/md/code/pdf/docx/html), chunking + BM25, code index (tree-sitter), Godot adapter, secrets scanner, log clustering, CSV/JSON profiler, report renderers (Markdown/JSON/CSV), compact "facts" builders for the LLM |
 | `nexus-agent` | `crates/nexus-agent` | core, llm, fs, analyze | Assistant spec + registry (built-ins via `include_dir!`), prompt rendering (minijinja), context budgeting, tool trait + tools, workflows (`chat`, `router`, `pipeline`), `TurnEngine` |
-| `nano-nexus` (bin) | `apps/desktop/src-tauri` | all | Tauri setup, `AppState`, commands, Channels/events, notifications, dialogs, tray, window effects, wiring persistence ↔ engine |
+| `nexus-share` | `crates/nexus-share` | core | LAN Share: axum server, pairing/sessions/CSRF/rate limits, WebSocket RPC dispatch over a `ShareApi` trait, embedded web UI, mDNS, optional TLS (see LAN-SHARE.md) |
+| `nano-nexus` (bin) | `apps/desktop/src-tauri` | all | Tauri setup, `AppState`, **`service::*` (transport-agnostic business API)**, thin `commands/*` wrappers, Channels/events, `ShareApi` impl, notifications, dialogs, tray, window effects |
 
 **Rule:** library crates never depend on `tauri`. They expose plain async Rust APIs and take
 callbacks or channels for progress, which keeps them testable with `cargo test` and no GUI.
@@ -111,6 +113,10 @@ UI composer ──invoke chat_send(conv_id, text, attachments, think)──► c
   Chat deltas, scan progress, and download progress all go this way.
 - **Global events** (`app.emit`) only for app-wide state: `runtime:status`, `notification:new`,
   `permission:request`, `job:update`, `model:changed`.
+- **Service layer rule (from M04):** each command is a thin wrapper:
+  `commands::chat_send(...) => service::chat::send(&ctx, Caller::Desktop, args, ChannelSink(ch))`.
+  LAN Share calls the same `service::*` with `Caller::Remote{device, policy}` over WebSocket.
+  The frontend calls a `Transport` facade (Tauri `invoke` or WebSocket), never `invoke` directly.
 - **Errors**: every command returns `Result<T, IpcError>`, where
   `IpcError { code: ErrorCode, message: String, detail: Option<String> }`.
   The UI maps `code` to friendly copy and actions (e.g. `permission_denied` → "Grant access…").
@@ -141,8 +147,11 @@ UI composer ──invoke chat_send(conv_id, text, attachments, think)──► c
   llama-server.log               child stderr (rotating, 5 MB × 3)
 NanoNexus.app/Contents/
   MacOS/nano-nexus, MacOS/llama-server
-  Resources/models/model.gguf, Resources/models/lock.json, Resources/licenses/*
+  Resources/models/manifest.json, Resources/models/<id>/<file>.gguf (1..n), Resources/licenses/*, Resources/bundle.json
 ```
+Windows install (`%LOCALAPPDATA%\Programs\NanoNexus\`): `nano-nexus.exe`, `runtime\llama-server.exe` + DLLs,
+`models\manifest.json` + `models\<id>\*.gguf`, optional `models-extra\` (offline kit). Data in
+`%APPDATA%\dev.nanonexus.app\`, or `.\data\` in portable mode (`portable.flag` next to the exe).
 
 Linux uses `~/.local/share/dev.nanonexus.app` and Windows uses
 `%APPDATA%\dev.nanonexus.app`, both resolved via Tauri's path API. Never hard-code these paths.
@@ -158,4 +167,5 @@ Linux uses `~/.local/share/dev.nanonexus.app` and Windows uses
 | Folder/file analyzer, Rename Forge, Godot adapter | [ANALYZER.md](ANALYZER.md) |
 | Catalog, downloads, GGUF, RAM fit | [MODEL-MANAGER.md](MODEL-MANAGER.md) |
 | SQLite schema, commands, events, error codes | [DATA-AND-IPC.md](DATA-AND-IPC.md) |
+| LAN Share server, pairing, web/mobile UI | [LAN-SHARE.md](LAN-SHARE.md) |
 | Visual design, screens, components | [../design/UI-DESIGN.md](../design/UI-DESIGN.md) |

@@ -5,7 +5,8 @@
 | **Owner** | You (single user, personal tool) |
 | **Version** | 1.0 (planning baseline) — 2026-10-11 |
 | **Primary platform** | macOS 13+ on Apple Silicon (M1–M5) |
-| **Secondary (optional)** | Linux x86_64/arm64, Windows 11 x64 |
+| **Must-have platform** | Windows 11 x64 (+ arm64), **built on the Mac** by cross-compiling |
+| **Optional** | Linux x86_64/arm64 (built in a Linux VM) |
 | **Status** | Approved for implementation, milestone M0 |
 
 ---
@@ -28,7 +29,10 @@ reviewed and undoable.
 - **One user: you.** You're a developer (Godot/GDScript, Rust), on a Mac with Apple Silicon.
 - No accounts, no cloud, no telemetry. Network is used only to download models when you ask.
 - The app is built on your machine. The model and runtime are compiled or downloaded locally
-  and bundled into your own `.app`.
+  and bundled into your own `.app` and Windows installer, both built on the Mac.
+- Some target machines are **offline** (e.g. a studio PC). They need several models bundled or
+  sideloaded, with no internet at install time or run time.
+- You also want to use the assistant from your **phone or another computer on the same Wi-Fi**.
 
 ## 3. Goals and non-goals
 
@@ -56,7 +60,15 @@ reviewed and undoable.
 9. **Notifications.** Native OS notifications when the app is unfocused, plus an in-app
    notification center for downloads, scans, model status, applied changes, and watch reports.
 10. **Looks great.** A native-feeling macOS design (vibrancy sidebar, overlay title bar),
-    dark and light themes, a command palette, and keyboard-first navigation.
+    dark and light themes, a command palette, and keyboard-first navigation. Windows gets
+    Mica and native chrome.
+11. **Windows build (must).** NSIS installer, portable ZIP, and offline kit, all cross-compiled
+    on the Apple Silicon Mac.
+12. **Bundle profiles + App Builder.** The basic build ships the default model. A custom build
+    ships any set of models. A local App Builder UI lets you tick models and targets and click
+    Build. Model packs add models to installed apps offline over USB.
+13. **LAN Share.** A one-click Start/Stop server (default port 9889) with QR/PIN pairing and a
+    responsive mobile/desktop web UI, so you can use your assistants from a phone on the same network.
 
 ### Non-goals (v1)
 - Cloud models or API keys (an optional "custom OpenAI-compatible endpoint" may come later).
@@ -64,7 +76,8 @@ reviewed and undoable.
 - Autonomous agents that change files without approval. **Never.**
 - Mac App Store distribution (no App Sandbox). Notarization is optional.
 - Training or fine-tuning models.
-- Vision, voice, and embeddings-RAG. Planned as optional M14+.
+- Vision, voice, and embeddings-RAG. Planned as optional (M16).
+- Access from outside your local network (no port forwarding or relay). LAN only.
 
 ## 4. Feature requirements
 
@@ -97,7 +110,7 @@ Priorities: **P0** is required for v1, **P1** is strongly wanted, **P2** is nice
 ### F3. Model runtime and bundled model (P0)
 | ID | Requirement | Acceptance criteria |
 |---|---|---|
-| F3.1 | Bundled `llama-server` + default GGUF in the `.app` | First launch works with networking off. |
+| F3.1 | Bundled `llama-server` + bundled GGUF(s) in the `.app` / Windows install (default model, or every model in the chosen bundle profile) | First launch works with networking off. All bundled models are listed as "Bundled" and can be switched offline. |
 | F3.2 | Owned child process on 127.0.0.1, random port, random 24-byte bearer token | `/v1/models` succeeds with the token and returns 401 without it. The token never reaches the webview. |
 | F3.3 | Health and ownership checks, ready timeout, crash detection, auto-restart once | The UI shows the states Starting → Loading → Ready / Error, with the log tail. |
 | F3.4 | Killed on app exit, window close (configurable), and crash recovery | No orphan `llama-server` after quitting. Stale PIDs are reaped on next launch. |
@@ -171,6 +184,36 @@ Priorities: **P0** is required for v1, **P1** is strongly wanted, **P2** is nice
 - Jobs panel (downloads, scans, batch LLM) with progress and cancel.
 - Optional: menu-bar tray icon, quick-ask global hotkey window (⌥Space), launch at login.
 
+### F11. Windows build, cross-compiled on the Mac (P0)
+| ID | Requirement | Acceptance criteria |
+|---|---|---|
+| F11.1 | `scripts/build-windows.sh` builds Windows x64 and arm64 on the Apple Silicon Mac (cargo-xwin + NSIS) | Produces `…-setup.exe` without any Windows machine |
+| F11.2 | Windows runtime = official llama.cpp binaries of the same pinned tag (Vulkan x64 default, CPU arm64), digest-verified | `runtime.lock.json` records the hashes |
+| F11.3 | Three formats: Installer, Portable ZIP (data next to the exe), Offline kit (installer + `models-extra/` + WebView2 offline) | Payload > 1.8 GB automatically uses kit or portable (NSIS limit) |
+| F11.4 | Windows parity: chat, assistants, permissions (Recycle Bin, Controlled Folder Access guidance), notifications, LAN Share | `docs/WINDOWS-TESTING.md` checklist passes on x64 hardware and an arm64 VM |
+| F11.5 | No orphan server: a Job Object kills `llama-server.exe` with the app. No console window flashes | Killing the app in Task Manager kills the server |
+
+### F12. Bundle profiles, App Builder, model packs (P0)
+| ID | Requirement | Acceptance criteria |
+|---|---|---|
+| F12.1 | Bundle profiles (`bundles/*.json`): models (catalog / HF repo + quant / local GGUF), default model, targets, Windows format | Schema-validated. `basic.json` = default model only |
+| F12.2 | **App Builder**: `node scripts/app-builder.mjs` opens a local web UI. Tick models, see total size and warnings, pick targets, click **Build**, watch logs, get artifacts with SHA-256 | Works headless too: `--profile X --target all --yes` |
+| F12.3 | Multi-model bundles in the app (`models/manifest.json`) | All listed as Bundled, switchable offline, verifiable |
+| F12.4 | Model packs: export (CLI or app) and import (app) a folder of verified models, no rebuild, no internet | Import verifies every SHA-256 and rejects tampered files |
+| F12.5 | Extra model folders: the app also discovers GGUFs in `<exe>/models-extra/` and user-added folders | Shown under Installed → "Discovered" |
+| F12.6 | `guide.html`: step-by-step user guide for every build and offline workflow (macOS, Windows-from-Mac, studio PC) | Kept up to date at each milestone exit |
+
+### F13. LAN Share and mobile web UI (P0)
+| ID | Requirement | Acceptance criteria |
+|---|---|---|
+| F13.1 | One-click **Start/Stop sharing** (title-bar 📡 pill + Settings → Sharing), default port **9889**, editable | Start < 1 s. Port conflicts show a fix ("Use 9890"). Stop closes the port |
+| F13.2 | Pairing by QR code or 6-digit PIN; per-device sessions; device list with rename/revoke | Unpaired requests get 401. A revoked device is logged out immediately |
+| F13.3 | Responsive web UI served by the app: mobile layout (< 768 px: bottom tabs, drawer, safe areas) and desktop layout (≥ 768 px); PWA installable | Playwright passes at 390×844 and 1280×800. Works on iOS Safari and Android Chrome |
+| F13.4 | Remote features: chat (streaming, stop, regenerate), assistants, history, reports viewer, notifications. Desktop-only screens show a friendly hint | Remote conversations sync to the desktop, tagged by device |
+| F13.5 | Remote policy: chat only / chat + read granted folders (default) / full (with desktop confirmation) | Remote can't apply changes or grant folders under the default policy |
+| F13.6 | Optional Bonjour name `nanonexus.local`, optional self-signed HTTPS with fingerprint | Toggle in settings |
+| F13.7 | `llama-server` is never exposed to the LAN | Verified with `lsof`/`netstat` in tests |
+
 ## 5. Non-functional requirements
 
 | Area | Requirement |
@@ -179,10 +222,11 @@ Priorities: **P0** is required for v1, **P1** is strongly wanted, **P2** is nice
 | **Security** | llama-server binds only to 127.0.0.1 with a random bearer token. The webview never talks to it (Rust proxies everything). Strict CSP. File content is treated as untrusted data (prompt-injection aware). The LLM has no direct write tool. |
 | **Performance** | Cold start to interactive UI < 1.5 s. Model ready < 5 s (1B Q8, M1). Idle RAM (app without model) < 250 MB. Chat UI at 60 fps while streaming. |
 | **Reliability** | Server crash → auto-restart once → clear error. No orphan processes. DB in WAL mode. Atomic file writes. |
-| **Portability** | Paths resolved relative to the executable/resources, so the app works after being moved. macOS 13+. |
+| **Portability** | Paths resolved relative to the executable/resources, so the app works after being moved. macOS 13+ and Windows 10/11 (x64, arm64), both built on the Mac. |
+| **LAN exposure** | Off by default. Auth always on. Only the NanoNexus API on the chosen port. Rate-limited pairing. Every remote action is audited. |
 | **Accessibility** | Full keyboard navigation, visible focus rings, `prefers-reduced-motion`, contrast ≥ 4.5:1. |
 | **Maintainability** | Rust crates with unit tests (≥ 70% on core logic). TS types generated from Rust (tauri-specta). Lint and format enforced. |
-| **Size** | App bundle ≈ 1.1 GB (model) + ~40 MB (app + runtime). |
+| **Size** | Basic build ≈ 1.1 GB (model) + ~40 MB (app + runtime) on macOS, ≈ 1.2 GB on Windows (Vulkan runtime DLLs). Custom profiles add their model sizes. |
 
 ## 6. Built-in assistants (v1)
 
@@ -217,6 +261,8 @@ with their own prompt). The tutorial example is **Regex Smith**.
   runs, and Godot's headless check and import report no script errors) and the change is undoable.
 - No orphan processes or data loss incidents across 30 days.
 - Chat feels instant: TTFT < 1 s, ≥ 40 tok/s on your Mac with the default model.
+- The studio PC (offline, Windows) runs a 3-model offline kit built on your Mac with zero internet.
+- You chat with your Mac's assistants from your phone over Wi-Fi in under 30 s from "Start sharing".
 
 ## 8. Risks and mitigations
 
@@ -230,6 +276,10 @@ with their own prompt). The tutorial example is **Regex Smith**.
 | Large-file bundling (1.1 GB) slows builds | Slow iteration | Dev mode reads the model from `vendor/` directly. Bundle only with `--bundles app`. |
 | Community model licensing ambiguity (trained on Claude outputs) | Fine for personal use | Personal use only. Documented in the catalog notes. Official `openbmb/MiniCPM5-1B-GGUF` is the fallback. |
 | tauri-specta still RC | Build breaks on upgrade | Pin exact versions. Fallback: `ts-rs` plus hand-written invoke wrappers (ADR-006). |
+| Tauri cross-compile to Windows is "less tested" | Windows build breaks | Spike S7 in M03 (walking skeleton on Windows). Pin tauri-cli. Avoid C deps needing MSVC/NASM (native-tls). |
+| NSIS ~2 GB installer limit | Multi-model Windows installers fail | Auto-switch to offline kit / portable ZIP above 1.8 GB (ADR-015). |
+| LAN Share exposes the assistant on Wi-Fi | Unauthorized use on shared networks | Off by default. Pairing + revocation. Default remote policy can't write. Firewall prompt guidance. A notification on every new pairing. |
+| iOS Safari drops background WebSockets | Missed streamed tokens | Auto-reconnect and refetch the conversation from the DB on resume. |
 
 ## 9. Open questions (defaults chosen, change any time)
 
@@ -239,6 +289,9 @@ with their own prompt). The tutorial example is **Regex Smith**.
 | Q2 | Default quant: V2 Q8_0 (1.1 GB) vs. V1 Q4_K_M (657 MB) | **V2 Q8_0**: better tool calling, and Q8 is near-lossless at 1B. Spike S3 measures it on your Mac. |
 | Q3 | Run in the background (menu bar) for Watches? | Optional, **off** by default. |
 | Q4 | Rename Forge language order | **GDScript → Rust → TS/JS → Python → C# → Lua** |
+| Q5 | Windows default runtime: Vulkan (GPU) or CPU-only? | **Vulkan x64** (falls back to CPU). Use `--cpu-only` for the smallest build |
+| Q6 | LAN Share remote default policy | **Chat + read granted folders.** Writes only from the desktop |
+| Q7 | LAN Share transport | **HTTP + pairing** by default (works on every phone without cert warnings). HTTPS optional |
 
 ## 10. Glossary
 

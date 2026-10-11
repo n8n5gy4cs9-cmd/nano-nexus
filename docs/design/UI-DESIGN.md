@@ -95,7 +95,7 @@ Each swaps `--accent`/`--accent-2` and the gradient.
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────────┐
-│ ● ● ●   (overlay titlebar, drag region 44px)          ⌘K Search…          🔔3   ◐ Ready ▾ │
+│ ● ● ●   (overlay titlebar, drag region 44px)     ⌘K Search…     📡 2   🔔3   ◐ Ready ▾ │
 ├───────────────┬────────────────────────────────────────────────────────────┬───────────────┤
 │ ▣ NanoNexus   │                                                            │  Inspector    │
 │               │                  (current view)                            │  (toggle ⌘I)  │
@@ -129,6 +129,39 @@ Each swaps `--accent`/`--accent-2` and the gradient.
 - Title-bar right cluster: **runtime pill** (●green Ready · ●amber Loading with spinner ·
   ●red Error). Clicking it opens a popover with the model name, ctx, tok/s, Restart, and Logs.
 - 🔔 notification bell with an unread badge opens the notification popover.
+- 📡 **Share pill**: grey "Share" when off. Green with the device count when on. Click → popover
+  with the big ON/OFF switch, URLs, QR code + PIN, paired devices, and "Sharing settings…"
+  (LAN-SHARE.md §2).
+
+### 3.1 Windows chrome
+- Native title bar (decorations on) + **Mica** backdrop (`window_vibrancy::apply_mica`, Win11; solid
+  `--bg-sidebar` fallback on Win10). No traffic-light padding. The ⌘K search, 📡, 🔔, and runtime
+  pill move into a 40 px app toolbar under the native title bar.
+- Shortcuts map ⌘ → Ctrl (one `mod` key in the shortcut layer). Hints use `Ctrl` labels.
+- Font stack: `Inter Variable, "Segoe UI Variable", "Segoe UI", system-ui`.
+- Scrollbars: thin overlay style via CSS (`scrollbar-width: thin`).
+
+### 3.2 Web / mobile layout (LAN Share, served to browsers)
+```
+ Mobile (< 768 px)                         Desktop browser (≥ 768 px)
+ ┌───────────────────────────┐            same as the app shell, minus desktop-only sections;
+ │ ☰  Nexus ▾        ◐ Ready │ ← top bar   desktop-only screens show "Open NanoNexus on your
+ │───────────────────────────│              computer for this" cards
+ │  messages (full width)    │
+ │  …                        │
+ │┌─────────────────────────┐│
+ ││ Ask Nexus…          ➤  ││ ← composer pinned, safe-area padding
+ │└─────────────────────────┘│
+ │ 💬 Chat  ◇ Assist.  🕘 History  ▤ Reports  ⋯ │ ← bottom tab bar 56 px
+ └───────────────────────────┘
+```
+- ☰ opens the conversations drawer (swipe from the left edge also works). Long-press a message
+  opens Copy / Regenerate. Touch targets are ≥ 44 px. Body text is 16 px (prevents iOS zoom on focus).
+- **Pairing screen:** a hexagon logo, "Pair with NanoNexus on <host>", a device-name field
+  (prefilled from the UA: "iPhone"), and [Pair]. When opened without a QR secret, it shows a
+  6-digit PIN pad.
+- **Connection banner:** amber "Reconnecting…" or red "NanoNexus on your computer is off or sharing stopped".
+- PWA: `theme_color` = `--bg`, icons 192/512 + maskable, `display: standalone`.
 
 ## 4. Screens
 
@@ -204,6 +237,9 @@ draft. Footer: Validate · Save · Export.
  │   ◔ Downloading 63% · 18.2 MB/s · 32 s left                    [Pause] [Cancel]        │  ← progress ring + bar (gradient)
  └──────────────────────────────────────────────────────────────────────────────────────────┘
 ```
+The Installed tab has sections **Bundled** (from the app's manifest: lock badge, "Verify"),
+**Downloaded**, **Imported / Discovered** (extra folders, model packs), and toolbar buttons
+[Import model pack…] [Export model pack…] [Add model folder…].
 Discover groups: **Tiny (≤1.5B)** · **Small (2–4B)** · **Coding** · **Thinking**. Each card has
 a "Why this model" line. Search shows HF results; expanding a row lists its GGUF files by quant
 with size and RAM badges.
@@ -266,8 +302,12 @@ Buttons: Apply (gradient) / Discard / Undo. Undo conflicts show a 3-option dialo
 ### 4.10 Settings
 Sections: General (launch at login, quit on close, language) · Appearance (theme, accent, font
 size, show perf stats) · Model runtime (ctx, GPU layers, flash attn, threads, idle unload, server
-logs) · Privacy (network downloads, deny list, clear history) · Notifications (per kind) ·
-Shortcuts · Advanced (data folder, journal retention, Godot path, reset app, open logs).
+logs) · Models (extra model folders, verify bundled models, import/export model packs) ·
+**Sharing** (enable switch, autostart, port **9889**, listen-on interface, Bonjour name, HTTPS +
+fingerprint, remote policy, allowed assistants, session lifetime, max devices, paired devices
+table, notifications on pairing; see LAN-SHARE §2) · Privacy (network downloads, deny list,
+clear history) · Notifications (per kind) · Shortcuts · Advanced (data folder, journal
+retention, Godot path, reset app, open logs) · About (version, bundle profile, build date, git commit).
 
 ### 4.11 Onboarding (first run, 4 steps, skippable)
 1. **Welcome**: logo animation (gradient ring forming a hexagon "nexus"), then "Private AI on your Mac".

@@ -183,7 +183,7 @@ Retention: journals are kept for 30 days or 2 GB (oldest pruned first), configur
 - The child `llama-server` only reads the GGUF in the bundle or App Support, which aren't
   TCC-protected, so it needs no grants.
 
-### Windows (optional)
+### Windows (must, built on the Mac; see ADR-014)
 - No TCC. **Controlled Folder Access** (Defender) can block writes to Documents/Desktop:
   `ERROR_ACCESS_DENIED` (5) on write while reads work → show guidance ("Allow an app through
   Controlled folder access").
@@ -193,6 +193,14 @@ Retention: journals are kept for 30 days or 2 GB (oldest pruned first), configur
 ### Linux (optional)
 - POSIX perms (`EACCES`) → plain message. Trash uses the freedesktop spec (`trash` crate).
 - Flatpak/Snap sandboxes aren't targeted. If added later, use the XDG Desktop Portal file chooser.
+
+### Remote callers (LAN Share, see LAN-SHARE.md §3)
+Every service call carries a `Caller`. For `Caller::Remote{policy}`:
+| Policy | Read via existing grants | Ask for new grants | Apply/undo change sets | Manage grants |
+|---|---|---|---|---|
+| `chat_only` | ❌ | ❌ | ❌ | ❌ |
+| `chat_read` (default) | ✅ (Read level only, even if the grant is higher) | → desktop modal "requested from <device>" | ❌ | ❌ |
+| `full` | ✅ | → desktop modal | ✅ after a desktop confirmation toast | ❌ (desktop only, always) |
 
 ## 7. What tools may do (enforced in `nexus-agent`)
 

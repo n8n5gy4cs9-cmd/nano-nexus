@@ -1,8 +1,8 @@
 # M01: Runtime and Model Pipeline
 
-**Goal:** on your Mac, produce `vendor/runtime/llama-server-aarch64-apple-darwin` (pinned,
-static, Metal) and `vendor/models/model.gguf` (pinned, SHA-256 verified), and answer spikes
-S1–S3 with real measurements.
+**Goal:** on your Mac, produce `vendor/runtime/macos-arm64/llama-server-aarch64-apple-darwin` (pinned,
+static, Metal) and `vendor/models/<default-id>/<file>.gguf` (pinned, SHA-256 verified, listed in
+`vendor/models/index.json`), and answer spikes S1–S3 with real measurements.
 
 **Prereqs:** M00. Xcode Command Line Tools, CMake ≥ 3.21, git, Node 22.
 **Exit demo:** `scripts/smoke-runtime.sh` starts the server with a random port and token, gets a
@@ -23,7 +23,8 @@ import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()
 EOF
 )
 TOKEN=$(openssl rand -hex 24)
-LLAMA_API_KEY=$TOKEN vendor/runtime/llama-server-aarch64-apple-darwin -m vendor/models/model.gguf \
+MODEL=$(node scripts/fetch-model.mjs --print-default-path)      # path of the default model's .gguf
+LLAMA_API_KEY=$TOKEN vendor/runtime/macos-arm64/llama-server-aarch64-apple-darwin -m "$MODEL" \
   --host 127.0.0.1 --port $PORT --ctx-size 8192 --parallel 1 --n-gpu-layers all --jinja \
   --reasoning-format deepseek --no-webui --timeout 120 > /tmp/nn-smoke.log 2>&1 &
 PID=$!; trap 'kill $PID 2>/dev/null' EXIT
@@ -58,8 +59,8 @@ Result: ✅/❌ … Evidence: (short table) … Decision: …
 ## Steps
 1. `scripts/doctor.sh` → fix anything red.
 2. `scripts/setup-runtime.sh` → expect ~3–6 min. Check `vendor/runtime/runtime.lock.json`.
-3. `node scripts/fetch-model.mjs` → ~1.1 GB. Check `vendor/models/lock.json`. Then run
-   `node scripts/fetch-model.mjs --verify`.
+3. `node scripts/fetch-model.mjs` → ~1.1 GB. Check `vendor/models/<id>/lock.json` and `vendor/models/index.json`.
+   Then run `node scripts/fetch-model.mjs --verify`.
 4. Write `scripts/smoke-runtime.sh`, make it pass, and commit it.
 5. Run S1 and S2 with curl (or small scripts) and record them in `docs/SPIKES.md`.
 6. Write `scripts/bench-model.sh` + `scripts/bench-prompts.txt`, run S3, and record. If the

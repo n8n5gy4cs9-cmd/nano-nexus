@@ -131,27 +131,28 @@ causes repetition on MiniCPM5). Use `repeat_penalty 1.05` only if loops are obse
 **Notes.** This is a community fine-tune. "Opus/Fable5" is the uploader's label, not an
 Anthropic release. The base model is Apache-2.0, and the training-data licensing is unclear.
 That is acceptable because this is a **personal** app. The revision and SHA-256 are pinned on
-your machine by `scripts/fetch-model.mjs` (HF API LFS oid) into `vendor/models/lock.json`.
+your machine by `scripts/fetch-model.mjs` (HF API LFS oid) into `vendor/models/<id>/lock.json`.
 
 ---
 
-## ADR-009: Bundle layout: `externalBin` for llama-server, `resources` for the model
-**Status:** Accepted
+## ADR-009: Bundle layout: platform configs, staged resources, manifest of bundled models
+**Status:** Accepted (revised 2026-10-11 for multi-model bundles and Windows)
 
-**Decision.** `tauri.conf.json`:
-`bundle.externalBin = ["../../../vendor/runtime/llama-server"]` (the file on disk carries the
-`-aarch64-apple-darwin` suffix, and Tauri strips it into `Contents/MacOS/llama-server`).
-`bundle.resources = {"../../../vendor/models/model.gguf": "models/model.gguf", "../../../vendor/models/lock.json": "models/lock.json", "../../../vendor/runtime/licenses/": "licenses/"}`.
-The model `resources` live in an **overlay config** `src-tauri/tauri.bundle.conf.json`, used
-only by `pnpm tauri build --config src-tauri/tauri.bundle.conf.json`. That way `tauri dev`
-doesn't copy 1.1 GB on every build. In debug builds the model resolves from
-`$NEXUS_MODEL_PATH` or `<repo>/vendor/models/model.gguf`.
-At runtime, the server is resolved as `current_exe().parent()/llama-server` and the model as
-`resource_dir()/models/model.gguf`. A `GGML_METAL_EMBED_LIBRARY=ON` build means **no separate
-.metallib** and no Metal toolchain download. Precompiled metallibs (as in the Godot project) are
-an optional optimization (M13).
-
----
+**Decision.**
+- macOS: `llama-server` ships as a Tauri `externalBin` (`tauri.macos.conf.json` →
+  `vendor/runtime/macos-arm64/llama-server`, which carries the `-aarch64-apple-darwin` suffix on disk)
+  → `Contents/MacOS/llama-server`.
+- Windows: the runtime folder (`llama-server.exe` + its DLLs) ships as a **resource** `runtime/`
+  (`tauri.windows.conf.json` + overlay), so the DLLs sit next to the exe.
+- Models ship as resources under `models/<id>/<file>.gguf`, plus `models/manifest.json` listing
+  every bundled model and the default. All of this comes from a **generated overlay config**
+  (`src-tauri/gen/tauri.bundle.<profile>.<target>.json`) written by `scripts/stage-bundle.mjs`.
+  `tauri dev` never copies models. Debug builds resolve them from `$NEXUS_MODEL_PATH` or
+  `vendor/models/index.json`.
+- Runtime resolution: macOS `current_exe().parent()/llama-server`. Windows
+  `resource_dir()/runtime/llama-server.exe`. Models come from `resource_dir()/models/manifest.json`.
+- `GGML_METAL_EMBED_LIBRARY=ON` means **no separate .metallib** and no Metal toolchain download.
+  Precompiled metallibs are an optional optimization (M15).
 
 ## ADR-010: Permissions model: in-app grants enforced in Rust; no App Sandbox
 **Status:** Accepted
@@ -196,3 +197,79 @@ drops the HTTP stream, which makes llama-server stop the slot.
 **Decision.** The CSP blocks all remote origins. Rust's `reqwest` is used only by `nexus-models`
 for catalog search and downloads, and only when Settings → Privacy → "Allow model downloads" is
 on (default on). Fonts and icons are bundled locally (@fontsource, lucide).
+
+---
+
+## ADR-014: Windows is a must-have, cross-compiled on the Apple Silicon Mac
+**Status:** Accepted · 2026-10-11
+
+**Context.** Windows builds are required, and they must be produced on your Mac (no Windows
+build machine).
+
+**Decision.**
+- App: `tauri build --runner cargo-xwin --target x86_64-pc-windows-msvc` (and `aarch64-pc-windows-msvc`)
+  with **NSIS** installers (`brew install nsis llvm`). MSI is impossible off Windows (WiX).
+- Runtime: the **official llama.cpp release binaries for the same pinned tag** (`b11552`),
+  `win-vulkan-x64` by default (GPU + CPU fallback), `win-cpu-x64` optional, and `win-cpu-arm64`.
+  Each is verified against the GitHub release-asset SHA-256 `digest` and recorded in
+  `vendor/runtime/windows-*/runtime.lock.json`. Cross-compiling llama.cpp from source is optional (spike S9).
+- Process safety on Windows: `CREATE_NO_WINDOW` plus a **Job Object with KILL_ON_JOB_CLOSE**,
+  so the server can't outlive the app even after a crash.
+- TLS: reqwest with **native-tls** (SChannel / Security.framework). This avoids aws-lc/NASM
+  cross-compile pain.
+- Testing: a Windows 11 ARM VM on the Mac (runs arm64 natively and x64 via Prism emulation),
+  plus real x64 hardware for GPU and performance.
+
+**Consequences.** Tauri cross-compilation is "less tested", so spike S7 runs early (M03).
+Unsigned builds trigger SmartScreen ("More info → Run anyway"). Signing is optional (M16).
+
+---
+
+## ADR-015: Bundle profiles, App Builder, and offline model packs
+**Status:** Accepted · 2026-10-11
+
+**Context.** Besides the basic build (one default model), you want to easily ship **several
+models inside the app** for machines without internet (e.g. a studio PC), on macOS and Windows.
+
+**Decision.**
+1. **Bundle profiles** (`bundles/*.json`, schema-validated) list the models (catalog id, HF
+   repo + quant, or a local GGUF), the default, the targets, and the Windows format. `basic.json`
+   is the default build.
+2. **App Builder** (`scripts/app-builder.mjs`): a zero-dependency local web UI on 127.0.0.1 with
+   a random token. Tick models, pick targets, click Build. It has a headless CLI mode too. It
+   only orchestrates the same scripts (`fetch-model`, `stage-bundle`, `build-app`, `build-windows`).
+3. **Bundled-model manifest** in the app (`models/manifest.json`). The app registers every listed
+   model as read-only "Bundled" and lets you switch between them offline.
+4. **Windows size rule:** NSIS can't build installers much over 2 GB, so payloads > 1.8 GB
+   automatically use the **offline kit** (installer + `models-extra/` + WebView2 offline
+   installer) or the **portable ZIP**.
+5. **Model packs:** export/import folders (`pack.json` + GGUFs, SHA-256-verified) to add models to
+   an installed app over USB with no rebuild and no internet.
+
+**User docs:** `guide.html` (repo root) explains every workflow step by step.
+
+---
+
+## ADR-016: LAN Share: embedded axum server, pairing auth, one frontend codebase
+**Status:** Accepted · 2026-10-11
+
+**Context.** You want to use the assistant from your phone or other computers on the same
+network, with a simple start/stop button and a settings page. The default port is 9889.
+
+**Decision.**
+- An optional axum server (`crates/nexus-share`) inside the app, **off by default**, bound to the
+  LAN on port **9889** (configurable). It serves the same React UI built for the web
+  (`dist-web/`, responsive mobile/desktop, PWA) and a WebSocket RPC that mirrors the Tauri
+  commands.
+- **Auth is always on:** QR/PIN pairing (single-use, 5-minute secrets, rate-limited PIN), per-device
+  HttpOnly session cookies (hash-only storage), CSRF header, and revocation. HTTPS
+  (self-signed via rcgen) is optional.
+- **Remote policy** defaults to "chat + read granted folders". Applying changes and granting new
+  folders requires the desktop (or the `full` policy plus desktop confirmation).
+- `llama-server` **stays loopback-only.** Only NanoNexus's authenticated API is exposed.
+- Architecture rule from M04: Tauri commands are thin wrappers over a transport-agnostic
+  `service::*` layer, and the frontend calls a `Transport` facade (Tauri or WebSocket), never
+  `invoke` directly.
+
+**Alternatives.** Expose llama-server directly (no auth model, no assistants, unsafe) · a
+separate web app (duplicate UI work) · Tauri remote/IPC over the network (not supported).

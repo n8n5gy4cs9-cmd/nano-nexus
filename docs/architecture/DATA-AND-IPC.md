@@ -114,7 +114,16 @@ CREATE TABLE rename_items (
 | `notifications.kinds` | all `true` |
 | `journal.retention_days` | `30` |
 | `journal.max_bytes` | `2147483648` |
-| `tools.godot_path` | `null` (auto-detect `/Applications/Godot.app/Contents/MacOS/Godot`) |
+| `tools.godot_path` | `null` (auto-detect `/Applications/Godot.app/Contents/MacOS/Godot`, `C:\Program Files\Godot\Godot*.exe`) |
+| `models.extra_dirs` | `[]` |
+| `share.enabled` / `share.autostart` | `false` / `false` |
+| `share.port` | `9889` |
+| `share.bind` | `"0.0.0.0"` |
+| `share.mdns` / `share.mdns_name` | `true` / `"nanonexus"` |
+| `share.https` | `false` |
+| `share.default_policy` | `"chat_read"` |
+| `share.allowed_assistants` | `["*"]` |
+| `share.session_days` / `share.max_devices` / `share.notify_pairing` | `30` / `5` / `true` |
 
 ## 2. Commands (Rust → TS via tauri-specta)
 
@@ -168,6 +177,9 @@ Naming: `domain_action`. All are `async` and return `Result<T, IpcError>`.
 | jobs | `jobs_list` / `job_cancel` | … |
 | notify | `notifications_list` / `notifications_mark_read` / `notifications_clear` | … |
 | watches | `watches_list` / `watch_add` / `watch_update` / `watch_delete` / `watch_run_now` | … |
+| models | `models_pack_export` / `models_pack_import` | `{model_ids, dest, on_progress}` / `{folder, mode: copy|reference, on_progress}` |
+| models | `models_extra_dirs_set` / `models_verify_bundled` | … |
+| share | `share_status` / `share_start` / `share_stop` / `share_settings_set` / `share_pairing_code` / `share_devices_list` / `share_device_update` / `share_device_revoke` | see LAN-SHARE §6 (desktop caller only) |
 
 ### Streaming payloads
 ```rust
@@ -194,6 +206,7 @@ pub enum ChatEvent {
 | `job:update` | `JobSummary` | Job created, progress (≤ 4 Hz), or finished |
 | `notification:new` | `Notification` | Any notification inserted |
 | `changeset:update` | `{id, status}` | Applied, undone, or failed |
+| `share:status` | `{running, port, urls, devices, error?}` | Sharing started, stopped, a device paired or revoked, or an error |
 
 ## 4. Error codes (`nexus-core::error::ErrorCode`)
 
@@ -214,6 +227,9 @@ pub enum ChatEvent {
 | `insufficient_disk` | "Not enough disk space: need {need}, have {have}." | — |
 | `network` | "Network error." | Retry |
 | `busy` | "Busy with another task." | Wait / cancel the job |
+| `port_in_use` | "Port {port} is already in use." | Use the suggested free port |
+| `unauthorized` | "This device isn't paired (or was revoked)." | Pair again |
+| `forbidden_remote` | "That needs the NanoNexus app on your computer." | — |
 | `internal` | "Something went wrong." | View logs |
 
 `IpcError { code, message, detail }`: `detail` contains the debug chain (shown only in an

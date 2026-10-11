@@ -1,7 +1,8 @@
 # NanoNexus
 
-> A private, offline AI assistant for your Mac. It runs a small local model and comes with
-> specialist assistants that can read, analyze, and (with your OK) change files.
+> A private, offline AI assistant for your Mac **and Windows**, both built on your Apple Silicon
+> Mac. It runs a small local model, comes with specialist assistants that can read, analyze, and
+> (with your OK) change files, and can share itself to your phone over Wi-Fi.
 
 **Status:** 📐 Planning complete, implementation not started. Progress is tracked in [`tasks.md`](tasks.md).
 
@@ -24,11 +25,13 @@ replies, validation, one retry, then a deterministic fallback.
 | See what's done and what's next | [`tasks.md`](tasks.md) (run `scripts/progress.sh`) |
 | Understand the product | [`docs/PRD.md`](docs/PRD.md) |
 | See the roadmap and milestones | [`docs/PLAN.md`](docs/PLAN.md) → [`docs/milestones/`](docs/milestones) |
+| **Build it, bundle more models, use it offline or from your phone** | [`guide.html`](guide.html) (open it in a browser) |
 | Understand the architecture | [`docs/architecture/OVERVIEW.md`](docs/architecture/OVERVIEW.md) |
 | See why things are built this way | [`docs/DECISIONS.md`](docs/DECISIONS.md) |
 | See the UI and visual design | [`docs/design/UI-DESIGN.md`](docs/design/UI-DESIGN.md) |
 | Read or edit assistants and system prompts | [`assistants/`](assistants) · [`docs/architecture/ASSISTANTS.md`](docs/architecture/ASSISTANTS.md) |
 | Hand the work to another AI | [`AGENTS.md`](AGENTS.md) · [`docs/agent-playbook/`](docs/agent-playbook) |
+| Share to phone / LAN | [`docs/architecture/LAN-SHARE.md`](docs/architecture/LAN-SHARE.md) |
 
 ## Repository layout (target)
 
@@ -50,15 +53,19 @@ nano-nexus/
 ## Quick start (once implemented)
 
 ```bash
-scripts/doctor.sh                 # check toolchain (Xcode CLT, Rust, Node 22, pnpm, CMake)
-scripts/setup-runtime.sh          # build pinned llama.cpp llama-server (Metal, arm64, static)
-node scripts/fetch-model.mjs      # download + verify default GGUF into vendor/models
-pnpm install && pnpm tauri dev    # run the app
-pnpm tauri build --bundles app    # build NanoNexus.app with model + runtime inside
+scripts/doctor.sh                       # check toolchain (Xcode CLT, Rust, Node 22, pnpm, CMake)
+scripts/setup-runtime.sh                # build pinned llama.cpp llama-server (Metal, arm64, static)
+node scripts/fetch-model.mjs            # download + verify the default GGUF into vendor/models
+pnpm install && pnpm -C apps/desktop tauri dev            # run the app
+scripts/build-app.sh --profile basic                      # NanoNexus.app with the default model
+scripts/build-windows.sh --profile basic --arch x64       # Windows installer, built on the Mac
+node scripts/app-builder.mjs                              # UI: tick models + targets → Build
 ```
 
-The model is **not** in this repo. You build or download it on your machine, and it goes into
-the app bundle at build time, the same way the Godot export plugin did it.
+The models are **not** in this repo. You build or download them on your machine, and the
+models listed in a **bundle profile** go into the app at build time (`bundles/basic.json` = default
+model only). Offline machines can also get more models later through **model packs** (USB).
+See [`guide.html`](guide.html).
 
 ## Default model
 

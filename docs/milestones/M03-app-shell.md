@@ -21,6 +21,13 @@ that, **moved to /Applications and opened with Wi-Fi off**, also turns Ready.
 6. Notifications plumbing: `notification` plugin, a `notify()` service in Rust (DB insert + emit +
    OS notification if unfocused), and the bell popover in the UI.
 7. Walking-skeleton bundle (overlay config + Info.plist + entitlements) and a manual test.
+8. **Platform configs** from day one: `tauri.macos.conf.json` (overlay title bar, externalBin) and
+   `tauri.windows.conf.json` (native decorations, NSIS, runtime as a resource). See BUNDLING §6.
+9. **Spike S7: Windows walking skeleton built on the Mac.** Install the cross toolchain
+   (`scripts/doctor.sh --windows`), run `node scripts/fetch-runtime-windows.mjs --arch x64` (write it
+   here, per BUNDLING §3), and cross-compile the shell with `--runner cargo-xwin`. Run the installer
+   in a Windows 11 ARM VM (x64 emulation) and on a PC if available → the window opens → Ready.
+   Record every problem and its fix in `docs/SPIKES.md` §S7.
 
 ## Design notes
 
@@ -112,6 +119,7 @@ Exit handling:
 - [ ] Theme toggle works and persists. Vibrancy is visible on macOS.
 - [ ] The bundled `.app` works offline after being moved. A notification is visible. No orphan after quit.
 - [ ] `src/bindings.ts` is generated and the frontend uses only typed calls.
+- [ ] S7: the Windows skeleton installer (built on the Mac) opens and reaches Ready on Windows (x64 emulation or real PC).
 
 ## Pitfalls
 - `externalBin` must exist at build time for **every** `tauri dev`. Run `scripts/setup-runtime.sh` first.
