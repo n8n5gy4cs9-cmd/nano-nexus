@@ -3,7 +3,10 @@ use rusqlite::Connection;
 use crate::StoreError;
 
 /// Ordered migrations: index + 1 is the schema version after applying it.
-pub const MIGRATIONS: &[(&str, &str)] = &[("0001_init", include_str!("../migrations/0001_init.sql"))];
+pub const MIGRATIONS: &[(&str, &str)] = &[
+    ("0001_init", include_str!("../migrations/0001_init.sql")),
+    ("0002_fs", include_str!("../migrations/0002_fs.sql")),
+];
 
 /// Current `PRAGMA user_version`.
 pub fn schema_version(conn: &Connection) -> Result<u32, StoreError> {

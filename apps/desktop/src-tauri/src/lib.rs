@@ -81,6 +81,8 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         tracing::info!(interrupted, "marked interrupted messages as stopped");
     }
     let engine = AppState::default_engine(&scheduler, &supervisor);
+    let home = app.path().home_dir()?;
+    let perms = AppState::build_permissions(&store, &home, &paths.data, Arc::new(nexus_fs::NullAudit));
     app.manage(Ctx::new(AppState {
         paths,
         store,
@@ -88,6 +90,7 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         scheduler,
         engine,
         chats: Default::default(),
+        perms,
         summarizing: Default::default(),
         bus: tokio::sync::broadcast::channel(64).0,
         settings: RwLock::new(settings),

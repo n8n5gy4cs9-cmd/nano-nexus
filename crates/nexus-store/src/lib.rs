@@ -4,6 +4,7 @@
 //! **Never edit an applied migration; add a new one.**
 
 pub mod chat;
+pub mod fs;
 mod migrate;
 pub mod notifications;
 pub mod settings;
@@ -15,6 +16,7 @@ use nexus_core::error::NexusError;
 use rusqlite::Connection;
 
 pub use chat::{ConversationPatch, MessageFinish};
+pub use fs::{ChangeSetRow, NewAudit};
 pub use migrate::{MIGRATIONS, schema_version};
 pub use notifications::NewNotification;
 

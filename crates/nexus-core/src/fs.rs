@@ -142,3 +142,25 @@ mod tests {
         );
     }
 }
+
+/// One row of the activity log.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+pub struct AuditRecord {
+    pub id: i64,
+    /// Unix milliseconds (UTC).
+    pub ts: i64,
+    /// Assistant id, `"editor"`, or `"user"`.
+    pub actor: String,
+    pub action: String,
+    pub path: String,
+    pub allowed: bool,
+    pub detail: Option<String>,
+}
+
+/// A user-added protected location.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+pub struct UserDenyRule {
+    pub id: String,
+    pub root: String,
+    pub created_at: i64,
+}

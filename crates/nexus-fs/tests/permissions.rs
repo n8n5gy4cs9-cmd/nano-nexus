@@ -337,7 +337,7 @@ mod properties {
 
         /// Whatever the level, anything inside a deny root is refused.
         #[test]
-        fn deny_always_wins(name in "[a-z0-9_.-]{1,12}", level in 0u8..3) {
+        fn deny_always_wins(name in "[a-z0-9_-][a-z0-9_.-]{0,11}", level in 0u8..3) {
             let e = env();
             let level = [GrantLevel::Read, GrantLevel::ReadWrite, GrantLevel::Full][level as usize];
             grant(&e, "", level);

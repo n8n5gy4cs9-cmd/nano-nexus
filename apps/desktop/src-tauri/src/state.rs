@@ -7,6 +7,7 @@ use std::sync::{Arc, Mutex, RwLock};
 
 use nexus_agent::{TurnEngine, TurnRunner};
 use nexus_core::ids::{ConversationId, MessageId};
+use nexus_fs::{AuditSink, DenyList, DenyRule, PermissionEngine, builtin_rules};
 use tokio_util::sync::CancellationToken;
 
 use nexus_core::paths::AppPaths;
@@ -67,6 +68,8 @@ pub struct AppState {
     /// Runs chat turns (a scripted fake in tests).
     pub engine: Arc<dyn TurnRunner>,
     pub chats: ChatJobs,
+    /// Every file access is decided here (grants + deny list + audit).
+    pub perms: Arc<PermissionEngine>,
     /// Conversations with a summary job in flight (at most one each).
     pub summarizing: Mutex<HashSet<ConversationId>>,
     pub bus: tokio::sync::broadcast::Sender<AppEvent>,
@@ -89,6 +92,30 @@ impl AppState {
         self.settings.read().map(|s| s.clone()).unwrap_or_default()
     }
 
+    /// The permission engine: built-in deny list for this OS plus the app's data folder and the user's
+    /// own entries, with the persisted grants loaded.
+    pub fn build_permissions(
+        store: &Store,
+        home: &std::path::Path,
+        app_data: &std::path::Path,
+        audit: Arc<dyn AuditSink>,
+    ) -> Arc<PermissionEngine> {
+        let mut rules = builtin_rules(home, app_data);
+        match store.list_user_deny() {
+            Ok(user) => rules.extend(
+                user.into_iter()
+                    .map(|u| DenyRule::user(PathBuf::from(u.root), "your protected location")),
+            ),
+            Err(e) => tracing::warn!("could not load protected locations: {e}"),
+        }
+        let engine = Arc::new(PermissionEngine::new(DenyList::new(rules), audit));
+        match store.list_grants() {
+            Ok(grants) => engine.load_grants(grants),
+            Err(e) => tracing::warn!("could not load folder grants: {e}"),
+        }
+        engine
+    }
+
     /// The production turn engine over a scheduler and supervisor.
     pub fn default_engine(scheduler: &Scheduler, supervisor: &Supervisor) -> Arc<dyn TurnRunner> {
         Arc::new(TurnEngine::new(scheduler.clone(), supervisor.clone()))
@@ -109,6 +136,12 @@ impl AppState {
         let supervisor = Supervisor::new(None);
         let scheduler = Scheduler::new(supervisor.clone());
         let engine = engine.unwrap_or_else(|| Self::default_engine(&scheduler, &supervisor));
+        let perms = Self::build_permissions(
+            &store,
+            &root.join("home"),
+            &paths.data,
+            Arc::new(nexus_fs::NullAudit),
+        );
         Arc::new(AppState {
             paths,
             store,
@@ -116,11 +149,59 @@ impl AppState {
             scheduler,
             engine,
             chats: ChatJobs::default(),
+            perms,
             summarizing: Default::default(),
             bus: tokio::sync::broadcast::channel(64).0,
             settings: RwLock::new(Settings::default()),
             resource_dir: root.join("resources"),
             exe_dir: root.join("bin"),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use nexus_core::fs::{Access, GrantLevel, GrantScope};
+    use nexus_fs::NewGrant;
+
+    #[test]
+    fn persisted_grants_and_user_deny_rules_load_at_startup() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dunce::canonicalize(dir.path()).unwrap();
+        std::fs::create_dir_all(root.join("docs")).unwrap();
+        std::fs::create_dir_all(root.join("private")).unwrap();
+        let store = Store::open_in_memory().unwrap();
+        let first = AppState::build_permissions(
+            &store,
+            &root.join("home"),
+            &root.join("data"),
+            Arc::new(nexus_fs::NullAudit),
+        );
+        let g = first
+            .add_grant(NewGrant {
+                root: root.join("docs"),
+                level: GrantLevel::Read,
+                recursive: true,
+                scope: GrantScope::Persistent,
+                expires_at: None,
+                label: None,
+            })
+            .unwrap();
+        store.save_grant(&g).unwrap();
+        store
+            .add_user_deny(&root.join("private").to_string_lossy())
+            .unwrap();
+
+        // "Restart": a fresh engine sees both.
+        let second = AppState::build_permissions(
+            &store,
+            &root.join("home"),
+            &root.join("data"),
+            Arc::new(nexus_fs::NullAudit),
+        );
+        assert!(second.check("t", &root.join("docs"), Access::Read).is_ok());
+        assert!(second.check("t", &root.join("private"), Access::Read).is_err());
+        assert!(second.deny_rules().iter().any(|r| !r.builtin));
     }
 }
