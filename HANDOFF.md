@@ -15,17 +15,44 @@ Pushing: `git push origin HEAD:main`. A stop hook also wants the session branch 
 - `cargo fmt` on `nexus-store` reformats `reports.rs` and `share.rs` (pre-existing drift). Revert those two files
   after formatting (`git checkout`) so commits stay focused, or format the crate in its own commit.
 
-## Session 3 (2026-10-11): M11 + Duo, written WITHOUT running build/test (owner request)
-Only the pure parts were run earlier in the session (nexus-core, nexus-store, nexus-analyze: fmt, clippy, tests green).
-Everything below in the app crate and frontend is **uncompiled / unlinted / untested**. On the Mac first run:
-`cargo check -p nano-nexus`, `cargo test -p nano-nexus`, `pnpm lint && pnpm typecheck && pnpm test`, then regenerate `bindings.ts`.
-- T11.02 jobs wiring (`AppState.jobs`, `job:update`, `jobs_list`/`job_cancel`; scan, index, propose, download mirrored). Narrative stays a chat turn.
-- T11.03 Jobs indicator (`components/shell/JobsIndicator.tsx`, `hooks/useJobs.ts`); T11.04 routing + quiet hours (`Settings::wants_os_notification`; no Settings page yet).
-- T09.15/T09.16 Rename Forge UI written (no Strings tab: strings commands still missing). Duo: swap now only with two chosen, installed models.
-- T11.05 watches (`nexus-analyze::watch`, `nexus-store::watches`, `service/watches.rs`, new `notify` 8.2 dep); T11.06 `WatchesSection`.
-- T18.03 Duo tier badge + "Use strong model".
-- Local TS types (`features/jobs/types.ts`, `features/analyzer/watches.ts`) mirror Rust types until `bindings.ts` regenerates.
-- Left: T11.07 (tray/autostart, optional), T11.08 / T18.02 (Mac), T18.04 / T18.05 (v0.2), T11 "Watch this folder" button on report page, component tests (Settings page exists now at `/settings`, untested) for the new UI, T09.15+.
+## Session 3 summary (2026-10-11) — read this first
+Owner asked for NO builds/tests in the second half of the session. Everything in the app crate (`apps/desktop/src-tauri`)
+and the frontend was written blind. **First thing on the Mac:** `git pull`, `cargo check -p nano-nexus`,
+`cargo test -p nano-nexus`, `pnpm -C apps/desktop lint && pnpm -C apps/desktop typecheck && pnpm -C apps/desktop test`,
+then regenerate `bindings.ts` and run `scripts/check.sh`. Expect small compile/type fixes. Two build/start breakages already
+happened and were fixed: duplicate TS name `VerifyResult` (Rename Forge's is now `RenameVerifyResult`), and a startup abort
+from `tokio::spawn` in the Tauri setup hook (use `tauri::async_runtime::spawn`; see `service::watches::run_scheduler`).
+
+### Done this session
+- M11: T11.02 jobs wiring (`AppState.jobs`, `job:update`, `jobs_list`/`job_cancel`; scan, index, propose, download mirrored; narrative stays a chat turn),
+  T11.03 Jobs indicator, T11.04 notification routing + quiet hours, T11.05 watches backend (`nexus-analyze::watch`, `nexus-store::watches`,
+  `service/watches.rs`, `notify` 8.2), T11.06 watched-folders UI.
+- M18: T18.03 Duo tier badge + "Use strong model". Duo swaps only when light/strong models are chosen AND installed.
+- Settings page (`features/settings/SettingsPage.tsx`, all settings except LAN Share details which live at `/settings/sharing`).
+- M09 UI: T09.15/T09.16 Rename Forge page (`features/rename/*`): start view, suggestions, review, usages, find, check, plan -> Changes.
+  Fixed channel arg names (`on_event`) in rename commands; items become `applied` when the change set is applied (`rename::on_changeset_status`).
+- Rename Forge chat assistant is now selectable (`pipeline_ready` returns Ok); real work is on the `/rename` page.
+- Librarian: the first hop now ALWAYS runs `kb_search` with the user's own words (router no longer asks the 1B model).
+- App Builder (`node scripts/app-builder.mjs`): fixed port 8787 + `bundles/local/app-builder-state.json`; saves only after restore, also on build.
+
+### NOT finished — Rename Forge (owner has asked for this repeatedly; do it next)
+1. **Strings tab + commands** (T09.13 backend exists: `nexus-analyze::code::strings` `extract_strings`, `validate`, `export_csv/json`,
+   `plan_key_rewrite`; `nexus-agent::pipelines::strings::propose`). Missing: service + commands (`rename_strings`, `rename_strings_propose`,
+   `rename_strings_export`, `rename_strings_apply` -> change set via `plan_key_rewrite`), a Strings tab in `RenamePage`, store table or in-memory state.
+2. **`find_symbol` data source**: implement `nexus_agent::tools::CodeSource` over `RenameRuntime.indexes` (`find_symbols`/`render_find`), set `ToolCx.code`
+   in `service/chat.rs`, add `find_symbol` to an assistant's `allowed` list (rename-forge.toml is a pipeline assistant; a router assistant may be needed).
+3. Planner integration test through `nexus-fs::Journal::apply` + undo (byte-identical; M09 exit criterion). `PlanOptions` lacks `typo`/`dynamic_refs`.
+4. UI: list is paged (200 rows), not virtualized; no "Overview" tab; no component tests; after applying a plan the user must reopen the project.
+5. T09.17 (real run on a copy of a project, Mac), T09.18 (more languages), T09.19 (exit check).
+6. Known index limits: name+scope resolution only; member refs on unknown receivers attach to every candidate; C# has no import mapping.
+
+### Other open items
+- T11.07 tray + autostart (optional, needs plugin deps), T11.08 and T18.02 (Mac), T18.04/T18.05 (Duo v0.2), "Watch this folder" button on a report page.
+- Library retrieval: a small doc was answered "not in the library" by Nexus+Libraries. Suspect chunking merges short sections under the first heading
+  (`nexus-knowledge/src/chunk.rs`, new heading only starts a chunk once the current one is a third full) and `max_per_doc = 2`. Investigate with a real
+  Reaper-like fixture; consider heading-per-chunk for short sections and a `daw`-style low-value term filter. Not verified.
+- Library questions could count as "hard" for Duo (route to the strong model). Not done.
+- Windows: shared code paths were reviewed, nothing Windows-specific was built this session.
 
 ## Done this session
 - T09.09 verified (was WIP) · T09.10 planner · T09.11 find · T09.12 verify · T09.13 strings mode · T09.14 store/service/commands · T11.01 JobRegistry.
