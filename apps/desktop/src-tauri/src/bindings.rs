@@ -15,6 +15,7 @@ pub fn builder() -> Builder<tauri::Wry> {
         .commands(collect_commands![
             app::app_info,
             app::open_external,
+            app::app_diagnostics,
             attachments::attachments_read,
             attachments::attachments_pick,
             runtime::runtime_status,

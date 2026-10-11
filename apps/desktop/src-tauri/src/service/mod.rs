@@ -7,6 +7,7 @@ pub mod attachments;
 pub mod chat;
 pub mod coalesce;
 pub mod conversations;
+pub mod diagnostics;
 pub mod editor;
 pub mod fs;
 pub mod models;

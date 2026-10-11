@@ -25,3 +25,10 @@ pub async fn open_external(app: tauri::AppHandle, url: String) -> CmdResult<()> 
         .open_url(&url, None::<&str>)
         .map_err(|e| IpcError::from(nexus_core::error::NexusError::Internal(e.to_string())))
 }
+
+/// The `/nano-nexus` report: runtime, models, share, recent log lines, and quick help.
+#[tauri::command]
+#[specta::specta]
+pub async fn app_diagnostics(ctx: State<'_, Arc<AppState>>) -> CmdResult<String> {
+    Ok(service::diagnostics::report(&ctx).await)
+}

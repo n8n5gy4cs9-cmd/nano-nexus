@@ -66,6 +66,8 @@ export const api = {
   app: {
     info: () => getTransport().call<AppInfo>("app_info"),
     /** Open an http(s) link in the OS browser. */
+    /** Plain-text health report for the `/nano-nexus` chat command. */
+    diagnostics: () => getTransport().call<string>("app_diagnostics"),
     openExternal: (url: string) => getTransport().call<null>("open_external", { url }),
   },
   runtime: {

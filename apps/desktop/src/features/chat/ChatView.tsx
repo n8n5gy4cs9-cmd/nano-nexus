@@ -8,7 +8,12 @@ import { AssistantIcon, Kbd } from "@/components/ui";
 import { FALLBACK_CARD, useAssistants } from "@/hooks/useAssistants";
 import { usePlatform } from "@/hooks/usePlatform";
 import { useChatShortcuts } from "@/hooks/useChatShortcuts";
+import { toast } from "sonner";
+
+import type { AttachmentInput } from "@/bindings";
+import { useRuntime } from "@/hooks/useRuntime";
 import { api } from "@/lib/api";
+import { logActivity, useActivity } from "@/stores/activity";
 import { modLabel } from "@/lib/platform";
 import { useAssistantChoice } from "@/stores/assistant";
 import type { LiveTurn } from "@/stores/chat";
@@ -93,6 +98,29 @@ export function ChatView() {
     },
     [byId, card],
   );
+  const runtime = useRuntime();
+
+  /** `/nano-nexus [question]`: attach a health report and ask the model; without a model, show it in the console. */
+  const sendOrCommand = async (text: string, attachments: AttachmentInput[]) => {
+    const m = /^\/nano-nexus\b\s*([\s\S]*)$/i.exec(text.trim());
+    if (!m) return send(text, attachments, think);
+    const question = (m[1] ?? "").trim() || "Check that NanoNexus is working and tell me anything that needs fixing.";
+    let report: string;
+    try {
+      report = await api.app.diagnostics();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not build the diagnostics.");
+      return;
+    }
+    if (runtime?.state !== "ready") {
+      // The model cannot answer, so show the report where it can be read.
+      for (const line of report.split("\n")) if (line.trim()) logActivity("runtime", line);
+      useActivity.setState({ open: true });
+      toast.info("The model is not ready. The diagnostics are in the Activity console.");
+      return;
+    }
+    return send(question, [...attachments, { kind: "text", path: null, label: "NanoNexus diagnostics", text: report }], think);
+  };
   const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings.get, retry: false, staleTime: 60_000 });
   const ctxSize = settings.data?.["runtime.ctx_size"] ?? 8192;
 
@@ -192,7 +220,7 @@ export function ChatView() {
         streaming={streaming}
         think={think}
         onThinkChange={setThink}
-        onSend={(text, attachments) => void send(text, attachments, think)}
+        onSend={(text, attachments) => void sendOrCommand(text, attachments)}
         onStop={() => void stop()}
         onEmptyChange={onEmptyChange}
         usedTokens={usedTokens}
