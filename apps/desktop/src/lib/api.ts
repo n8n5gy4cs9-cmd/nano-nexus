@@ -58,6 +58,7 @@ import type { PairingView, SharePolicy, ShareDevice, ShareStatus } from "@/featu
 import type { KbIndexResult, KbLibrary, KbLibraryDetail, KbPassage, KbProgress } from "@/features/library/types";
 
 import { getTransport } from "./transport";
+import type { JobSummary } from "@/features/jobs/types";
 import type { Unsubscribe } from "./transport";
 
 /** Value accepted by `settings.set`. */
@@ -114,6 +115,12 @@ export const api = {
       getTransport().stream<ChatEvent, ChatSendResult>("chat_regenerate", { assistantMessageId, think }, onEvent),
     editResend: (userMessageId: string, text: string, think: boolean, onEvent: (e: ChatEvent) => void) =>
       getTransport().stream<ChatEvent, ChatSendResult>("chat_edit_resend", { userMessageId, text, think }, onEvent),
+  },
+  jobs: {
+    list: (limit: number) => getTransport().call<JobSummary[]>("jobs_list", { limit }),
+    cancel: (id: string) => getTransport().call<boolean>("job_cancel", { id }),
+    /** Subscribe to `job:update`. */
+    onUpdate: (handler: (job: JobSummary) => void): Promise<Unsubscribe> => getTransport().on<JobSummary>("job:update", handler),
   },
   notifications: {
     list: (limit: number) => getTransport().call<NotificationPayload[]>("notifications_list", { limit }),

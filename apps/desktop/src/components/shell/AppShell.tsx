@@ -17,6 +17,7 @@ import { IS_WEB } from "@/lib/target";
 import { ConsolePanel } from "./ConsolePanel";
 import { Inspector } from "./Inspector";
 import { MobileTabBar } from "./MobileTabBar";
+import { JobsIndicator } from "./JobsIndicator";
 import { NotificationBell } from "./NotificationBell";
 import { RuntimePill } from "./RuntimePill";
 import { SharePill } from "@/features/share/SharePill";
@@ -59,6 +60,7 @@ export function AppShell() {
               <IconButton aria-label="Toggle activity console" size="sm" aria-pressed={consoleOpen} onClick={() => useActivity.getState().toggle()}>
                 <Terminal />
               </IconButton>
+              <JobsIndicator />
               <NotificationBell />
               {IS_WEB ? null : <SharePill />}
               <RuntimePill />
