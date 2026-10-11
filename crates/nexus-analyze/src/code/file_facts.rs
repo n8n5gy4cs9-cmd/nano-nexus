@@ -32,6 +32,9 @@ pub struct DefFact {
     pub doc: Option<String>,
     /// True when the syntax says it overrides/implements something (`override`, `@Override`, trait impl).
     pub overrides: bool,
+    /// A test attribute/annotation is on it (`#[test]`, `@Test`, `[Fact]`).
+    #[serde(default)]
+    pub test_attr: bool,
     /// Visibility text found in the syntax: `pub`, `public`, `export`, `private`, …
     pub visibility: Option<String>,
 }
@@ -375,6 +378,52 @@ fn has_override(def: Node<'_>, lang: Lang, src: &[u8]) -> bool {
     }
 }
 
+fn has_test_attr(def: Node<'_>, lang: Lang, src: &[u8]) -> bool {
+    let words = [
+        "test",
+        "Test",
+        "Fact",
+        "Theory",
+        "TestMethod",
+        "TestCase",
+        "ParameterizedTest",
+        "RepeatedTest",
+    ];
+    let has = |t: &str| {
+        t.split(|c: char| !(c.is_alphanumeric() || c == '_'))
+            .any(|w| words.contains(&w))
+    };
+    match lang {
+        Lang::Rust => {
+            let mut prev = def.prev_sibling();
+            while let Some(p) = prev {
+                match p.kind() {
+                    "attribute_item" => {
+                        if has(text(p, src)) {
+                            return true;
+                        }
+                    }
+                    k if k.contains("comment") => {}
+                    _ => break,
+                }
+                prev = p.prev_sibling();
+            }
+            false
+        }
+        Lang::Java => {
+            let mut c = def.walk();
+            def.children(&mut c)
+                .any(|ch| ch.kind() == "modifiers" && has(text(ch, src)))
+        }
+        Lang::CSharp => {
+            let mut c = def.walk();
+            def.children(&mut c)
+                .any(|ch| ch.kind() == "attribute_list" && has(text(ch, src)))
+        }
+        _ => false,
+    }
+}
+
 /// Parse and extract the facts of one file. `None` if the grammar or query fails.
 pub fn extract(lang: Lang, src: &[u8]) -> Option<FileFacts> {
     let tree = lang.parse(src)?;
@@ -491,6 +540,7 @@ pub fn extract(lang: Lang, src: &[u8]) -> Option<FileFacts> {
                 SymbolKind::Variable | SymbolKind::Parameter => None,
                 _ => doc_for(def_node, lang, src),
             },
+            test_attr: has_test_attr(def_node, lang, src),
             overrides: matches!(
                 kind,
                 SymbolKind::Method | SymbolKind::Function | SymbolKind::Field

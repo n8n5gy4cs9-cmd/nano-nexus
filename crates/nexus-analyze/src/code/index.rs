@@ -151,6 +151,8 @@ pub struct IndexOptions {
     pub max_file_bytes: u64,
     /// Directory names to skip in addition to the built-in list.
     pub skip_dirs: Vec<String>,
+    /// Per-project ignore list lines (names with `*`, or `path:<prefix>`); matches are `RESERVED`.
+    pub ignore: Vec<String>,
 }
 
 impl Default for IndexOptions {
@@ -159,6 +161,7 @@ impl Default for IndexOptions {
             max_files: 20_000,
             max_file_bytes: 1_500_000,
             skip_dirs: Vec::new(),
+            ignore: Vec::new(),
         }
     }
 }
@@ -408,7 +411,7 @@ pub fn build_index(
         },
         &mut symbols,
     );
-    Ok(CodeIndex {
+    let mut index = CodeIndex {
         version: INDEX_VERSION,
         root: root.to_string_lossy().replace('\\', "/"),
         files,
@@ -420,7 +423,14 @@ pub fn build_index(
         others,
         imports: edges,
         facts,
-    })
+    };
+    let rules: Vec<_> = opts
+        .ignore
+        .iter()
+        .filter_map(|l| super::reserved::IgnoreRule::parse(l))
+        .collect();
+    super::reserved::apply(&mut index, &rules);
+    Ok(index)
 }
 
 fn folders_of(files: &[IndexedFile]) -> Vec<String> {
