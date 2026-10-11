@@ -59,6 +59,11 @@ fn bridge_app_events(app: &tauri::AppHandle) {
                         tracing::warn!("could not emit conversation:updated: {e}");
                     }
                 }
+                state::AppEvent::ChangeSetUpdated { id, status } => {
+                    if let Err(e) = (commands::fs::ChangeSetUpdate { id, status }).emit(&app) {
+                        tracing::warn!("could not emit changeset:update: {e}");
+                    }
+                }
                 state::AppEvent::PermissionRequest(req) => {
                     let focused = app.get_webview_window("main").and_then(|w| w.is_focused().ok()).unwrap_or(false);
                     if !focused {
@@ -107,6 +112,11 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     // The writer task needs the async runtime, like the scheduler.
     let audit = tauri::async_runtime::block_on(async { audit::AuditWriter::start(store.clone()) });
     let perms = AppState::build_permissions(&store, &home, &paths.data, audit.clone());
+    let journal = Arc::new(nexus_fs::Journal::new(paths.journal.clone(), Arc::new(nexus_fs::SystemTrash)));
+    let recovered = journal.recover_interrupted();
+    if !recovered.is_empty() {
+        tracing::warn!(count = recovered.len(), "rolled back change sets interrupted by a crash");
+    }
     app.manage(Ctx::new(AppState {
         paths,
         store,
@@ -116,6 +126,7 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         chats: Default::default(),
         perms,
         broker: Default::default(),
+        journal,
         audit,
         summarizing: Default::default(),
         bus: tokio::sync::broadcast::channel(64).0,

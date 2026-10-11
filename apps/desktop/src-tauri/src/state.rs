@@ -59,6 +59,8 @@ pub enum AppEvent {
     ConversationUpdated(ConversationId),
     /// A tool needs a folder grant; the UI shows the permission modal.
     PermissionRequest(crate::service::permissions::PermissionRequest),
+    /// A change set was planned, applied, undone, or discarded.
+    ChangeSetUpdated { id: nexus_core::ids::ChangeSetId, status: String },
 }
 
 /// Everything services need. Later milestones add jobs, permissions, and the assistant registry.
@@ -73,6 +75,8 @@ pub struct AppState {
     /// Every file access is decided here (grants + deny list + audit).
     pub perms: Arc<PermissionEngine>,
     pub broker: crate::service::permissions::PermissionBroker,
+    /// The only writer of user files (apply / undo with backups).
+    pub journal: Arc<nexus_fs::Journal>,
     /// Queues audit entries and writes them in batches.
     pub audit: Arc<crate::audit::AuditWriter>,
     /// Conversations with a summary job in flight (at most one each).
@@ -143,6 +147,10 @@ impl AppState {
         let engine = engine.unwrap_or_else(|| Self::default_engine(&scheduler, &supervisor));
         let audit = crate::audit::AuditWriter::start(store.clone());
         let perms = Self::build_permissions(&store, &root.join("home"), &paths.data, audit.clone());
+        let journal = Arc::new(nexus_fs::Journal::new(
+            paths.journal.clone(),
+            Arc::new(nexus_fs::MoveToDirTrash(root.join("trash"))),
+        ));
         Arc::new(AppState {
             paths,
             store,
@@ -152,6 +160,7 @@ impl AppState {
             chats: ChatJobs::default(),
             perms,
             broker: Default::default(),
+            journal,
             audit,
             summarizing: Default::default(),
             bus: tokio::sync::broadcast::channel(64).0,

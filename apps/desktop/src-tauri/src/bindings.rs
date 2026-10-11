@@ -4,7 +4,7 @@
 use specta_typescript::Typescript;
 use tauri_specta::{Builder, collect_commands, collect_events};
 
-use crate::commands::{app, attachments, chat, conversations, notifications, permissions, runtime, settings};
+use crate::commands::{app, attachments, chat, conversations, fs, notifications, permissions, runtime, settings};
 
 /// All commands and events.
 pub fn builder() -> Builder<tauri::Wry> {
@@ -33,12 +33,32 @@ pub fn builder() -> Builder<tauri::Wry> {
             notifications::notifications_mark_read,
             notifications::notifications_clear,
             notifications::notifications_send_test,
+            fs::fs_grants_list,
+            fs::fs_grant_add,
+            fs::fs_grant_update,
+            fs::fs_grant_revoke,
+            fs::fs_deny_list,
+            fs::fs_deny_add,
+            fs::fs_deny_remove,
+            fs::fs_pick_folder,
+            fs::fs_list_dir,
+            fs::fs_read_text,
+            fs::fs_stat,
+            fs::os_permissions_status,
+            fs::os_open_privacy_settings,
+            fs::audit_list,
+            fs::changesets_list,
+            fs::changeset_preview,
+            fs::changeset_apply,
+            fs::changeset_undo,
+            fs::changeset_discard,
             permissions::permission_respond,
             permissions::permission_requests,
         ])
         .events(collect_events![
             runtime::RuntimeStatus,
-            crate::notify::NotificationNew
+            crate::notify::NotificationNew,
+            fs::ChangeSetUpdate
         ])
         // Timestamps (ms) and byte counts stay far below 2^53, so numbers are exact.
         .dangerously_cast_bigints_to_number()

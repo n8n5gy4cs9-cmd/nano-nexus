@@ -32,6 +32,27 @@ impl Trasher for SystemTrash {
     }
 }
 
+/// Moves paths into a folder instead of the system Trash. For tests and environments without a Trash.
+pub struct MoveToDirTrash {
+    dir: PathBuf,
+    counter: std::sync::atomic::AtomicUsize,
+}
+
+impl MoveToDirTrash {
+    pub fn new(dir: impl Into<PathBuf>) -> Self {
+        Self { dir: dir.into(), counter: std::sync::atomic::AtomicUsize::new(0) }
+    }
+}
+
+impl Trasher for MoveToDirTrash {
+    fn trash(&self, path: &Path) -> Result<(), String> {
+        std::fs::create_dir_all(&self.dir).map_err(|e| e.to_string())?;
+        let n = self.counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+        std::fs::rename(path, self.dir.join(format!("{n}-{name}"))).map_err(|e| e.to_string())
+    }
+}
+
 /// What happened to one operation; enough to reverse it.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
