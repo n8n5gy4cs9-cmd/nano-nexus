@@ -1,0 +1,242 @@
+//! Typed application settings (DATA-AND-IPC §1). Stored one JSON value per dotted key.
+
+use std::collections::BTreeMap;
+
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+
+use crate::error::NexusError;
+
+/// UI colour theme.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "snake_case")]
+pub enum Theme {
+    Light,
+    Dark,
+    #[default]
+    System,
+}
+
+/// What a paired LAN device may do.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "snake_case")]
+pub enum SharePolicy {
+    ChatOnly,
+    #[default]
+    ChatRead,
+    Full,
+}
+
+/// Every setting, with the defaults from the spec.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
+#[serde(default)]
+pub struct Settings {
+    #[serde(rename = "ui.theme")]
+    pub ui_theme: Theme,
+    #[serde(rename = "ui.accent")]
+    pub ui_accent: String,
+    #[serde(rename = "ui.show_perf_stats")]
+    pub ui_show_perf_stats: bool,
+    #[serde(rename = "runtime.ctx_size")]
+    pub runtime_ctx_size: u32,
+    /// `"all"` or a number as a string.
+    #[serde(rename = "runtime.gpu_layers")]
+    pub runtime_gpu_layers: String,
+    /// `"auto"`, `"on"` or `"off"`.
+    #[serde(rename = "runtime.flash_attn")]
+    pub runtime_flash_attn: String,
+    /// `None` = auto.
+    #[serde(rename = "runtime.threads")]
+    pub runtime_threads: Option<u32>,
+    #[serde(rename = "app.quit_on_window_close")]
+    pub app_quit_on_window_close: bool,
+    /// 0 = never unload.
+    #[serde(rename = "runtime.idle_unload_minutes")]
+    pub runtime_idle_unload_minutes: u32,
+    #[serde(rename = "models.active_model_id")]
+    pub models_active_model_id: String,
+    #[serde(rename = "privacy.allow_network_downloads")]
+    pub privacy_allow_network_downloads: bool,
+    #[serde(rename = "notifications.os_when_unfocused")]
+    pub notifications_os_when_unfocused: bool,
+    /// Per-kind switches; a kind that is absent counts as enabled (see [`Settings::notification_kind_enabled`]).
+    #[serde(rename = "notifications.kinds")]
+    pub notifications_kinds: BTreeMap<String, bool>,
+    #[serde(rename = "journal.retention_days")]
+    pub journal_retention_days: u32,
+    #[serde(rename = "journal.max_bytes")]
+    pub journal_max_bytes: u64,
+    /// `None` = auto-detect.
+    #[serde(rename = "tools.godot_path")]
+    pub tools_godot_path: Option<String>,
+    #[serde(rename = "models.extra_dirs")]
+    pub models_extra_dirs: Vec<String>,
+    #[serde(rename = "share.enabled")]
+    pub share_enabled: bool,
+    #[serde(rename = "share.autostart")]
+    pub share_autostart: bool,
+    #[serde(rename = "share.port")]
+    pub share_port: u16,
+    #[serde(rename = "share.bind")]
+    pub share_bind: String,
+    #[serde(rename = "share.mdns")]
+    pub share_mdns: bool,
+    #[serde(rename = "share.mdns_name")]
+    pub share_mdns_name: String,
+    #[serde(rename = "share.https")]
+    pub share_https: bool,
+    #[serde(rename = "share.default_policy")]
+    pub share_default_policy: SharePolicy,
+    #[serde(rename = "share.allowed_assistants")]
+    pub share_allowed_assistants: Vec<String>,
+    #[serde(rename = "share.session_days")]
+    pub share_session_days: u32,
+    #[serde(rename = "share.max_devices")]
+    pub share_max_devices: u32,
+    #[serde(rename = "share.notify_pairing")]
+    pub share_notify_pairing: bool,
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            ui_theme: Theme::System,
+            ui_accent: "violet".into(),
+            ui_show_perf_stats: true,
+            runtime_ctx_size: 8192,
+            runtime_gpu_layers: "all".into(),
+            runtime_flash_attn: "auto".into(),
+            runtime_threads: None,
+            // The app stays in the Dock on macOS until Cmd-Q.
+            app_quit_on_window_close: !cfg!(target_os = "macos"),
+            runtime_idle_unload_minutes: 0,
+            models_active_model_id: "builtin".into(),
+            privacy_allow_network_downloads: true,
+            notifications_os_when_unfocused: true,
+            notifications_kinds: BTreeMap::new(),
+            journal_retention_days: 30,
+            journal_max_bytes: 2_147_483_648,
+            tools_godot_path: None,
+            models_extra_dirs: Vec::new(),
+            share_enabled: false,
+            share_autostart: false,
+            share_port: 9889,
+            share_bind: "0.0.0.0".into(),
+            share_mdns: true,
+            share_mdns_name: "nanonexus".into(),
+            share_https: false,
+            share_default_policy: SharePolicy::ChatRead,
+            share_allowed_assistants: vec!["*".into()],
+            share_session_days: 30,
+            share_max_devices: 5,
+            share_notify_pairing: true,
+        }
+    }
+}
+
+/// A set of `dotted.key -> JSON value` changes.
+pub type SettingsPatch = BTreeMap<String, Value>;
+
+impl Settings {
+    /// Whether notifications of `kind` are enabled (absent = enabled).
+    pub fn notification_kind_enabled(&self, kind: &str) -> bool {
+        self.notifications_kinds.get(kind).copied().unwrap_or(true)
+    }
+
+    /// The value of one key as JSON, or `None` for an unknown key.
+    pub fn get_key(&self, key: &str) -> Option<Value> {
+        match serde_json::to_value(self) {
+            Ok(Value::Object(mut m)) => m.remove(key),
+            _ => None,
+        }
+    }
+
+    /// Set one key. Unknown keys and values of the wrong type are rejected and leave `self` untouched.
+    pub fn set_key(&mut self, key: &str, value: Value) -> Result<(), NexusError> {
+        self.apply(&SettingsPatch::from([(key.to_owned(), value)]))
+    }
+
+    /// Apply a patch atomically: either every entry is valid or nothing changes.
+    pub fn apply(&mut self, patch: &SettingsPatch) -> Result<(), NexusError> {
+        let Value::Object(mut map) =
+            serde_json::to_value(&*self).map_err(|e| NexusError::Internal(e.to_string()))?
+        else {
+            return Err(NexusError::Internal(
+                "settings did not serialize to an object".into(),
+            ));
+        };
+        for (k, v) in patch {
+            if !map.contains_key(k) {
+                return Err(NexusError::InvalidInput(format!("unknown setting: {k}")));
+            }
+            map.insert(k.clone(), v.clone());
+        }
+        let next: Settings = serde_json::from_value(Value::Object(map))
+            .map_err(|e| NexusError::InvalidInput(format!("invalid setting value: {e}")))?;
+        *self = next;
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn defaults_match_spec() {
+        let s = Settings::default();
+        assert_eq!(s.runtime_ctx_size, 8192);
+        assert_eq!(s.share_port, 9889);
+        assert_eq!(s.share_default_policy, SharePolicy::ChatRead);
+        assert_eq!(s.journal_max_bytes, 2_147_483_648);
+        assert!(s.notification_kind_enabled("anything"));
+    }
+
+    #[test]
+    fn defaults_round_trip_through_json() {
+        let s = Settings::default();
+        let json = serde_json::to_string(&s).unwrap();
+        assert_eq!(serde_json::from_str::<Settings>(&json).unwrap(), s);
+        assert_eq!(s.get_key("ui.theme"), Some(json!("system")));
+        assert_eq!(s.get_key("runtime.threads"), Some(Value::Null));
+        assert_eq!(s.get_key("nope"), None);
+    }
+
+    #[test]
+    fn empty_object_yields_defaults() {
+        assert_eq!(
+            serde_json::from_str::<Settings>("{}").unwrap(),
+            Settings::default()
+        );
+    }
+
+    #[test]
+    fn set_key_validates() {
+        let mut s = Settings::default();
+        s.set_key("runtime.ctx_size", json!(4096)).unwrap();
+        s.set_key("runtime.threads", json!(6)).unwrap();
+        s.set_key("ui.theme", json!("dark")).unwrap();
+        assert_eq!(
+            (s.runtime_ctx_size, s.runtime_threads, s.ui_theme),
+            (4096, Some(6), Theme::Dark)
+        );
+
+        let before = s.clone();
+        assert!(s.set_key("runtime.ctx_size", json!("big")).is_err());
+        assert!(s.set_key("ui.theme", json!("neon")).is_err());
+        assert!(s.set_key("no.such.key", json!(1)).is_err());
+        assert_eq!(s, before);
+    }
+
+    #[test]
+    fn patch_is_atomic() {
+        let mut s = Settings::default();
+        let patch = SettingsPatch::from([
+            ("share.port".to_owned(), json!(1234)),
+            ("share.https".to_owned(), json!("yes")),
+        ]);
+        assert!(s.apply(&patch).is_err());
+        assert_eq!(s.share_port, 9889);
+    }
+}
