@@ -56,9 +56,9 @@ pub fn classify_error(e: &std::io::Error, path: &Path, home: &Path, writing: boo
         ErrorKind::NotFound => OsAccess::Missing,
         ErrorKind::PermissionDenied => {
             let code = e.raw_os_error();
-            if cfg!(target_os = "macos") && code == Some(1) && is_tcc_protected(path, home) {
-                OsAccess::Denied
-            } else if cfg!(windows) && code == Some(5) && writing {
+            let mac_tcc = cfg!(target_os = "macos") && code == Some(1) && is_tcc_protected(path, home);
+            let win_cfa = cfg!(windows) && code == Some(5) && writing;
+            if mac_tcc || win_cfa {
                 OsAccess::Denied
             } else {
                 OsAccess::Other

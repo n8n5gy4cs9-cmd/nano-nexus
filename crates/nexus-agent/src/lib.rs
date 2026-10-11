@@ -9,7 +9,9 @@ pub mod internal;
 pub mod jobs;
 pub mod prompt;
 pub mod registry;
+pub mod router;
 pub mod spec;
+pub mod tools;
 pub mod turn;
 
 pub use budget::{

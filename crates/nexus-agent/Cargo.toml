@@ -25,9 +25,9 @@ jsonschema.workspace = true
 include_dir.workspace = true
 async-trait.workspace = true
 nexus-fs = { path = "../nexus-fs" }
-walkdir.workspace = true
 
 [dev-dependencies]
 axum.workspace = true
 insta.workspace = true
 secrecy.workspace = true
+tempfile.workspace = true

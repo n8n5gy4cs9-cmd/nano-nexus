@@ -177,6 +177,12 @@ impl PermissionEngine {
             .max()
     }
 
+    /// Would `access` be allowed? Unaudited and side-effect free: for bulk walks that already passed
+    /// [`PermissionEngine::check`] on their root and need to skip protected or ungranted children.
+    pub fn probe(&self, path: &Path, access: Access) -> bool {
+        self.decide(path, access, None).is_ok()
+    }
+
     /// May `actor` perform `access` on `path`? On success returns the canonical path to use. Every call
     /// (allowed or denied) is audited.
     pub fn check(&self, actor: &str, path: &Path, access: Access) -> Result<CanonicalPath, FsError> {

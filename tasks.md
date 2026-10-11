@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 81/229 tasks done (35%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 84/229 tasks done (36%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -123,9 +123,9 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T06.01** `AssistantSpec` (deny_unknown_fields) + schema validation + Registry (include_dir! built-ins + user from store) (2026-10-11)
 - [x] **T06.02** `prompt_lint` test for all 17 built-ins (tokens ≤ 450, schema, ids, starters, icons) and fix any failures (2026-10-11) — Godot Sidekick dropped (owner: no Godot anywhere; Rename Forge is language-agnostic, see M09)
 - [x] **T06.03** Internal prompt loader (`prompts/internal/*.md`) + variable checks + snapshot tests (2026-10-11)
-- [ ] **T06.04** Tool trait + `read_file`, `list_dir`, `search_files`, `grep_text`, `file_info`, `calculate`, `now` (budgeted outputs) + temp-dir tests
-- [ ] **T06.05** Router workflow (heuristic gate, dynamic action schema, arg resolution, loop guard, max hops) + scripted mock tests
-- [ ] **T06.06** Permission integration in tools (broker, denied → model told) + tests
+- [x] **T06.04** Tool trait + `read_file`, `list_dir`, `search_files`, `grep_text`, `file_info`, `calculate`, `now` (budgeted outputs) + temp-dir tests (2026-10-11)
+- [x] **T06.05** Router workflow (heuristic gate, dynamic action schema, arg resolution, loop guard, max hops) + scripted mock tests (2026-10-11)
+- [x] **T06.06** Permission integration in tools (broker, denied → model told) + tests (2026-10-11) — `PermissionAsker` trait in nexus-agent; the app's broker-backed impl lands with the T06.07 service wiring
 - [ ] **T06.07** Store assistants repo + commands `assistants_*`, `assistant_validate` (field errors + token count)
 - [ ] **T06.08** UI Assistants gallery (categories, search, cards, permission chips, pipeline cards disabled until ready)
 - [ ] **T06.09** UI assistant switcher (⌘/) + header chip + "switched to" divider
