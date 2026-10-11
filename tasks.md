@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 16/217 tasks done (7%) · **Next:** T00.04 `nexus-core::error` (ErrorCode, NexusError, IpcError) + serialization tests
+**Progress:** 17/217 tasks done (7%) · **Next:** T00.05 `nexus-core::paths` (AppPaths, ensure_dirs, portable mode) + tests
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -32,7 +32,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T00.01** Root Cargo workspace (resolver 3, edition 2024, rust-version 1.90), rust-toolchain.toml, rustfmt.toml, clippy.toml (2026-10-11)
 - [x] **T00.02** Create library crates `nexus-{core,store,llm,models,fs,analyze,agent,share}` (empty, compiling, workspace lints) (2026-10-11)
 - [x] **T00.03** `nexus-core::ids` (UUIDv7 newtypes) + tests (2026-10-11)
-- [ ] **T00.04** `nexus-core::error` (ErrorCode, NexusError, IpcError) + serialization tests
+- [x] **T00.04** `nexus-core::error` (ErrorCode, NexusError, IpcError) + serialization tests (2026-10-11)
 - [ ] **T00.05** `nexus-core::paths` (AppPaths, ensure_dirs, portable mode) + tests
 - [ ] **T00.06** `nexus-core::settings` (all keys + defaults, incl. share.*) + `events` types + tests
 - [ ] **T00.07** Root `package.json`, `pnpm-workspace.yaml`, `.nvmrc`, `.editorconfig`
