@@ -16,4 +16,5 @@ pub use prompt::{PREAMBLE, PromptContext, render_system_prompt};
 pub use spec::{AssistantSpec, builtin_nexus};
 pub use turn::{
     AttachmentBlock, ChatBackend, HistoryMessage, StoredSummary, TurnEngine, TurnInput, TurnOutcome,
+    TurnRunner,
 };

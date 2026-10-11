@@ -1,0 +1,701 @@
+//! Chat: send, stop, regenerate, edit-and-resend. Persists the streaming answer every 500 ms so a
+//! crash loses at most half a second, and always ends the assistant message in a final state.
+
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
+
+use nexus_agent::{
+    AttachmentBlock, HistoryMessage, PromptContext, StoredSummary, TurnInput, builtin_nexus, prompt,
+    render_system_prompt,
+};
+use nexus_core::chat::{AttachmentInput, ChatEvent, Conversation, Message, MessageRole, MessageStatus};
+use nexus_core::error::NexusError;
+use nexus_core::events::RuntimeState;
+use nexus_core::ids::{AssistantId, ConversationId, MessageId};
+use nexus_core::sink::Sink;
+use nexus_store::{MessageFinish, Store};
+use serde::{Deserialize, Serialize};
+use specta::Type;
+
+use crate::state::Ctx;
+
+use super::Caller;
+
+/// Max characters of one message (the context window is the real limit; this stops accidents).
+const MAX_TEXT_CHARS: usize = 200_000;
+const PERSIST_EVERY: Duration = Duration::from_millis(500);
+
+#[derive(Clone, Debug, Deserialize, Type)]
+pub struct ChatSendArgs {
+    /// `None` starts a new conversation.
+    pub conversation_id: Option<ConversationId>,
+    pub assistant_id: AssistantId,
+    pub text: String,
+    pub attachments: Vec<AttachmentInput>,
+    /// "Think harder" for this turn.
+    pub think: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Type)]
+pub struct ChatSendResult {
+    pub conversation_id: ConversationId,
+    pub user_message_id: MessageId,
+    pub assistant_message_id: MessageId,
+}
+
+/// Assistants available in M04: only the built-in Nexus (the full registry arrives in M06).
+fn resolve_assistant(id: &AssistantId) -> Result<nexus_agent::AssistantSpec, NexusError> {
+    match id.as_str() {
+        "nexus" => builtin_nexus().map_err(|e| NexusError::Internal(e.to_string())),
+        _ => Err(NexusError::NotFound("assistant".into())),
+    }
+}
+
+/// Writes the partial answer to the store at most every `every`, and forwards every event.
+pub struct PersistingSink {
+    inner: Arc<dyn Sink<ChatEvent>>,
+    store: Arc<Store>,
+    id: MessageId,
+    every: Duration,
+    buf: Mutex<Buffer>,
+}
+
+struct Buffer {
+    content: String,
+    reasoning: String,
+    last_flush: Instant,
+}
+
+impl PersistingSink {
+    pub fn new(inner: Arc<dyn Sink<ChatEvent>>, store: Arc<Store>, id: MessageId, every: Duration) -> Self {
+        Self {
+            inner,
+            store,
+            id,
+            every,
+            buf: Mutex::new(Buffer {
+                content: String::new(),
+                reasoning: String::new(),
+                last_flush: Instant::now(),
+            }),
+        }
+    }
+}
+
+impl Sink<ChatEvent> for PersistingSink {
+    fn send(&self, event: ChatEvent) -> bool {
+        if let Ok(mut b) = self.buf.lock() {
+            let dirty = match &event {
+                ChatEvent::Content { delta } => {
+                    b.content.push_str(delta);
+                    true
+                }
+                ChatEvent::Reasoning { delta } => {
+                    b.reasoning.push_str(delta);
+                    true
+                }
+                _ => false,
+            };
+            if dirty && b.last_flush.elapsed() >= self.every {
+                let reasoning = (!b.reasoning.is_empty()).then_some(b.reasoning.as_str());
+                if let Err(e) = self.store.update_message_stream(&self.id, &b.content, reasoning) {
+                    tracing::warn!("could not persist streaming message: {e}");
+                }
+                b.last_flush = Instant::now();
+            }
+        }
+        self.inner.send(event)
+    }
+}
+
+fn check_text(text: &str, has_attachments: bool) -> Result<(), NexusError> {
+    if text.trim().is_empty() && !has_attachments {
+        return Err(NexusError::InvalidInput("the message is empty".into()));
+    }
+    if text.chars().count() > MAX_TEXT_CHARS {
+        return Err(NexusError::InvalidInput("the message is too long".into()));
+    }
+    Ok(())
+}
+
+/// Send a message and start the answer. Returns as soon as the messages exist; the answer streams to
+/// `sink` from a background task.
+pub fn send(
+    ctx: &Ctx,
+    _caller: &Caller,
+    args: ChatSendArgs,
+    sink: Arc<dyn Sink<ChatEvent>>,
+) -> Result<ChatSendResult, NexusError> {
+    check_text(&args.text, !args.attachments.is_empty())?;
+    let spec = resolve_assistant(&args.assistant_id)?;
+    let conv = ctx
+        .store
+        .get_or_create_conversation(args.conversation_id.as_ref(), &args.assistant_id)?;
+    let user = ctx
+        .store
+        .insert_user_message(&conv.id, args.text.trim_end(), &args.attachments)?;
+    let assistant = start_turn(ctx, &conv, &user, spec, args.think, sink)?;
+    Ok(ChatSendResult {
+        conversation_id: conv.id,
+        user_message_id: user.id,
+        assistant_message_id: assistant,
+    })
+}
+
+/// Stop a running answer; the partial text is kept. `false` if nothing was running.
+pub fn stop(ctx: &Ctx, assistant_message_id: &MessageId) -> bool {
+    ctx.chats.cancel(assistant_message_id)
+}
+
+/// Redo an assistant answer: the old answer (and anything after it) is deleted and a new one streams.
+pub fn regenerate(
+    ctx: &Ctx,
+    _caller: &Caller,
+    assistant_message_id: &MessageId,
+    think: bool,
+    sink: Arc<dyn Sink<ChatEvent>>,
+) -> Result<ChatSendResult, NexusError> {
+    let old = ctx
+        .store
+        .get_message(assistant_message_id)?
+        .ok_or_else(|| NexusError::NotFound("message".into()))?;
+    if old.role != MessageRole::Assistant {
+        return Err(NexusError::InvalidInput(
+            "only assistant messages can be regenerated".into(),
+        ));
+    }
+    if ctx.chats.is_running(&old.id) {
+        return Err(NexusError::Busy("that answer is still being written".into()));
+    }
+    let conv = ctx
+        .store
+        .get_conversation(&old.conversation_id)?
+        .ok_or_else(|| NexusError::NotFound("conversation".into()))?;
+    let messages = ctx.store.list_messages(&conv.id)?;
+    let idx = messages
+        .iter()
+        .position(|m| m.id == old.id)
+        .ok_or_else(|| NexusError::NotFound("message".into()))?;
+    let user = messages[..idx]
+        .iter()
+        .rev()
+        .find(|m| m.role == MessageRole::User)
+        .cloned()
+        .ok_or_else(|| NexusError::InvalidInput("there is no question to answer again".into()))?;
+    let spec = resolve_assistant(&conv.assistant_id)?;
+    ctx.store.delete_messages_after(&user.id)?;
+    let assistant = start_turn(ctx, &conv, &user, spec, think, sink)?;
+    Ok(ChatSendResult {
+        conversation_id: conv.id,
+        user_message_id: user.id,
+        assistant_message_id: assistant,
+    })
+}
+
+/// Replace a user message's text, drop everything after it, and answer again.
+pub fn edit_resend(
+    ctx: &Ctx,
+    _caller: &Caller,
+    user_message_id: &MessageId,
+    text: &str,
+    think: bool,
+    sink: Arc<dyn Sink<ChatEvent>>,
+) -> Result<ChatSendResult, NexusError> {
+    let user = ctx
+        .store
+        .get_message(user_message_id)?
+        .ok_or_else(|| NexusError::NotFound("message".into()))?;
+    if user.role != MessageRole::User {
+        return Err(NexusError::InvalidInput(
+            "only your own messages can be edited".into(),
+        ));
+    }
+    check_text(text, !user.attachments.is_empty())?;
+    let conv = ctx
+        .store
+        .get_conversation(&user.conversation_id)?
+        .ok_or_else(|| NexusError::NotFound("conversation".into()))?;
+    for m in ctx.store.list_messages(&conv.id)? {
+        if m.role == MessageRole::Assistant && ctx.chats.is_running(&m.id) {
+            return Err(NexusError::Busy("an answer is still being written".into()));
+        }
+    }
+    let spec = resolve_assistant(&conv.assistant_id)?;
+    ctx.store.set_message_content(&user.id, text.trim_end())?;
+    ctx.store.delete_messages_after(&user.id)?;
+    let user = ctx
+        .store
+        .get_message(&user.id)?
+        .ok_or_else(|| NexusError::NotFound("message".into()))?;
+    let assistant = start_turn(ctx, &conv, &user, spec, think, sink)?;
+    Ok(ChatSendResult {
+        conversation_id: conv.id,
+        user_message_id: user.id,
+        assistant_message_id: assistant,
+    })
+}
+
+/// Insert the assistant placeholder and spawn the turn. `user` must be the last message.
+fn start_turn(
+    ctx: &Ctx,
+    conv: &Conversation,
+    user: &Message,
+    spec: nexus_agent::AssistantSpec,
+    think: bool,
+    sink: Arc<dyn Sink<ChatEvent>>,
+) -> Result<MessageId, NexusError> {
+    let model_id = match ctx.supervisor.state() {
+        RuntimeState::Ready { model_id, .. } => Some(model_id),
+        _ => None,
+    };
+    let placeholder =
+        ctx.store
+            .insert_assistant_placeholder(&conv.id, &spec_id(&spec), model_id.as_deref())?;
+    let cancel = ctx.chats.register(&placeholder.id);
+
+    // History: finished messages before the question.
+    let history: Vec<HistoryMessage> = ctx
+        .store
+        .list_messages(&conv.id)?
+        .into_iter()
+        .take_while(|m| m.id != user.id)
+        .filter(|m| matches!(m.role, MessageRole::User | MessageRole::Assistant))
+        .filter(|m| {
+            matches!(m.status, MessageStatus::Done | MessageStatus::Stopped) && !m.content.trim().is_empty()
+        })
+        .map(|m| HistoryMessage {
+            id: m.id,
+            role: m.role,
+            content: m.content,
+        })
+        .collect();
+
+    let settings = ctx.settings_snapshot();
+    let pctx = PromptContext::new(prompt::os_display_name(std::env::consts::OS), prompt::today_iso());
+    let system_prompt = render_system_prompt(&spec, &pctx).unwrap_or_else(|e| {
+        tracing::warn!("prompt rendering failed, using the raw prompt: {e}");
+        spec.prompt.system.clone()
+    });
+    let input = TurnInput {
+        assistant: spec,
+        system_prompt,
+        history,
+        summary: conv.summary.clone().map(|text| StoredSummary {
+            text,
+            upto: conv.summary_upto.clone(),
+        }),
+        user_text: user.content.clone(),
+        attachments: user
+            .attachments
+            .iter()
+            .filter_map(|a| {
+                a.snapshot.clone().map(|text| AttachmentBlock {
+                    label: a.label.clone(),
+                    path: a.path.clone(),
+                    text,
+                })
+            })
+            .collect(),
+        think,
+        ctx_size: settings.runtime_ctx_size,
+    };
+
+    let ctx = Arc::clone(ctx);
+    let assistant_id = placeholder.id.clone();
+    let attachments = user.attachments.clone();
+    tokio::spawn(async move {
+        let persisting = PersistingSink::new(
+            sink.clone(),
+            ctx.store.clone(),
+            assistant_id.clone(),
+            PERSIST_EVERY,
+        );
+        persisting.send(ChatEvent::Started {
+            assistant_message_id: assistant_id.clone(),
+        });
+        let outcome = ctx.engine.run(input, &persisting, cancel).await;
+
+        let mut fin = MessageFinish::new(outcome.status, outcome.content.clone());
+        fin.reasoning = outcome.reasoning.clone();
+        fin.error = outcome.error.as_ref().map(|(_, m)| m.clone());
+        fin.tokens_prompt = outcome.tokens_prompt;
+        fin.tokens_out = outcome.tokens_out;
+        fin.tps = outcome.tps;
+        fin.ttft_ms = outcome.ttft_ms;
+        if let Err(e) = ctx.store.finish_message(&assistant_id, &fin) {
+            tracing::error!("could not save the finished answer: {e}");
+        }
+        for (a, tokens) in attachments.iter().zip(outcome.attachment_tokens.iter()) {
+            let _ = ctx.store.set_attachment_tokens(&a.id, *tokens);
+        }
+        ctx.chats.finish(&assistant_id);
+    });
+    Ok(placeholder.id)
+}
+
+fn spec_id(spec: &nexus_agent::AssistantSpec) -> AssistantId {
+    AssistantId(spec.id.clone())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use futures_util::future::BoxFuture;
+    use nexus_agent::{TurnOutcome, TurnRunner};
+    use nexus_core::chat::AttachmentKind;
+    use nexus_core::sink::VecSink;
+    use std::collections::VecDeque;
+    use tokio_util::sync::CancellationToken;
+
+    use crate::state::AppState;
+
+    /// Scripted runner: each call pops one reply (events to emit + the text of the outcome).
+    struct Fake {
+        replies: Mutex<VecDeque<String>>,
+        inputs: Mutex<Vec<TurnInput>>,
+        hang: bool,
+    }
+
+    impl Fake {
+        fn new(replies: &[&str]) -> Arc<Self> {
+            Arc::new(Self {
+                replies: Mutex::new(replies.iter().map(|s| (*s).to_owned()).collect()),
+                inputs: Mutex::new(Vec::new()),
+                hang: false,
+            })
+        }
+        fn hanging() -> Arc<Self> {
+            Arc::new(Self {
+                replies: Mutex::new(VecDeque::new()),
+                inputs: Mutex::new(Vec::new()),
+                hang: true,
+            })
+        }
+    }
+
+    fn outcome(status: MessageStatus, content: &str) -> TurnOutcome {
+        TurnOutcome {
+            status,
+            content: content.into(),
+            reasoning: Some("thoughts".into()),
+            finish_reason: Some("stop".into()),
+            tokens_prompt: Some(10),
+            tokens_out: Some(5),
+            tps: Some(40.0),
+            ttft_ms: Some(100),
+            error: None,
+            dropped: vec![],
+            needs_summary: false,
+            attachment_tokens: vec![7],
+        }
+    }
+
+    impl TurnRunner for Fake {
+        fn run<'a>(
+            &'a self,
+            input: TurnInput,
+            sink: &'a dyn Sink<ChatEvent>,
+            cancel: CancellationToken,
+        ) -> BoxFuture<'a, TurnOutcome> {
+            Box::pin(async move {
+                self.inputs.lock().unwrap().push(input);
+                if self.hang {
+                    sink.send(ChatEvent::Content {
+                        delta: "partial".into(),
+                    });
+                    cancel.cancelled().await;
+                    sink.send(ChatEvent::Done {
+                        finish_reason: "stopped".into(),
+                        tokens_out: 0,
+                        tps: 0.0,
+                        ttft_ms: 0,
+                    });
+                    return outcome(MessageStatus::Stopped, "partial");
+                }
+                let text = self
+                    .replies
+                    .lock()
+                    .unwrap()
+                    .pop_front()
+                    .unwrap_or_else(|| "ok".into());
+                sink.send(ChatEvent::Reasoning {
+                    delta: "thoughts".into(),
+                });
+                for word in text.split_inclusive(' ') {
+                    sink.send(ChatEvent::Content {
+                        delta: word.to_owned(),
+                    });
+                }
+                sink.send(ChatEvent::Done {
+                    finish_reason: "stop".into(),
+                    tokens_out: 5,
+                    tps: 40.0,
+                    ttft_ms: 100,
+                });
+                outcome(MessageStatus::Done, &text)
+            })
+        }
+    }
+
+    fn args(text: &str, conv: Option<ConversationId>) -> ChatSendArgs {
+        ChatSendArgs {
+            conversation_id: conv,
+            assistant_id: AssistantId::from("nexus"),
+            text: text.into(),
+            attachments: vec![],
+            think: false,
+        }
+    }
+
+    async fn wait_idle(ctx: &Ctx, id: &MessageId) {
+        for _ in 0..200 {
+            if !ctx.chats.is_running(id) {
+                return;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        panic!("turn never finished");
+    }
+
+    #[tokio::test]
+    async fn send_persists_streams_and_finishes() {
+        let dir = tempfile::tempdir().unwrap();
+        let fake = Fake::new(&["Hello there friend"]);
+        let ctx = AppState::for_tests_with(dir.path(), Some(fake.clone()));
+        let sink = VecSink::<ChatEvent>::default();
+        let r = send(&ctx, &Caller::Desktop, args("hi", None), Arc::new(sink.clone())).unwrap();
+        wait_idle(&ctx, &r.assistant_message_id).await;
+
+        let events = sink.events();
+        assert_eq!(
+            events[0],
+            ChatEvent::Started {
+                assistant_message_id: r.assistant_message_id.clone()
+            }
+        );
+        assert!(matches!(events.last(), Some(ChatEvent::Done { .. })));
+        let msgs = ctx.store.list_messages(&r.conversation_id).unwrap();
+        assert_eq!(msgs.len(), 2);
+        assert_eq!(
+            (msgs[0].role, msgs[0].content.as_str()),
+            (MessageRole::User, "hi")
+        );
+        let a = &msgs[1];
+        assert_eq!(
+            (a.status, a.content.as_str()),
+            (MessageStatus::Done, "Hello there friend")
+        );
+        assert_eq!(a.reasoning.as_deref(), Some("thoughts"));
+        assert_eq!((a.tokens_out, a.ttft_ms), (Some(5), Some(100)));
+        // The turn input excluded the new question from history and used the Nexus prompt.
+        let inputs = fake.inputs.lock().unwrap();
+        assert!(inputs[0].history.is_empty());
+        assert_eq!(inputs[0].user_text, "hi");
+        assert!(inputs[0].system_prompt.starts_with("You are Nexus"));
+        assert_eq!(inputs[0].ctx_size, 8192);
+    }
+
+    #[tokio::test]
+    async fn a_second_message_sees_the_first_exchange_as_history() {
+        let dir = tempfile::tempdir().unwrap();
+        let fake = Fake::new(&["first answer", "second answer"]);
+        let ctx = AppState::for_tests_with(dir.path(), Some(fake.clone()));
+        let sink = VecSink::<ChatEvent>::default();
+        let r1 = send(&ctx, &Caller::Desktop, args("one", None), Arc::new(sink.clone())).unwrap();
+        wait_idle(&ctx, &r1.assistant_message_id).await;
+        let r2 = send(
+            &ctx,
+            &Caller::Desktop,
+            args("two", Some(r1.conversation_id.clone())),
+            Arc::new(sink),
+        )
+        .unwrap();
+        wait_idle(&ctx, &r2.assistant_message_id).await;
+        let inputs = fake.inputs.lock().unwrap();
+        let h: Vec<_> = inputs[1].history.iter().map(|m| m.content.as_str()).collect();
+        assert_eq!(h, ["one", "first answer"]);
+        assert_eq!(r1.conversation_id, r2.conversation_id);
+    }
+
+    #[tokio::test]
+    async fn stop_keeps_the_partial_answer() {
+        let dir = tempfile::tempdir().unwrap();
+        let ctx = AppState::for_tests_with(dir.path(), Some(Fake::hanging()));
+        let sink = VecSink::<ChatEvent>::default();
+        let r = send(&ctx, &Caller::Desktop, args("long task", None), Arc::new(sink)).unwrap();
+        tokio::time::sleep(Duration::from_millis(50)).await;
+        assert!(stop(&ctx, &r.assistant_message_id));
+        wait_idle(&ctx, &r.assistant_message_id).await;
+        let m = ctx.store.get_message(&r.assistant_message_id).unwrap().unwrap();
+        assert_eq!(
+            (m.status, m.content.as_str()),
+            (MessageStatus::Stopped, "partial")
+        );
+        assert!(!stop(&ctx, &r.assistant_message_id), "already finished");
+    }
+
+    #[tokio::test]
+    async fn regenerate_replaces_the_answer() {
+        let dir = tempfile::tempdir().unwrap();
+        let fake = Fake::new(&["old answer", "new answer"]);
+        let ctx = AppState::for_tests_with(dir.path(), Some(fake.clone()));
+        let sink = VecSink::<ChatEvent>::default();
+        let r = send(
+            &ctx,
+            &Caller::Desktop,
+            args("question", None),
+            Arc::new(sink.clone()),
+        )
+        .unwrap();
+        wait_idle(&ctx, &r.assistant_message_id).await;
+        let r2 = regenerate(
+            &ctx,
+            &Caller::Desktop,
+            &r.assistant_message_id,
+            false,
+            Arc::new(sink),
+        )
+        .unwrap();
+        wait_idle(&ctx, &r2.assistant_message_id).await;
+        assert_ne!(r2.assistant_message_id, r.assistant_message_id);
+        assert_eq!(r2.user_message_id, r.user_message_id);
+        let msgs = ctx.store.list_messages(&r.conversation_id).unwrap();
+        assert_eq!(msgs.len(), 2);
+        assert_eq!(msgs[1].content, "new answer");
+        assert!(
+            fake.inputs.lock().unwrap()[1].history.is_empty(),
+            "old answer must not be in the new history"
+        );
+        // Regenerating a user message is refused.
+        let err = regenerate(
+            &ctx,
+            &Caller::Desktop,
+            &r.user_message_id,
+            false,
+            Arc::new(VecSink::<ChatEvent>::default()),
+        )
+        .unwrap_err();
+        assert_eq!(err.code(), nexus_core::error::ErrorCode::InvalidInput);
+    }
+
+    #[tokio::test]
+    async fn edit_resend_rewrites_and_drops_later_messages() {
+        let dir = tempfile::tempdir().unwrap();
+        let fake = Fake::new(&["a1", "a2", "a1-edited"]);
+        let ctx = AppState::for_tests_with(dir.path(), Some(fake.clone()));
+        let sink = VecSink::<ChatEvent>::default();
+        let r1 = send(
+            &ctx,
+            &Caller::Desktop,
+            args("first", None),
+            Arc::new(sink.clone()),
+        )
+        .unwrap();
+        wait_idle(&ctx, &r1.assistant_message_id).await;
+        let r2 = send(
+            &ctx,
+            &Caller::Desktop,
+            args("second", Some(r1.conversation_id.clone())),
+            Arc::new(sink.clone()),
+        )
+        .unwrap();
+        wait_idle(&ctx, &r2.assistant_message_id).await;
+        let r3 = edit_resend(
+            &ctx,
+            &Caller::Desktop,
+            &r1.user_message_id,
+            "first, but better",
+            false,
+            Arc::new(sink),
+        )
+        .unwrap();
+        wait_idle(&ctx, &r3.assistant_message_id).await;
+        let msgs = ctx.store.list_messages(&r1.conversation_id).unwrap();
+        assert_eq!(
+            msgs.iter().map(|m| m.content.as_str()).collect::<Vec<_>>(),
+            ["first, but better", "a1-edited"]
+        );
+        assert_eq!(fake.inputs.lock().unwrap()[2].user_text, "first, but better");
+    }
+
+    #[tokio::test]
+    async fn validation_errors() {
+        let dir = tempfile::tempdir().unwrap();
+        let ctx = AppState::for_tests_with(dir.path(), Some(Fake::new(&[])));
+        let sink: Arc<dyn Sink<ChatEvent>> = Arc::new(VecSink::<ChatEvent>::default());
+        let code = |r: Result<ChatSendResult, NexusError>| r.unwrap_err().code();
+        use nexus_core::error::ErrorCode::*;
+        assert_eq!(
+            code(send(&ctx, &Caller::Desktop, args("   ", None), sink.clone())),
+            InvalidInput
+        );
+        let mut a = args("hi", None);
+        a.assistant_id = AssistantId::from("nobody");
+        assert_eq!(code(send(&ctx, &Caller::Desktop, a, sink.clone())), NotFound);
+        assert_eq!(
+            code(send(
+                &ctx,
+                &Caller::Desktop,
+                args("hi", Some(ConversationId::from("missing"))),
+                sink.clone()
+            )),
+            NotFound
+        );
+        // An attachment alone is a valid message.
+        let mut with_file = args("", None);
+        with_file.attachments = vec![AttachmentInput {
+            kind: AttachmentKind::Text,
+            path: None,
+            label: "n".into(),
+            text: Some("body".into()),
+        }];
+        let r = send(&ctx, &Caller::Desktop, with_file, sink).unwrap();
+        wait_idle(&ctx, &r.assistant_message_id).await;
+        let user = ctx.store.get_message(&r.user_message_id).unwrap().unwrap();
+        assert_eq!(
+            user.attachments[0].tokens,
+            Some(7),
+            "attachment token cost is recorded"
+        );
+    }
+
+    #[tokio::test]
+    async fn persisting_sink_flushes_partial_text_periodically() {
+        let store = Arc::new(Store::open_in_memory().unwrap());
+        let conv = store.create_conversation(&AssistantId::from("nexus")).unwrap();
+        let m = store
+            .insert_assistant_placeholder(&conv.id, &AssistantId::from("nexus"), None)
+            .unwrap();
+        let inner = VecSink::<ChatEvent>::default();
+        let sink = PersistingSink::new(
+            Arc::new(inner.clone()),
+            store.clone(),
+            m.id.clone(),
+            Duration::from_millis(20),
+        );
+        sink.send(ChatEvent::Content { delta: "one ".into() });
+        assert_eq!(
+            store.get_message(&m.id).unwrap().unwrap().content,
+            "",
+            "not flushed yet"
+        );
+        tokio::time::sleep(Duration::from_millis(30)).await;
+        sink.send(ChatEvent::Reasoning { delta: "why".into() });
+        let saved = store.get_message(&m.id).unwrap().unwrap();
+        assert_eq!(
+            (saved.content.as_str(), saved.reasoning.as_deref()),
+            ("one ", Some("why")),
+            "flush after the interval"
+        );
+        sink.send(ChatEvent::Content { delta: "two".into() });
+        assert_eq!(
+            store.get_message(&m.id).unwrap().unwrap().content,
+            "one ",
+            "within the interval: not rewritten"
+        );
+        tokio::time::sleep(Duration::from_millis(30)).await;
+        sink.send(ChatEvent::Content { delta: "!".into() });
+        assert_eq!(store.get_message(&m.id).unwrap().unwrap().content, "one two!");
+        assert_eq!(inner.events().len(), 4, "every event is forwarded");
+    }
+}

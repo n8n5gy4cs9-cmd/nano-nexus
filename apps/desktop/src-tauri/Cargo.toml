@@ -22,9 +22,11 @@ tauri = { workspace = true, features = ["macos-private-api"] }
 [dependencies]
 tauri.workspace = true
 nexus-core = { path = "../../../crates/nexus-core" }
+nexus-agent = { path = "../../../crates/nexus-agent" }
 nexus-llm = { path = "../../../crates/nexus-llm" }
 nexus-store = { path = "../../../crates/nexus-store" }
 tokio-util.workspace = true
+futures-util.workspace = true
 serde.workspace = true
 specta.workspace = true
 specta-typescript.workspace = true

@@ -110,6 +110,28 @@ impl TurnOutcome {
     }
 }
 
+/// Object-safe view of a turn engine, so application state can hold one without generics (and tests
+/// can swap in a scripted backend).
+pub trait TurnRunner: Send + Sync {
+    fn run<'a>(
+        &'a self,
+        input: TurnInput,
+        sink: &'a dyn Sink<ChatEvent>,
+        cancel: CancellationToken,
+    ) -> futures_util::future::BoxFuture<'a, TurnOutcome>;
+}
+
+impl<B: ChatBackend + 'static, K: Tokenize + 'static> TurnRunner for TurnEngine<B, K> {
+    fn run<'a>(
+        &'a self,
+        input: TurnInput,
+        sink: &'a dyn Sink<ChatEvent>,
+        cancel: CancellationToken,
+    ) -> futures_util::future::BoxFuture<'a, TurnOutcome> {
+        Box::pin(self.run_turn(input, sink, cancel))
+    }
+}
+
 /// Runs chat turns.
 pub struct TurnEngine<B: ChatBackend, K: Tokenize> {
     backend: B,

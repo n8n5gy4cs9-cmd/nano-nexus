@@ -2255,6 +2255,8 @@ dependencies = [
 name = "nano-nexus"
 version = "0.1.0"
 dependencies = [
+ "futures-util",
+ "nexus-agent",
  "nexus-core",
  "nexus-llm",
  "nexus-store",

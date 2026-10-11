@@ -66,11 +66,14 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     if interrupted > 0 {
         tracing::info!(interrupted, "marked interrupted messages as stopped");
     }
+    let engine = AppState::default_engine(&scheduler, &supervisor);
     app.manage(Ctx::new(AppState {
         paths,
         store,
         supervisor,
         scheduler,
+        engine,
+        chats: Default::default(),
         settings: RwLock::new(settings),
         resource_dir,
         exe_dir,

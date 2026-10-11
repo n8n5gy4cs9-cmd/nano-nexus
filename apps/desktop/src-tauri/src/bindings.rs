@@ -4,7 +4,7 @@
 use specta_typescript::Typescript;
 use tauri_specta::{Builder, collect_commands, collect_events};
 
-use crate::commands::{app, notifications, runtime, settings};
+use crate::commands::{app, chat, notifications, runtime, settings};
 
 /// All commands and events.
 pub fn builder() -> Builder<tauri::Wry> {
@@ -16,6 +16,10 @@ pub fn builder() -> Builder<tauri::Wry> {
             runtime::runtime_logs,
             settings::settings_get,
             settings::settings_set,
+            chat::chat_send,
+            chat::chat_stop,
+            chat::chat_regenerate,
+            chat::chat_edit_resend,
             notifications::notifications_list,
             notifications::notifications_unread_count,
             notifications::notifications_mark_read,

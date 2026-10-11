@@ -440,6 +440,20 @@ impl Store {
         })
     }
 
+    /// Delete every message after `id` in its conversation (edit-resend keeps `id` itself).
+    pub fn delete_messages_after(&self, id: &MessageId) -> Result<usize, StoreError> {
+        self.with_conn(|c| {
+            let n = c.execute(
+                "DELETE FROM messages WHERE conversation_id = (SELECT conversation_id FROM messages WHERE id = ?1)
+                   AND (created_at > (SELECT created_at FROM messages WHERE id = ?1)
+                        OR (created_at = (SELECT created_at FROM messages WHERE id = ?1)
+                            AND rowid > (SELECT rowid FROM messages WHERE id = ?1)))",
+                [id.as_str()],
+            )?;
+            Ok(n)
+        })
+    }
+
     /// Record the token cost of an attachment.
     pub fn set_attachment_tokens(&self, attachment_id: &str, tokens: u32) -> Result<(), StoreError> {
         self.with_conn(|c| {
@@ -591,6 +605,21 @@ mod tests {
             .collect();
         assert_eq!(ids, [u1.id.clone(), a1.id.clone()]);
         assert_eq!(s.delete_messages_from(&a1.id).unwrap(), 1);
+    }
+
+    #[test]
+    fn delete_after_keeps_the_anchor() {
+        let (s, c) = store();
+        let u1 = s.insert_user_message(&c.id, "one", &[]).unwrap();
+        pause();
+        s.insert_assistant_placeholder(&c.id, &AssistantId::from("nexus"), None)
+            .unwrap();
+        pause();
+        s.insert_user_message(&c.id, "two", &[]).unwrap();
+        assert_eq!(s.delete_messages_after(&u1.id).unwrap(), 2);
+        let left = s.list_messages(&c.id).unwrap();
+        assert_eq!(left.len(), 1);
+        assert_eq!(left[0].id, u1.id);
     }
 
     #[test]
