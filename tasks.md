@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 27/217 tasks done (12%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 28/217 tasks done (12%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -55,7 +55,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T02.02** SSE decoder (CRLF, partial lines, UTF-8 splits, `[DONE]`) + exhaustive tests (2026-10-11)
 - [x] **T02.03** ThinkSplitter (`<think>` fallback, split tags) + tests (2026-10-11)
 - [x] **T02.04** `LlmClient` (health, models w/ auth, tokenize, chat, chat_stream, error mapping) + axum mock-server tests (2026-10-11)
-- [ ] **T02.05** Port probe + token + `ServerProcess::spawn` (env_clear, LLAMA_API_KEY, process group, log ring + file)
+- [x] **T02.05** Port probe + token + `ServerProcess::spawn` (env_clear, LLAMA_API_KEY, process group, log ring + file) (2026-10-11)
 - [ ] **T02.06** Windows spawn specifics behind `cfg(windows)`: CREATE_NO_WINDOW, Job Object KILL_ON_JOB_CLOSE, env SystemRoot/TEMP
 - [ ] **T02.07** `Supervisor` (states, ready loop, ownership check, auto-restart once, graceful shutdown) + fake-binary tests
 - [ ] **T02.08** Stale-process reaping via `server.json` + exe-path check + test

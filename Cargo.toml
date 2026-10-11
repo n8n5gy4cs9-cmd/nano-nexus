@@ -35,3 +35,4 @@ bytes = "1"
 secrecy = "0.10"
 getrandom = "0.4"
 axum = "0.8"
+nix = { version = "0.30", default-features = false } # safe SIGTERM / killpg (unsafe_code is forbidden)
