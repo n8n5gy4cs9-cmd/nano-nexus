@@ -208,7 +208,9 @@ impl ResolvedCall {
 
 /// Expand `~`, then match bare names against granted folders. Returns `None` if nothing sensible fits.
 pub fn resolve_path(raw: &str, home: &Path, roots: &[PathBuf]) -> Option<PathBuf> {
+    // Small models sometimes run on into markup (`C:")</param><function name=`): keep the path part only.
     let raw = raw.trim().trim_matches(|c| c == '"' || c == '\'' || c == '`');
+    let raw = raw.split(['<', '"']).next().unwrap_or("").trim();
     if raw.is_empty() {
         return None;
     }
@@ -406,8 +408,10 @@ pub async fn run_router(
         }
         let vars = json!({
             "tools": tool_info,
-            "granted_roots": roots.iter().map(|r| r.display().to_string()).collect::<Vec<_>>(),
-            "home_dir": req.home.display().to_string(),
+            // Forward slashes: a Windows `C:\Users\me` pasted into the JSON example breaks the example
+            // (invalid escapes), and the model then imitates the broken output. Windows accepts `/`.
+            "granted_roots": roots.iter().map(|r| r.display().to_string().replace('\\', "/")).collect::<Vec<_>>(),
+            "home_dir": req.home.display().to_string().replace('\\', "/"),
             "request": req.user_text,
             "tool_results_so_far": outcome.runs.len(),
         });
@@ -516,6 +520,18 @@ fn is_permission_stop(llm_text: &str) -> bool {
     llm_text.starts_with("Path not granted")
         || llm_text.starts_with("The user declined")
         || llm_text.starts_with("Path is protected")
+}
+
+#[cfg(test)]
+mod path_tests {
+    use super::*;
+
+    #[test]
+    fn markup_after_a_path_is_cut_off() {
+        let home = Path::new("/home/me");
+        let raw = r#"/home/me/Downloads")</param><function name="#;
+        assert_eq!(resolve_path(raw, home, &[]).unwrap(), Path::new("/home/me/Downloads"));
+    }
 }
 
 #[cfg(test)]
