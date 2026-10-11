@@ -15,6 +15,17 @@ Pushing: `git push origin HEAD:main`. A stop hook also wants the session branch 
 - `cargo fmt` on `nexus-store` reformats `reports.rs` and `share.rs` (pre-existing drift). Revert those two files
   after formatting (`git checkout`) so commits stay focused, or format the crate in its own commit.
 
+## Session 3 (2026-10-11): M11 + Duo, written WITHOUT running build/test (owner request)
+Only the pure parts were run earlier in the session (nexus-core, nexus-store, nexus-analyze: fmt, clippy, tests green).
+Everything below in the app crate and frontend is **uncompiled / unlinted / untested**. On the Mac first run:
+`cargo check -p nano-nexus`, `cargo test -p nano-nexus`, `pnpm lint && pnpm typecheck && pnpm test`, then regenerate `bindings.ts`.
+- T11.02 jobs wiring (`AppState.jobs`, `job:update`, `jobs_list`/`job_cancel`; scan, index, propose, download mirrored). Narrative stays a chat turn.
+- T11.03 Jobs indicator (`components/shell/JobsIndicator.tsx`, `hooks/useJobs.ts`); T11.04 routing + quiet hours (`Settings::wants_os_notification`; no Settings page yet).
+- T11.05 watches (`nexus-analyze::watch`, `nexus-store::watches`, `service/watches.rs`, new `notify` 8.2 dep); T11.06 `WatchesSection`.
+- T18.03 Duo tier badge + "Use strong model".
+- Local TS types (`features/jobs/types.ts`, `features/analyzer/watches.ts`) mirror Rust types until `bindings.ts` regenerates.
+- Left: T11.07 (tray/autostart, optional), T11.08 / T18.02 (Mac), T18.04 / T18.05 (v0.2), T11 "Watch this folder" button on report page, Settings → Notifications UI, component tests for the new UI, T09.15+.
+
 ## Done this session
 - T09.09 verified (was WIP) · T09.10 planner · T09.11 find · T09.12 verify · T09.13 strings mode · T09.14 store/service/commands · T11.01 JobRegistry.
 - `crates/nexus-analyze/src/code/`: `plan` (`plan_renames`, `git_dirty`, `parse_porcelain`), `find` (`find_symbols`, `usages`,
