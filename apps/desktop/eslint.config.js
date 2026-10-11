@@ -17,4 +17,23 @@ export default tseslint.config(
       "@typescript-eslint/consistent-type-imports": "error",
     },
   },
+  {
+    // Feature code goes through `src/lib/api.ts` (Transport facade), never `invoke` or the generated
+    // `commands`/`events`: the same UI must run over Tauri and, later, the LAN Share WebSocket.
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/lib/transport/**", "src/bindings.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            { name: "@tauri-apps/api/core", importNames: ["invoke", "Channel"], message: "Use src/lib/api.ts (Transport facade)." },
+            { name: "@tauri-apps/api/event", message: "Use api.*.on... from src/lib/api.ts." },
+            { name: "@tauri-apps/api", message: "Use src/lib/api.ts (Transport facade)." },
+            { name: "@/bindings", importNames: ["commands", "events"], message: "Use src/lib/api.ts; import only types from bindings." },
+          ],
+        },
+      ],
+    },
+  },
 );
