@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 21/217 tasks done (9%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 22/217 tasks done (10%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -43,7 +43,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 ## M01: Runtime and model pipeline · [spec](docs/milestones/M01-runtime-model.md)
 - [ ] **T01.01** 🍎 Run `scripts/setup-runtime.sh`; fix any issue; confirm `runtime.lock.json`, arm64-only, system-libs-only
 - [ ] **T01.02** 🍎 Run `node scripts/fetch-model.mjs` (default model) + `--verify`; confirm `vendor/models/index.json`
-- [ ] **T01.03** Write `scripts/smoke-runtime.sh` (random port + token, health, auth check 200/401, SSE stream, JSON schema call, clean kill)
+- [x] **T01.03** Write `scripts/smoke-runtime.sh` (random port + token, health, auth check 200/401, SSE stream, JSON schema call, clean kill) — written + syntax-checked only; owner must run on the Mac (2026-10-11)
 - [ ] **T01.04** 🍎🔬 **S1** thinking toggle (`enable_thinking`, `--reasoning-format deepseek`, `--reasoning off`) → SPIKES.md
 - [ ] **T01.05** 🍎🔬 **S2** JSON-schema shapes, `pattern` + `enum`, thinking on/off, 20 runs → SPIKES.md
 - [ ] **T01.06** Write `scripts/bench-model.sh` + `scripts/bench-prompts.txt` (TTFT, tok/s, peak RSS)
