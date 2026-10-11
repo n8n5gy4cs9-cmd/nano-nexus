@@ -392,6 +392,7 @@ fn set_status(
         id: ChangeSetId(id.to_owned()),
         status: status.to_owned(),
     });
+    super::rename::on_changeset_status(ctx, id, status);
     Ok(())
 }
 

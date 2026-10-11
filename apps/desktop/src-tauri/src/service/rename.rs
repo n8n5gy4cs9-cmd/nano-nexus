@@ -34,6 +34,8 @@ const STATUSES: &[&str] = &["candidate", "proposed", "accepted", "rejected", "ne
 pub struct RenameRuntime {
     indexes: Mutex<HashMap<String, Arc<CodeIndex>>>,
     jobs: Mutex<HashMap<String, CancellationToken>>,
+    /// Planned change sets and the session each one came from.
+    plans: Mutex<HashMap<String, String>>,
 }
 
 impl RenameRuntime {
@@ -559,12 +561,32 @@ pub async fn plan(
         })?;
     let id = super::fs::changeset_plan(ctx, &planned.change_set.title, "rename", planned.change_set.ops)?;
     ctx.store.set_rename_session_status(session_id, "planned", None)?;
+    if let Ok(mut m) = ctx.renames.plans.lock() {
+        m.insert(id.0.clone(), session_id.to_owned());
+    }
     Ok(RenamePlanView {
         changeset_id: id.0,
         edits: planned.edit_count,
         skipped: planned.skipped.into_iter().map(|s| s.reason).collect(),
         dirty: planned.dirty,
     })
+}
+
+/// A rename change set was applied (accepted items become `applied`) or undone (back to `accepted`).
+/// Other change sets are ignored.
+pub fn on_changeset_status(ctx: &AppCtx, changeset_id: &str, status: &str) {
+    let Some(session) = ctx.renames.plans.lock().ok().and_then(|m| m.get(changeset_id).cloned()) else {
+        return;
+    };
+    let (from, to) = match status {
+        "applied" => ("accepted", "applied"),
+        "undone" => ("applied", "accepted"),
+        _ => return,
+    };
+    if let Err(e) = ctx.store.bulk_set_rename_status(&session, from, to) {
+        tracing::warn!("could not update rename items: {e}");
+    }
+    let _ = ctx.store.set_rename_session_status(&session, "ready", None);
 }
 
 /// The project's own checkers (cargo check, tsc, …) and whether each is installed.

@@ -21,6 +21,7 @@ Everything below in the app crate and frontend is **uncompiled / unlinted / unte
 `cargo check -p nano-nexus`, `cargo test -p nano-nexus`, `pnpm lint && pnpm typecheck && pnpm test`, then regenerate `bindings.ts`.
 - T11.02 jobs wiring (`AppState.jobs`, `job:update`, `jobs_list`/`job_cancel`; scan, index, propose, download mirrored). Narrative stays a chat turn.
 - T11.03 Jobs indicator (`components/shell/JobsIndicator.tsx`, `hooks/useJobs.ts`); T11.04 routing + quiet hours (`Settings::wants_os_notification`; no Settings page yet).
+- T09.15/T09.16 Rename Forge UI written (no Strings tab: strings commands still missing). Duo: swap now only with two chosen, installed models.
 - T11.05 watches (`nexus-analyze::watch`, `nexus-store::watches`, `service/watches.rs`, new `notify` 8.2 dep); T11.06 `WatchesSection`.
 - T18.03 Duo tier badge + "Use strong model".
 - Local TS types (`features/jobs/types.ts`, `features/analyzer/watches.ts`) mirror Rust types until `bindings.ts` regenerates.

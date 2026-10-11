@@ -60,6 +60,7 @@ import type { KbIndexResult, KbLibrary, KbLibraryDetail, KbPassage, KbProgress }
 import { getTransport } from "./transport";
 import type { ReportDelta, WatchSchedule, WatchView } from "@/features/analyzer/watches";
 import type { JobSummary } from "@/features/jobs/types";
+import type { Checker, Found, RenameItem, RenamePlan, RenamePlanOptions, RenameProgress, RenameSession, Usage, VerifyResult } from "@/features/rename/types";
 import type { Unsubscribe } from "./transport";
 
 /** Value accepted by `settings.set`. */
@@ -116,6 +117,32 @@ export const api = {
       getTransport().stream<ChatEvent, ChatSendResult>("chat_regenerate", { assistantMessageId, think }, onEvent),
     editResend: (userMessageId: string, text: string, think: boolean, onEvent: (e: ChatEvent) => void) =>
       getTransport().stream<ChatEvent, ChatSendResult>("chat_edit_resend", { userMessageId, text, think }, onEvent),
+  },
+  rename: {
+    /** Index a project; resolves with the new session. `jobId` is the handle for `cancel`. */
+    createSession: (jobId: string, root: string, onProgress: (p: RenameProgress) => void) =>
+      getTransport().stream<RenameProgress, RenameSession>("rename_session_create", { jobId, root }, onProgress),
+    sessions: (limit = 50) => getTransport().call<RenameSession[]>("rename_sessions", { limit }),
+    deleteSession: (sessionId: string) => getTransport().call<boolean>("rename_session_delete", { sessionId }),
+    items: (sessionId: string, status: string | null = null) => getTransport().call<RenameItem[]>("rename_items", { sessionId, status }),
+    /** Ask the model for names; resolves with how many proposals were made. */
+    propose: (jobId: string, sessionId: string, symbolIds: string[] | null, tryAgain: boolean, onProgress: (p: RenameProgress) => void) =>
+      getTransport().stream<RenameProgress, number>("rename_propose", { jobId, sessionId, symbolIds, tryAgain }, onProgress),
+    updateItem: (sessionId: string, symbolId: string, patch: { finalName?: string | null; status?: string | null; includeStrings?: boolean | null }) =>
+      getTransport().call<RenameItem>("rename_item_update", {
+        sessionId,
+        symbolId,
+        finalName: patch.finalName ?? null,
+        status: patch.status ?? null,
+        includeStrings: patch.includeStrings ?? null,
+      }),
+    plan: (sessionId: string, options: RenamePlanOptions) => getTransport().call<RenamePlan>("rename_plan", { sessionId, options }),
+    checkers: (sessionId: string) => getTransport().call<Checker[]>("rename_checkers", { sessionId }),
+    verify: (jobId: string, sessionId: string, checkerId: string, onLine: (line: string) => void) =>
+      getTransport().stream<string, VerifyResult>("rename_verify", { jobId, sessionId, checkerId }, onLine),
+    usages: (sessionId: string, symbolId: string) => getTransport().call<Usage[]>("rename_usages", { sessionId, symbolId }),
+    find: (sessionId: string, query: string) => getTransport().call<Found[]>("rename_find", { sessionId, query }),
+    cancel: (jobId: string) => getTransport().call<boolean>("rename_cancel", { jobId }),
   },
   watches: {
     list: () => getTransport().call<WatchView[]>("watches_list"),

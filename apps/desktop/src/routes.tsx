@@ -26,6 +26,7 @@ import { IS_WEB } from "@/lib/target";
 import { SharingSettings } from "@/features/share/SharingSettings";
 import { DesktopOnly } from "@/web/DesktopOnly";
 import { EditorPage } from "@/features/editor/EditorPage";
+import { RenamePage } from "@/features/rename/RenamePage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 import { PlaceholderPage } from "@/features/placeholders/PlaceholderPage";
 
@@ -70,6 +71,7 @@ function pageFor(s: NavSection) {
   if (s.path === "/changes") return <ChangesPage />;
   if (s.path === "/permissions") return <PermissionsPage />;
   if (s.path === "/library") return <LibraryPage />;
+  if (s.path === "/rename") return <RenamePage />;
   if (s.path === "/settings") return <SettingsPage />;
   return <PlaceholderPage section={s} />;
 }

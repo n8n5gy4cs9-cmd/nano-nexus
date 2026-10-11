@@ -32,9 +32,9 @@ pub async fn rename_session_create(
     ctx: Ctx<'_>,
     job_id: String,
     root: String,
-    on_progress: Channel<RenameProgress>,
+    on_event: Channel<RenameProgress>,
 ) -> CmdResult<RenameSessionView> {
-    service::rename::session_create(&ctx, &job_id, &root, progress_to(on_progress)).await.map_err(ipc)
+    service::rename::session_create(&ctx, &job_id, &root, progress_to(on_event)).await.map_err(ipc)
 }
 
 #[tauri::command]
@@ -64,9 +64,9 @@ pub async fn rename_propose(
     session_id: String,
     symbol_ids: Option<Vec<String>>,
     try_again: bool,
-    on_progress: Channel<RenameProgress>,
+    on_event: Channel<RenameProgress>,
 ) -> CmdResult<u32> {
-    service::rename::propose_names(&ctx, &job_id, &session_id, symbol_ids, try_again, progress_to(on_progress))
+    service::rename::propose_names(&ctx, &job_id, &session_id, symbol_ids, try_again, progress_to(on_event))
         .await
         .map_err(ipc)
 }
@@ -105,10 +105,10 @@ pub async fn rename_verify(
     job_id: String,
     session_id: String,
     checker_id: String,
-    on_output: Channel<String>,
+    on_event: Channel<String>,
 ) -> CmdResult<VerifyResult> {
     let sink: Arc<dyn Fn(String) + Send + Sync> = Arc::new(move |l| {
-        let _ = on_output.send(l);
+        let _ = on_event.send(l);
     });
     service::rename::verify(&ctx, &job_id, &session_id, &checker_id, sink).await.map_err(ipc)
 }
