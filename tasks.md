@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 13/233 tasks done (5%) · **Next:** T00.01 Root Cargo workspace (resolver 3, edition 2024, rust-version 1.90), rust-toolchain.toml, rustfmt.toml, clippy.toml
+**Progress:** 14/217 tasks done (6%) · **Next:** T00.02 Create library crates `nexus-{core,store,llm,models,fs,analyze,agent,share}` (empty, compiling, workspace lints)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -29,7 +29,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **TP.13** `docs/SPIKES.md` + `docs/QUESTIONS.md` skeletons (2026-10-11)
 
 ## M00: Bootstrap · [spec](docs/milestones/M00-bootstrap.md)
-- [ ] **T00.01** Root Cargo workspace (resolver 3, edition 2024, rust-version 1.90), rust-toolchain.toml, rustfmt.toml, clippy.toml
+- [x] **T00.01** Root Cargo workspace (resolver 3, edition 2024, rust-version 1.90), rust-toolchain.toml, rustfmt.toml, clippy.toml (2026-10-11) — note: `members = []` until T00.02 (a `crates/*` glob with no crates, or an empty workspace, breaks cargo/fmt); `check.sh` goes green once T00.02 lands
 - [ ] **T00.02** Create library crates `nexus-{core,store,llm,models,fs,analyze,agent,share}` (empty, compiling, workspace lints)
 - [ ] **T00.03** `nexus-core::ids` (UUIDv7 newtypes) + tests
 - [ ] **T00.04** `nexus-core::error` (ErrorCode, NexusError, IpcError) + serialization tests
