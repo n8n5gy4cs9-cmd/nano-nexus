@@ -28,6 +28,7 @@ quick-xml.workspace = true
 csv.workspace = true
 kamadak-exif = { workspace = true }
 whatlang.workspace = true
+postcard.workspace = true
 tree-sitter.workspace = true
 tree-sitter-python.workspace = true
 tree-sitter-javascript.workspace = true
