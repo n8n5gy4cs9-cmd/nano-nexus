@@ -11,6 +11,7 @@ pub fn builder() -> Builder<tauri::Wry> {
     Builder::<tauri::Wry>::new()
         .commands(collect_commands![
             app::app_info,
+            app::open_external,
             runtime::runtime_status,
             runtime::runtime_restart,
             runtime::runtime_logs,

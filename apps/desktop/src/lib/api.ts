@@ -25,6 +25,8 @@ export type SettingValue = null | boolean | number | string | string[] | Record<
 export const api = {
   app: {
     info: () => getTransport().call<AppInfo>("app_info"),
+    /** Open an http(s) link in the OS browser. */
+    openExternal: (url: string) => getTransport().call<null>("open_external", { url }),
   },
   runtime: {
     status: () => getTransport().call<RuntimeState>("runtime_status"),

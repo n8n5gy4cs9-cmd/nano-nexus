@@ -15,6 +15,20 @@ pub struct AppInfo {
     pub log_dir: String,
 }
 
+/// Only plain web links may be handed to the OS browser.
+pub fn validate_external_url(url: &str) -> Result<(), nexus_core::error::NexusError> {
+    let ok = (url.starts_with("https://") || url.starts_with("http://"))
+        && !url.contains(char::is_whitespace)
+        && url.len() <= 2048;
+    if ok {
+        Ok(())
+    } else {
+        Err(nexus_core::error::NexusError::InvalidInput(
+            "only http(s) links can be opened".into(),
+        ))
+    }
+}
+
 /// Remotes see the version and platform but not where the data lives.
 pub fn info(ctx: &AppCtx, caller: &Caller) -> AppInfo {
     let (data_dir, log_dir) = if caller.is_desktop() {
@@ -38,6 +52,22 @@ pub fn info(ctx: &AppCtx, caller: &Caller) -> AppInfo {
 mod tests {
     use super::*;
     use nexus_core::settings::SharePolicy;
+
+    #[test]
+    fn external_urls_are_limited_to_web_links() {
+        assert!(validate_external_url("https://example.com/a?b=1").is_ok());
+        assert!(validate_external_url("http://localhost:3000").is_ok());
+        for bad in [
+            "file:///etc/passwd",
+            "javascript:alert(1)",
+            "ftp://x",
+            "https://a b",
+            "tauri://localhost",
+            "",
+        ] {
+            assert!(validate_external_url(bad).is_err(), "{bad}");
+        }
+    }
 
     #[tokio::test]
     async fn remotes_do_not_see_local_paths() {

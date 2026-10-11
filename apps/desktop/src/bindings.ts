@@ -6,6 +6,8 @@ import * as __TAURI_EVENT from "@tauri-apps/api/event";
 /** Commands */
 export const commands = {
 	appInfo: () => typedError<AppInfo, IpcError>(__TAURI_INVOKE("app_info")),
+	/**  Open a web link in the OS browser (https/http only). */
+	openExternal: (url: string) => typedError<null, IpcError>(__TAURI_INVOKE("open_external", { url })),
 	runtimeStatus: () => typedError<RuntimeState, IpcError>(__TAURI_INVOKE("runtime_status")),
 	runtimeRestart: () => typedError<null, IpcError>(__TAURI_INVOKE("runtime_restart")),
 	runtimeLogs: (lines: number) => typedError<string[], IpcError>(__TAURI_INVOKE("runtime_logs", { lines })),
