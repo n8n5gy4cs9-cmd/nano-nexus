@@ -78,10 +78,10 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T03.11** macOS vibrancy sidebar + transparent window; Windows Mica + native decorations — macOS vibrancy done (config + CSS, untested off-Mac); Windows Mica deferred, see QUESTIONS Q-2 (2026-10-11)
 - [x] **T03.12** Notifications plumbing: plugin, `notify()` service (DB + emit + OS when unfocused), bell popover, test notification (2026-10-11)
 - [x] **T03.13** App icon (hexagon nexus) 1024px → `pnpm tauri icon` (2026-10-11)
-- [ ] **T03.14** 🍎 Walking-skeleton `.app` (overlay config with default model) → move to /Applications → works offline → notification → no orphan
+- [ ] **T03.14** 🍎 Walking-skeleton `.app` (overlay config with default model) → move to /Applications → works offline → notification → no orphan — ⏳ Mac/Windows-only; owner to run
 - [x] **T03.15** Write `scripts/fetch-runtime-windows.mjs` (GitHub release digest verification, extract, prune, lock) + mock test (2026-10-11)
-- [ ] **T03.16** 🍎🪟🔬 **S7** cross-compile skeleton for Windows x64 (cargo-xwin + NSIS) on the Mac; run in a Win11 ARM VM / PC → SPIKES.md
-- [ ] ⭐ **T03.17** Exit check: Ready < 5 s in dev; kill server → auto-restart; theme persists; skeletons OK on macOS + Windows
+- [ ] **T03.16** 🍎🪟🔬 **S7** cross-compile skeleton for Windows x64 (cargo-xwin + NSIS) on the Mac; run in a Win11 ARM VM / PC → SPIKES.md — ⏳ Mac/Windows-only; owner to run
+- [ ] ⭐ **T03.17** Exit check: Ready < 5 s in dev; kill server → auto-restart; theme persists; skeletons OK on macOS + Windows — ⏳ Mac/Windows-only; owner to run
 
 ## M04: Chat MVP ★ · [spec](docs/milestones/M04-chat.md)
 - [ ] **T04.01** Store migration 0001 (settings, assistants, conversations, messages + FTS5 + triggers, attachments) + repos + tests
