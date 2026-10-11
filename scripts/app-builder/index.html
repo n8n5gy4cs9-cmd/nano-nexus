@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NanoNexus App Builder</title>
+<style>
+:root{--bg:#fff;--fg:#1c1b22;--mut:#6b6a76;--bd:#dedde6;--card:#f6f6fa;--ac:#6d4aff}
+@media(prefers-color-scheme:dark){:root{--bg:#15141b;--fg:#ececf3;--mut:#9a99a8;--bd:#2c2b38;--card:#1d1c26}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,sans-serif}
+main{max-width:860px;margin:0 auto;padding:20px 16px 60px}h1{margin:0 0 4px}h2{font-size:16px;margin:26px 0 8px}
+.mut{color:var(--mut);font-size:13px}.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px}
+button{font:inherit;border:1px solid var(--bd);background:var(--card);color:var(--fg);border-radius:8px;padding:6px 12px;cursor:pointer}
+button.p{background:var(--ac);border-color:var(--ac);color:#fff}button:disabled{opacity:.5}
+input[type=text]{font:inherit;width:100%;padding:6px 8px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--fg)}
+label{display:flex;gap:8px;align-items:center;padding:3px 0}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.list{max-height:240px;overflow:auto;border:1px solid var(--bd);border-radius:8px;background:var(--bg)}
+.list div{padding:5px 10px;cursor:pointer;display:flex;justify-content:space-between;gap:10px}.list div:hover{background:var(--card)}
+pre{background:#0e0d13;color:#d8d8e6;border-radius:10px;padding:12px;max-height:340px;overflow:auto;font:12px/1.5 ui-monospace,monospace;white-space:pre-wrap}
+.sel{display:flex;gap:8px;align-items:center;padding:4px 0}.sel input[type=text]{flex:1}
+</style></head><body><main>
+<h1>NanoNexus App Builder</h1>
+<p class="mut">Pick your model(s) and books, choose Mac and/or Windows, press Build. Everything stays on this computer.</p>
+
+<h2>1 · Name</h2><input type="text" id="name" value="my-bundle" aria-label="Bundle name">
+
+<h2>2 · Models</h2>
+<div class="card">
+  <div class="mut">Your downloaded <b>.gguf</b> files (Downloads folder):</div>
+  <div id="dl"></div>
+  <div class="row" style="margin-top:8px"><button id="browseG">Browse for a .gguf…</button><span class="mut">or pick one from any folder</span></div>
+  <div id="browserG" hidden></div>
+  <div id="chosen"></div>
+  <div class="mut" style="margin-top:10px">Catalog models (downloaded for you):</div><div id="cat"></div>
+  <div class="mut" style="margin-top:10px">Default model on first launch:</div><select id="def"></select>
+</div>
+
+<h2>3 · Reference libraries (optional)</h2>
+<div class="card"><div class="row"><button id="browseK">Add a folder…</button><span class="mut">PDF, EPUB, Markdown, text, HTML, DOCX, CSV, code</span></div>
+  <div id="browserK" hidden></div><div id="books"></div></div>
+
+<h2>4 · Build for</h2>
+<div class="card row" id="targets">
+  <label><input type="radio" name="t" value="mac"> macOS</label>
+  <label><input type="radio" name="t" value="windows"> Windows (x64)</label>
+  <label><input type="radio" name="t" value="all"> Both</label>
+  <span class="mut">Windows format:</span>
+  <select id="fmt"><option value="auto">Automatic</option><option value="installer">Installer</option><option value="portable">Portable folder</option></select>
+</div>
+
+<div class="row" style="margin-top:18px"><button class="p" id="go">Build</button><button id="stop" disabled>Cancel</button><span id="msg" class="mut"></span></div>
+<h2>Log</h2><pre id="log">Waiting…</pre>
+</main>
+<script>
+const T = new URLSearchParams(location.search).get('t');
+const api = (p, o = {}) => fetch(p + (p.includes('?') ? '&' : '?') + 't=' + T, o).then(async r => { const j = await r.json(); if (!r.ok) throw new Error(j.error || r.status); return j; });
+const $ = id => document.getElementById(id);
+const gb = b => b >= 1073741824 ? (b / 1073741824).toFixed(2) + ' GB' : (b / 1048576).toFixed(0) + ' MB';
+const state = { ggufs: [], catalog: new Set(), books: [] };
+
+function renderChosen() {
+  $('chosen').innerHTML = '';
+  state.ggufs.forEach((g, i) => {
+    const d = document.createElement('div'); d.className = 'sel';
+    d.innerHTML = '<span>📦</span><input type="text" placeholder="Display name"><button>Remove</button>';
+    const inp = d.querySelector('input'); inp.value = g.name; inp.oninput = () => { g.name = inp.value; renderDefault(); };
+    d.querySelector('button').onclick = () => { state.ggufs.splice(i, 1); renderChosen(); renderDefault(); };
+    d.insertBefore(Object.assign(document.createElement('span'), { className: 'mut', textContent: g.file }), inp);
+    $('chosen').append(d);
+  });
+  renderDefault();
+}
+const slug = s => s.toLowerCase().replace(/[^a-z0-9.]+/g, '-').replace(/^-+|-+$/g, '') || 'model';
+const gid = g => slug(g.file.replace(/\.gguf$/i, ''));
+function renderDefault() {
+  const opts = [...state.ggufs.map(g => [gid(g), g.name || g.file]), ...[...state.catalog].map(c => [c, c])];
+  const cur = $('def').value;
+  $('def').innerHTML = opts.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+  if (opts.some(o => o[0] === cur)) $('def').value = cur;
+}
+function addGguf(e) { if (!state.ggufs.some(g => g.path === e.path)) state.ggufs.push({ path: e.path, file: e.name, name: e.name.replace(/\.gguf$/i, '') }); renderChosen(); }
+
+function browser(el, dir, pickFiles, onPick) {
+  api('/api/ls?dir=' + encodeURIComponent(dir)).then(r => {
+    el.hidden = false; el.innerHTML = '';
+    const head = document.createElement('div'); head.className = 'mut'; head.textContent = r.dir; el.append(head);
+    if (!pickFiles) { const b = document.createElement('button'); b.textContent = 'Use this folder'; b.onclick = () => { onPick(r.dir); el.hidden = true; }; el.append(b); }
+    const l = document.createElement('div'); l.className = 'list';
+    const add = (label, right, fn) => { const d = document.createElement('div'); d.innerHTML = `<span>${label}</span><span class="mut">${right}</span>`; d.onclick = fn; l.append(d); };
+    if (r.parent) add('⬆ ..', '', () => browser(el, r.parent, pickFiles, onPick));
+    r.entries.filter(e => e.dir || pickFiles).forEach(e => add((e.dir ? '📁 ' : '📦 ') + e.name, e.dir ? '' : gb(e.size), () => e.dir ? browser(el, e.path, pickFiles, onPick) : (onPick(e), el.hidden = true)));
+    el.append(l);
+  }).catch(e => alert(e.message));
+}
+
+api('/api/info').then(info => {
+  $('dl').innerHTML = info.downloadsGguf.length ? '' : '<div class="mut">No .gguf files found in ' + info.downloads + '</div>';
+  info.downloadsGguf.forEach(e => { const b = document.createElement('label'); b.innerHTML = `<input type="checkbox"> ${e.name} <span class="mut">${gb(e.size)}</span>`; b.querySelector('input').onchange = ev => { if (ev.target.checked) addGguf(e); else { state.ggufs = state.ggufs.filter(g => g.path !== e.path); renderChosen(); } }; $('dl').append(b); });
+  info.catalog.forEach(m => { const b = document.createElement('label'); b.innerHTML = `<input type="checkbox"> ${m.name} <span class="mut">${m.quant ?? ''}</span>`; b.querySelector('input').onchange = ev => { ev.target.checked ? state.catalog.add(m.id) : state.catalog.delete(m.id); renderDefault(); }; $('cat').append(b); });
+  const mac = info.platform === 'darwin';
+  document.querySelector(`input[name=t][value=${mac ? 'mac' : 'windows'}]`).checked = true;
+  if (!mac) document.querySelector('input[name=t][value=mac]').disabled = true;
+  $('browseG').onclick = () => browser($('browserG'), info.downloads, true, addGguf);
+  $('browseK').onclick = () => browser($('browserK'), info.home, false, p => { if (!state.books.includes(p)) state.books.push(p); renderBooks(); });
+}).catch(e => $('msg').textContent = e.message);
+
+function renderBooks() {
+  $('books').innerHTML = '';
+  state.books.forEach((p, i) => { const d = document.createElement('div'); d.className = 'sel'; d.innerHTML = `<span>📚 ${p}</span><button>Remove</button>`; d.querySelector('button').onclick = () => { state.books.splice(i, 1); renderBooks(); }; $('books').append(d); });
+}
+
+let es;
+function watch() {
+  $('log').textContent = ''; es?.close(); es = new EventSource('/api/log?t=' + T);
+  es.onmessage = e => { const l = $('log'); l.textContent += JSON.parse(e.data) + '\n'; l.scrollTop = l.scrollHeight; };
+  es.addEventListener('done', e => { es.close(); $('go').disabled = false; $('stop').disabled = true; $('msg').textContent = e.data === '0' ? '✔ Finished. Files are in dist-bundles/' : '✖ Build failed (see the log).'; });
+}
+$('go').onclick = async () => {
+  if (!state.ggufs.length && !state.catalog.size) return ($('msg').textContent = 'Choose at least one model.');
+  const body = { name: $('name').value, ggufs: state.ggufs.map(g => ({ path: g.path, id: gid(g), name: g.name })), catalog: [...state.catalog], knowledge: state.books, default: $('def').value, target: document.querySelector('input[name=t]:checked')?.value, format: $('fmt').value };
+  try { await api('/api/build', { method: 'POST', body: JSON.stringify(body) }); } catch (e) { return ($('msg').textContent = e.message); }
+  $('go').disabled = true; $('stop').disabled = false; $('msg').textContent = 'Building… this can take several minutes.'; watch();
+};
+$('stop').onclick = () => api('/api/cancel', { method: 'POST' });
+</script></body></html>

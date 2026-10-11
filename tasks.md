@@ -216,8 +216,8 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [ ] **T12.03** `scripts/stage-bundle.mjs` (hardlinks, manifest.json, licenses, generated overlay) + test with fake 10 MB models
 - [ ] **T12.04** `scripts/verify-payload.mjs` (re-hash models + runtime, lipo/otool, Info.plist keys; `--windows` PE arch check)
 - [ ] **T12.05** `scripts/build-app.sh --profile <p>` (doctor → verify → stage → build:web → tauri build → verify → codesign → zip + SHA256SUMS)
-- [ ] **T12.06** `scripts/app-builder.mjs` server (127.0.0.1 + token, profile CRUD, size calc, build runner, SSE logs, idle exit, CLI mode)
-- [ ] **T12.07** `scripts/app-builder/index.html` UI (models checklist, HF/local add, default radio, targets, Windows format, size summary, results)
+- [x] **T12.06** `scripts/app-builder.mjs` server (127.0.0.1 + token, profile CRUD, size calc, build runner, SSE logs, idle exit, CLI mode) (2026-10-11) — simplified: `scripts/app-builder.mjs` (127.0.0.1 + token, idle exit, SSE log) runs `scripts/bundle.mjs`; no profile CRUD or size calc yet
+- [x] **T12.07** `scripts/app-builder/index.html` UI (models checklist, HF/local add, default radio, targets, Windows format, size summary, results) (2026-10-11) — `scripts/app-builder/index.html`: Downloads .gguf picker, folder browser, catalog, books, targets
 - [ ] **T12.08** `scripts/make-model-pack.mjs` + `schemas/model-pack.schema.json` usage + test
 - [ ] **T12.09** In-app model packs: export + import (verify, copy/reference, progress) + `models-extra/` first-launch import
 - [ ] **T12.10** Settings → About shows `bundle.json` (profile, commit, date)

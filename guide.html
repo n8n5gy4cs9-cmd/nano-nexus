@@ -162,6 +162,7 @@
 
 <h2 id="quick">★ Quick start: bundle my own model + books (macOS and Windows) <span class="badge b-now">Available now</span></h2>
 <p>One script does everything: <code>scripts/bundle.mjs</code>. You give it your downloaded <code>.gguf</code> file(s) and your reference folders; it checks and imports the model, copies the books, stages the files, and builds the app. You do not need to edit any config.</p>
+<div class="note ok"><strong>Easiest: the App Builder</strong>Run <code>node scripts/app-builder.mjs</code>. A page opens in your browser: tick your <code>.gguf</code> files (it lists the ones in your <b>Downloads</b> folder, or browse to any folder), tick catalog models if you want, add book folders, choose <b>macOS / Windows / Both</b>, press <b>Build</b>, and watch the log. The result appears in <code>dist-bundles/&lt;name&gt;/</code>. It only listens on this computer and closes itself after 30 idle minutes. Prefer the terminal? The same thing in one command is below.</div>
 <ol class="steps">
   <li><b>Do the one-time setup</b> in <a href="#setup">step 1</a> (Mac). For Windows builds also do the <a href="#windows">Windows toolchain</a> once. If you only need Mac, skip that.</li>
   <li><b>Put your files somewhere easy</b>, for example:
