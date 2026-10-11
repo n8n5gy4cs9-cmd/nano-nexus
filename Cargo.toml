@@ -36,3 +36,4 @@ secrecy = "0.10"
 getrandom = "0.4"
 axum = "0.8"
 nix = { version = "0.30", default-features = false } # safe SIGTERM / killpg (unsafe_code is forbidden)
+win32job = "2" # Windows Job Object (KILL_ON_JOB_CLOSE) for llama-server, ADR-014

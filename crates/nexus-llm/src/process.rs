@@ -22,6 +22,9 @@ pub struct ServerProcess {
     pid: u32,
     port: u16,
     log: LogRing,
+    /// Windows: dropping the job (app exit for any reason) kills the server.
+    #[cfg(windows)]
+    _job: Option<win32job::Job>,
 }
 
 impl ServerProcess {
@@ -67,12 +70,16 @@ impl ServerProcess {
         if let Some(err) = child.stderr.take() {
             tokio::spawn(pump(err, log.clone(), file.clone()));
         }
+        #[cfg(windows)]
+        let job = assign_kill_on_close_job(&child);
         tracing::info!(pid, port, "llama-server started");
         Ok(Self {
             child,
             pid,
             port,
             log,
+            #[cfg(windows)]
+            _job: job,
         })
     }
 
@@ -120,6 +127,12 @@ impl ServerProcess {
         if matches!(self.child.try_wait(), Ok(Some(_))) {
             return;
         }
+        // Windows has no SIGTERM and llama-server holds no state to flush: kill straight away.
+        #[cfg(windows)]
+        let grace = {
+            let _ = self.child.start_kill();
+            grace
+        };
         terminate(self.pid);
         if tokio::time::timeout(grace, self.child.wait()).await.is_err() {
             kill_group(self.pid);
@@ -147,8 +160,40 @@ fn platform_setup(cmd: &mut Command) {
     cmd.process_group(0);
 }
 
-#[cfg(not(unix))]
+/// `CREATE_NO_WINDOW`: no console window flashes when the server starts.
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
+#[cfg(windows)]
+fn platform_setup(cmd: &mut Command) {
+    cmd.creation_flags(CREATE_NO_WINDOW);
+}
+
+#[cfg(not(any(unix, windows)))]
 fn platform_setup(_cmd: &mut Command) {}
+
+/// Put the child in a Job Object with `KILL_ON_JOB_CLOSE`, so Windows kills the server when the app
+/// dies for any reason. Failure is logged and non-fatal (the explicit stop path still works).
+#[cfg(windows)]
+fn assign_kill_on_close_job(child: &Child) -> Option<win32job::Job> {
+    let attempt = || -> Result<win32job::Job, win32job::JobError> {
+        let job = win32job::Job::create()?;
+        let mut info = job.query_extended_limit_info()?;
+        info.limit_kill_on_job_close();
+        job.set_extended_limit_info(&info)?;
+        if let Some(handle) = child.raw_handle() {
+            job.assign_process(handle as isize)?;
+        }
+        Ok(job)
+    };
+    match attempt() {
+        Ok(job) => Some(job),
+        Err(e) => {
+            tracing::warn!("could not create kill-on-close job object: {e}");
+            None
+        }
+    }
+}
 
 #[cfg(unix)]
 fn signal_group(pid: u32, sig: nix::sys::signal::Signal) {

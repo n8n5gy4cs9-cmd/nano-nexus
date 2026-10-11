@@ -4,6 +4,7 @@
     test,
     allow(clippy::unwrap_used, clippy::expect_used, clippy::field_reassign_with_default)
 )]
+pub mod backend;
 pub mod client;
 pub mod config;
 pub mod error;
