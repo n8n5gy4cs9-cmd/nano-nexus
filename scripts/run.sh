@@ -52,7 +52,18 @@ if [ ! -d apps/desktop/node_modules ] && [ ! -d node_modules ]; then
   pnpm install
 fi
 
-# 4) Launch.
+# 4) Web UI for LAN Share. It is embedded in the app at compile time, so build it first (and again when the
+#    sources changed). This skips the type check on purpose; `pnpm build:web` runs it.
+if [ "$WEB" = "0" ]; then
+  DIST=apps/desktop/dist-web/index.html
+  if [ ! -f "$DIST" ] || grep -q "not built yet" "$DIST" 2>/dev/null \
+     || [ -n "$(find apps/desktop/src apps/desktop/public apps/desktop/index.html -newer "$DIST" -type f 2>/dev/null | head -n 1)" ]; then
+    step "Building the web UI for LAN Share"
+    pnpm -C apps/desktop exec vite build --mode web --outDir dist-web
+  fi
+fi
+
+# 5) Launch.
 if [ "$WEB" = "1" ]; then
   exec pnpm -C apps/desktop dev:web
 else

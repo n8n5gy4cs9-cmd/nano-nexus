@@ -32,6 +32,30 @@ pub fn lan_addresses() -> Vec<Ipv4Addr> {
     found
 }
 
+/// This computer's own `.local` name (what macOS and Windows already answer for on the network),
+/// e.g. `harris-macbook-pro`. `None` if it cannot be determined.
+pub fn host_local_name() -> Option<String> {
+    static NAME: std::sync::OnceLock<Option<String>> = std::sync::OnceLock::new();
+    NAME.get_or_init(|| {
+        let run = |cmd: &str, args: &[&str]| {
+            std::process::Command::new(cmd)
+                .args(args)
+                .output()
+                .ok()
+                .filter(|o| o.status.success())
+                .and_then(|o| String::from_utf8(o.stdout).ok())
+        };
+        let raw = if cfg!(target_os = "macos") {
+            run("scutil", &["--get", "LocalHostName"]).or_else(|| run("hostname", &["-s"]))
+        } else {
+            run("hostname", &[])
+        }?;
+        let name = crate::mdns::sanitize_name(raw.trim().trim_end_matches(".local"));
+        (!name.is_empty()).then_some(name)
+    })
+    .clone()
+}
+
 /// Browser URLs for a server on `bind:port`. A specific bind shows only that address.
 pub fn share_urls(bind: IpAddr, port: u16, https: bool, mdns_name: Option<&str>) -> Vec<String> {
     let scheme = if https { "https" } else { "http" };
@@ -41,8 +65,16 @@ pub fn share_urls(bind: IpAddr, port: u16, https: bool, mdns_name: Option<&str>)
         vec![bind.to_string()]
     };
     let mut urls: Vec<String> = hosts.into_iter().map(|h| format!("{scheme}://{h}:{port}")).collect();
-    if let (Some(name), true) = (mdns_name, bind.is_unspecified()) {
-        urls.push(format!("{scheme}://{name}.local:{port}"));
+    if bind.is_unspecified() {
+        // The computer's own .local name works without any extra advertising, so list it first.
+        if let Some(host) = host_local_name() {
+            urls.push(format!("{scheme}://{host}.local:{port}"));
+        }
+        if let Some(name) = mdns_name {
+            if host_local_name().as_deref() != Some(name) {
+                urls.push(format!("{scheme}://{name}.local:{port}"));
+            }
+        }
     }
     urls
 }
