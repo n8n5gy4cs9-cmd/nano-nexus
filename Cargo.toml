@@ -2,6 +2,13 @@
 resolver = "3"
 members = ["crates/*", "apps/desktop/src-tauri"]
 
+# Smaller debug builds: keep line tables for backtraces, drop debuginfo of dependencies.
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false
+
 [workspace.package]
 edition = "2024"
 rust-version = "1.90"

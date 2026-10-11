@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 65/229 tasks done (28%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 66/229 tasks done (28%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -104,7 +104,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 
 ## M05: Permissions and change sets · [spec](docs/milestones/M05-permissions.md) · [contract](docs/architecture/PERMISSIONS.md)
 - [x] **T05.01** Grants model + canonicalization (existing + non-existing paths, dunce on Windows) + tests (2026-10-11)
-- [ ] **T05.02** Deny list (per OS, user entries) + check algorithm + exhaustive tests (boundaries, symlinks, expiry, max level)
+- [x] **T05.02** Deny list (per OS, user entries) + check algorithm + exhaustive tests (boundaries, symlinks, expiry, max level) (2026-10-11)
 - [ ] **T05.03** Store migration 0002 (grants, deny_rules, audit_log, changesets) + repos; load grants on startup
 - [ ] **T05.04** Batched async audit writer + tests
 - [ ] **T05.05** ChangeSet model + preview (diffs via `similar`, conflicts, missing grants, validation)
