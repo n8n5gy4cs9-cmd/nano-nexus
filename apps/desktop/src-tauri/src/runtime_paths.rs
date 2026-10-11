@@ -54,6 +54,32 @@ pub fn server_binary(resource_dir: &Path, exe_dir: &Path) -> PathBuf {
     }
 }
 
+/// Debug builds only: the `llama-server` that `scripts/setup-runtime.sh` built under `<repo>/vendor/runtime`.
+/// `tauri dev` has no `externalBin` copy next to the executable, so without this the runtime never starts.
+pub fn vendor_server_binary(vendor_dir: &Path) -> Option<PathBuf> {
+    let runtime = vendor_dir.join("runtime");
+    let mut found: Vec<PathBuf> = std::fs::read_dir(&runtime)
+        .ok()?
+        .flatten()
+        .filter(|d| d.file_type().is_ok_and(|t| t.is_dir()))
+        .filter_map(|d| std::fs::read_dir(d.path()).ok())
+        .flat_map(|rd| rd.flatten())
+        .map(|e| e.path())
+        .filter(|p| {
+            p.is_file()
+                && p.file_name()
+                    .is_some_and(|n| n.to_string_lossy().starts_with("llama-server"))
+                && p.extension().is_none_or(|x| x != "json")
+        })
+        .collect();
+    found.sort();
+    // Prefer the folder for this OS and CPU.
+    let arch = if std::env::consts::ARCH == "aarch64" { "arm64" } else { std::env::consts::ARCH };
+    let host = format!("{}-{arch}", std::env::consts::OS);
+    let mine = found.iter().find(|p| p.to_string_lossy().contains(&host)).cloned();
+    mine.or_else(|| found.into_iter().next())
+}
+
 /// Read `<models_dir>/manifest.json`.
 pub fn read_manifest(models_dir: &Path) -> Option<BundleManifest> {
     serde_json::from_slice(&std::fs::read(models_dir.join("manifest.json")).ok()?).ok()

@@ -867,8 +867,12 @@ pub fn init(ctx: &AppCtx) {
 
 /// Re-read the user's extra model folders. Returns how many models they hold.
 pub fn rescan(ctx: &AppCtx) -> Result<usize, NexusError> {
-    let dirs =
+    let mut dirs =
         crate::runtime_paths::extra_model_dirs(&ctx.exe_dir, &ctx.settings_snapshot().models_extra_dirs);
+    // Dev builds list whatever `scripts/fetch-model.mjs` put in `<repo>/vendor/models`.
+    if cfg!(debug_assertions) {
+        dirs.push(std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../vendor/models"));
+    }
     bundled::sync_extra_folders(&ctx.store, &dirs).map_err(|e| NexusError::Internal(e.to_string()))
 }
 

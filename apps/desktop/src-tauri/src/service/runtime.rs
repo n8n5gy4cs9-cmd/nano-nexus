@@ -45,11 +45,14 @@ pub fn build_config(ctx: &AppCtx) -> Option<RuntimeConfig> {
             path: PathBuf::from(m.path),
         });
     let model = registered.or_else(|| runtime_paths::resolve_model(&search))?;
-    let mut cfg = RuntimeConfig::from_settings(
-        &settings,
-        runtime_paths::server_binary(&ctx.resource_dir, &ctx.exe_dir),
-        model.path,
-    );
+    let mut binary = runtime_paths::server_binary(&ctx.resource_dir, &ctx.exe_dir);
+    if cfg!(debug_assertions) && !binary.is_file() {
+        let vendor = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../vendor");
+        if let Some(dev) = runtime_paths::vendor_server_binary(&vendor) {
+            binary = dev;
+        }
+    }
+    let mut cfg = RuntimeConfig::from_settings(&settings, binary, model.path);
     cfg.model_id = model.id;
     Some(cfg)
 }
