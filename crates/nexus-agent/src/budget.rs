@@ -6,7 +6,7 @@ use std::future::Future;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::sync::Mutex;
 
-use nexus_llm::LlmClient;
+use nexus_llm::{LlmClient, Supervisor};
 
 /// Something that can count tokens for the loaded model.
 pub trait Tokenize: Send + Sync {
@@ -17,6 +17,14 @@ pub trait Tokenize: Send + Sync {
 impl Tokenize for LlmClient {
     async fn count(&self, text: &str) -> Option<u32> {
         self.tokenize(text).await.ok().map(|t| t.len() as u32)
+    }
+}
+
+/// Counts through whatever server the supervisor currently runs (none while not ready: estimates).
+impl Tokenize for Supervisor {
+    async fn count(&self, text: &str) -> Option<u32> {
+        let client = self.client().await?;
+        client.count(text).await
     }
 }
 

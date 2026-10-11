@@ -7,9 +7,13 @@
 pub mod budget;
 pub mod prompt;
 pub mod spec;
+pub mod turn;
 
 pub use budget::{
     ContextMeter, HistoryItem, HistoryPlan, Limits, SummaryInfo, TokenCounter, Tokenize, plan_history,
 };
 pub use prompt::{PREAMBLE, PromptContext, render_system_prompt};
 pub use spec::{AssistantSpec, builtin_nexus};
+pub use turn::{
+    AttachmentBlock, ChatBackend, HistoryMessage, StoredSummary, TurnEngine, TurnInput, TurnOutcome,
+};

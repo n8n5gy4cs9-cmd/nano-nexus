@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 52/217 tasks done (23%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 53/217 tasks done (24%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -88,7 +88,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T04.02** Service layer skeleton (`service/*`, `AppCtx`, `Caller`, `Sink` trait) + ChannelSink (2026-10-11)
 - [x] **T04.03** `nexus-agent` minimal: preamble + `nexus.toml` rendering (minijinja) + insta snapshot (2026-10-11)
 - [x] **T04.04** ContextBudget (tokenize + LRU cache, history window, reserve) + tests (2026-10-11)
-- [ ] **T04.05** TurnEngine chat workflow (stream → ChatEvent, think toggle, reasoning not re-sent) + mock-LLM tests
+- [x] **T04.05** TurnEngine chat workflow (stream → ChatEvent, think toggle, reasoning not re-sent) + mock-LLM tests (2026-10-11)
 - [ ] **T04.06** Commands: `chat_send` / `chat_stop` / `chat_regenerate` / `chat_edit_resend` with streaming persistence (500 ms)
 - [ ] **T04.07** Delta coalescing (16 ms / 32 chars) in Rust; Channel ordering test
 - [ ] **T04.08** Title job (`title.md` + schema + fallback) and history summary job (`history_summary.md`)

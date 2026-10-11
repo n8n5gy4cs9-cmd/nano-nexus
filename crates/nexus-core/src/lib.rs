@@ -7,3 +7,4 @@ pub mod events;
 pub mod ids;
 pub mod paths;
 pub mod settings;
+pub mod sink;

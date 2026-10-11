@@ -9,7 +9,7 @@ pub mod sink;
 
 use nexus_core::settings::SharePolicy;
 
-pub use sink::{ChannelSink, Sink, VecSink};
+pub use sink::{ChannelSink, NullSink, Sink, VecSink};
 
 /// Who is asking. Remotes get fewer powers (checked in the services that need it).
 #[derive(Clone, Debug, PartialEq, Eq)]
