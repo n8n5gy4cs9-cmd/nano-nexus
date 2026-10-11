@@ -10,6 +10,17 @@ workspace = true
 
 [dependencies]
 nexus-core = { path = "../nexus-core" }
+bytes.workspace = true
+futures-util.workspace = true
+reqwest.workspace = true
+secrecy.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+axum.workspace = true
+tokio = { workspace = true, features = ["net", "rt-multi-thread", "macros", "time"] }
