@@ -1,0 +1,5 @@
+Explain in two sentences what a mutex is.
+Write a Python function that returns the n-th Fibonacci number iteratively.
+Summarize the plot of Romeo and Juliet in three bullet points.
+Rename this variable to something clearer and say why: `tmp2 = a * b + c`.
+List five tips for keeping a desktop folder tidy.
