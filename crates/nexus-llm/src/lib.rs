@@ -11,6 +11,7 @@ pub mod error;
 pub mod logring;
 pub mod port;
 pub mod process;
+pub mod reaper;
 pub mod sse;
 pub mod supervisor;
 pub mod think;

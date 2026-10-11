@@ -219,3 +219,40 @@ async fn shutdown_kills_the_process_and_stop_during_startup_cancels() {
     let _ = starting.await.unwrap();
     assert_eq!(sup2.state(), RuntimeState::Stopped);
 }
+
+#[tokio::test]
+async fn server_json_is_written_and_removed() {
+    let dir = tempfile::tempdir().unwrap();
+    let json = dir.path().join("runtime/server.json");
+    let sup = Supervisor::with_files(None, Some(json.clone()));
+    sup.start(cfg("ok")).await.unwrap();
+    let info = nexus_llm::reaper::ServerInfo::read(&json).expect("server.json after start");
+    assert_eq!(info.exe, std::path::PathBuf::from(BIN));
+    assert!(info.pid > 0 && info.port > 0);
+    sup.shutdown().await;
+    assert!(!json.exists());
+}
+
+#[tokio::test]
+async fn start_reaps_an_orphan_from_a_previous_run() {
+    let dir = tempfile::tempdir().unwrap();
+    let json = dir.path().join("server.json");
+    // Simulate a crashed app: a live mock server recorded in server.json.
+    let mut orphan = std::process::Command::new(BIN)
+        .args(["-m", "ok", "--port", "0"])
+        .env("LLAMA_API_KEY", "x")
+        .spawn()
+        .unwrap();
+    // port 0 is rejected by the mock only if bind fails; give it a moment, then record it.
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    nexus_llm::reaper::ServerInfo::new(orphan.id(), 0, std::path::PathBuf::from(BIN))
+        .write(&json)
+        .unwrap();
+    let sup = Supervisor::with_files(None, Some(json.clone()));
+    sup.start(cfg("ok")).await.unwrap();
+    let status = tokio::task::spawn_blocking(move || orphan.wait().unwrap())
+        .await
+        .unwrap();
+    assert!(!status.success(), "orphan should have been killed");
+    sup.shutdown().await;
+}

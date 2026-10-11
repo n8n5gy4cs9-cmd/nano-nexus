@@ -39,6 +39,7 @@ struct Inner {
     state: watch::Sender<RuntimeState>,
     cancel: StdMutex<CancellationToken>,
     log_file: Option<std::path::PathBuf>,
+    server_json: Option<std::path::PathBuf>,
 }
 
 impl Inner {
@@ -76,6 +77,12 @@ pub struct Supervisor {
 impl Supervisor {
     /// `log_file`: where the child's output is also written (rotating, 5 MB x 3).
     pub fn new(log_file: Option<std::path::PathBuf>) -> Self {
+        Self::with_files(log_file, None)
+    }
+
+    /// Like [`Supervisor::new`], plus `server_json` (`<data>/runtime/server.json`): written after a
+    /// successful start, removed on clean stop, and used to reap an orphan from a previous run.
+    pub fn with_files(log_file: Option<std::path::PathBuf>, server_json: Option<std::path::PathBuf>) -> Self {
         let (state, _) = watch::channel(RuntimeState::Stopped);
         Self {
             inner: Arc::new(Inner {
@@ -90,6 +97,7 @@ impl Supervisor {
                 state,
                 cancel: StdMutex::new(CancellationToken::new()),
                 log_file,
+                server_json,
             }),
         }
     }
@@ -128,6 +136,10 @@ impl Supervisor {
     pub async fn start(&self, cfg: RuntimeConfig) -> Result<(), LlmError> {
         let cancel = self.inner.swap_cancel();
         let mut ctl = self.inner.ctl.lock().await;
+        // Reap before stopping: `stop_locked` deletes server.json, which is what names the orphan.
+        if let (Some(json), true) = (&self.inner.server_json, ctl.proc.is_none()) {
+            crate::reaper::reap_stale(json, &cfg.server_bin);
+        }
         stop_locked(&self.inner, &mut ctl).await;
         ctl.budget = 1;
         start_locked(&self.inner, &mut ctl, cfg, cancel).await
@@ -157,6 +169,9 @@ async fn stop_locked(inner: &Arc<Inner>, ctl: &mut Ctl) {
     ctl.ready_at = None;
     if let Some(mut p) = ctl.proc.take() {
         p.stop(GRACE).await;
+    }
+    if let Some(json) = &inner.server_json {
+        crate::reaper::ServerInfo::remove(json);
     }
     inner.set_state(RuntimeState::Stopped);
 }
@@ -205,6 +220,12 @@ async fn start_locked(
                     ctx_size: cfg.ctx_size,
                     gpu_layers: cfg.gpu_layers.clone(),
                 });
+                if let Some(json) = &inner.server_json {
+                    let info = crate::reaper::ServerInfo::new(proc.pid(), port, cfg.server_bin.clone());
+                    if let Err(e) = info.write(json) {
+                        tracing::warn!("could not write server.json: {e}");
+                    }
+                }
                 ctl.proc = Some(proc);
                 ctl.client = Some(client);
                 ctl.ready_at = Some(Instant::now());
