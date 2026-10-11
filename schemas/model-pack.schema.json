@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nanonexus.local/schemas/model-pack.schema.json",
+  "title": "Model pack (pack.json): offline sideloading of models via USB/folder",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "kind", "name", "created_at", "models"],
+  "properties": {
+    "schema": { "const": 1 },
+    "kind": { "const": "model-pack" },
+    "name": { "type": "string" },
+    "created_at": { "type": "string" },
+    "created_by": { "type": "string", "description": "app version or 'make-model-pack.mjs'" },
+    "models": { "type": "array", "minItems": 1, "items": { "$ref": "bundle-manifest.schema.json#/$defs/model" } }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nanonexus.local/schemas/bundle-profile.schema.json",
+  "title": "NanoNexus bundle profile (bundles/*.json): which models ship inside a build",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "name", "models", "default", "targets"],
+  "properties": {
+    "schema": { "const": 1 },
+    "name": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+    "description": { "type": "string" },
+    "models": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "oneOf": [
+          { "type": "string", "description": "catalog id" },
+          { "type": "object", "additionalProperties": false, "required": ["repo", "as"],
+            "properties": { "repo": { "type": "string" }, "quant": { "type": "string" }, "file": { "type": "string" }, "revision": { "type": "string" }, "as": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9.]+)*$" }, "name": { "type": "string" } } },
+          { "type": "object", "additionalProperties": false, "required": ["local", "as"],
+            "properties": { "local": { "type": "string" }, "as": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9.]+)*$" }, "name": { "type": "string" } } }
+        ]
+      }
+    },
+    "default": { "type": "string", "description": "id (catalog id or 'as') of the default model; must be one of models" },
+    "targets": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["macos-arm64", "windows-x64", "windows-arm64", "linux-x64"] } },
+    "windows": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "format": { "enum": ["auto", "installer", "portable", "kit"] },
+        "webview": { "enum": ["embedBootstrapper", "downloadBootstrapper", "offlineInstaller", "skip"] },
+        "runtime": { "enum": ["vulkan", "cpu"] }
+      }
+    },
+    "share": {
+      "type": "object", "additionalProperties": false,
+      "description": "optional LAN Share defaults baked into the build",
+      "properties": { "port": { "type": "integer", "minimum": 1024, "maximum": 65535 }, "autostart": { "type": "boolean" } }
+    }
+  }
+}

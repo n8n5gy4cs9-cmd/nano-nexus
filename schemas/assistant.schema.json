@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nanonexus.local/schemas/assistant.schema.json",
+  "title": "NanoNexus assistant definition (TOML, validated as JSON)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "id", "name", "icon", "color", "category", "tagline", "workflow", "prompt"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$", "maxLength": 40 },
+    "name": { "type": "string", "minLength": 2, "maxLength": 32 },
+    "icon": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "description": "lucide icon name" },
+    "color": { "enum": ["violet", "teal", "amber", "blue", "green", "red", "indigo", "pink", "slate"] },
+    "category": { "enum": ["General", "Documents", "Files", "Code", "Data", "Writing", "System", "Meta", "Custom"] },
+    "tagline": { "type": "string", "maxLength": 100 },
+    "description": { "type": "string", "maxLength": 600 },
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "model": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "thinking": { "type": "boolean" },
+        "temperature": { "type": "number", "minimum": 0, "maximum": 1.5 },
+        "top_p": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
+        "min_p": { "type": "number", "minimum": 0, "maximum": 1 },
+        "top_k": { "type": "integer", "minimum": 0, "maximum": 200 },
+        "repeat_penalty": { "type": "number", "minimum": 1, "maximum": 1.5 },
+        "max_tokens": { "type": "integer", "minimum": 32, "maximum": 8192 }
+      }
+    },
+    "context": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "attach": { "type": "array", "uniqueItems": true, "items": { "enum": ["text", "file", "folder", "selection", "none"] } },
+        "max_attach_tokens": { "type": "integer", "minimum": 0, "maximum": 32000 },
+        "history_turns": { "type": "integer", "minimum": 0, "maximum": 50 }
+      }
+    },
+    "permissions": {
+      "type": "object", "additionalProperties": false,
+      "properties": { "needs": { "type": "array", "uniqueItems": true, "items": { "enum": ["read", "write", "create", "move", "trash"] } } }
+    },
+    "workflow": {
+      "type": "object", "additionalProperties": false, "required": ["kind"],
+      "properties": {
+        "kind": { "enum": ["chat", "router", "pipeline"] },
+        "pipeline": { "enum": ["folder_report", "doc_qa", "doc_summarize", "rename_propose", "strings_improve", "tidy_plan", "secrets_report", "log_triage", "data_profile", "commit_message"] },
+        "max_hops": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "always_route": { "type": "boolean" }
+      },
+      "allOf": [
+        { "if": { "properties": { "kind": { "const": "pipeline" } } }, "then": { "required": ["pipeline"] } }
+      ]
+    },
+    "tools": {
+      "type": "object", "additionalProperties": false,
+      "properties": { "allowed": { "type": "array", "uniqueItems": true, "items": { "enum": ["read_file", "list_dir", "search_files", "grep_text", "scan_folder", "file_info", "doc_search", "calculate", "now"] } } }
+    },
+    "ui": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "starters": { "type": "array", "minItems": 1, "maxItems": 4, "items": { "type": "string", "maxLength": 120 } },
+        "placeholder": { "type": "string", "maxLength": 80 },
+        "output": { "enum": ["markdown", "report", "table"] }
+      }
+    },
+    "prompt": {
+      "type": "object", "additionalProperties": false, "required": ["system"],
+      "properties": { "system": { "type": "string", "minLength": 20, "maxLength": 2400, "description": "≤ 450 tokens, checked by prompt_lint" } }
+    }
+  }
+}

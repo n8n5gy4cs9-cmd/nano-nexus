@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nanonexus.local/schemas/bundle-manifest.schema.json",
+  "title": "models/manifest.json inside a built app (written by scripts/stage-bundle.mjs)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "profile", "built_at", "default", "models"],
+  "properties": {
+    "schema": { "const": 1 },
+    "profile": { "type": "string" },
+    "built_at": { "type": "string" },
+    "app_version": { "type": "string" },
+    "git_commit": { "type": "string" },
+    "default": { "type": "string" },
+    "models": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/model" } }
+  },
+  "$defs": {
+    "model": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "name", "path", "sha256", "bytes"],
+      "properties": {
+        "id": { "type": "string" }, "name": { "type": "string" },
+        "path": { "type": "string", "description": "relative to the manifest's folder, forward slashes" },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }, "bytes": { "type": "integer", "minimum": 1 },
+        "repo": { "type": "string" }, "revision": { "type": "string" }, "license": { "type": "string" },
+        "catalog_id": { "type": ["string", "null"] },
+        "sampling": { "type": "object" }, "capabilities": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

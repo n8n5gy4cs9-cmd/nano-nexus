@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 8/233 tasks done (3%) · **Next:** TP.08 Internal pipeline prompts (`prompts/internal/`) and JSON Schemas (`schemas/`)
+**Progress:** 9/233 tasks done (3%) · **Next:** TP.09 Model catalog (`catalog/models.json`) + bundle profiles (`bundles/`)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -21,7 +21,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **TP.05** Master plan + 17 milestone specs (`docs/PLAN.md`, `docs/milestones/`) (2026-10-11)
 - [x] **TP.06** This task list (2026-10-11)
 - [x] **TP.07** 18 built-in assistants with researched system prompts (`assistants/`) (2026-10-11)
-- [ ] **TP.08** Internal pipeline prompts (`prompts/internal/`) and JSON Schemas (`schemas/`)
+- [x] **TP.08** Internal pipeline prompts (`prompts/internal/`) and JSON Schemas (`schemas/`) (2026-10-11)
 - [ ] **TP.09** Model catalog (`catalog/models.json`) + bundle profiles (`bundles/`)
 - [ ] **TP.10** AI agent handbook (`AGENTS.md`, `CLAUDE.md`, `docs/agent-playbook/`, `.claude/skills/`)
 - [ ] **TP.11** Helper scripts: `doctor.sh`, `progress.sh`, `check.sh`, `setup-runtime.sh`, `fetch-model.mjs`

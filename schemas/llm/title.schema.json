@@ -1,0 +1,7 @@
+{
+  "$comment": "Conversation title (prompts/internal/title.md). Fallback: first 6 words of the user message.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["title"],
+  "properties": { "title": { "type": "string", "minLength": 3, "maxLength": 48 } }
+}

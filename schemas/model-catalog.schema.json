@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nanonexus.local/schemas/model-catalog.schema.json",
+  "title": "NanoNexus curated model catalog",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "updated", "models"],
+  "properties": {
+    "schema": { "const": 1 },
+    "updated": { "type": "string", "format": "date" },
+    "notes": { "type": "string" },
+    "models": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/entry" } }
+  },
+  "$defs": {
+    "sampling": {
+      "type": "object", "additionalProperties": false,
+      "properties": { "temperature": { "type": "number" }, "top_p": { "type": "number" }, "top_k": { "type": "integer" }, "min_p": { "type": "number" }, "repeat_penalty": { "type": "number" } }
+    },
+    "entry": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "name", "family", "params_b", "quant", "repo", "revision", "file_pattern", "approx_bytes", "license", "context_default", "capabilities", "sampling", "tier", "verified"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9.]+)*$" },
+        "name": { "type": "string" },
+        "family": { "type": "string" },
+        "params_b": { "type": "number", "exclusiveMinimum": 0 },
+        "quant": { "type": "string" },
+        "repo": { "type": "string", "pattern": "^[^/\\s]+/[^/\\s]+$" },
+        "revision": { "type": "string" },
+        "file": { "type": "string", "description": "exact file name if known" },
+        "file_pattern": { "type": "string", "description": "regex (JS/Rust compatible) used to pick the file from the repo tree when 'file' is absent or not found" },
+        "approx_bytes": { "type": "integer", "minimum": 1 },
+        "license": { "type": "string" },
+        "context_max": { "type": "integer" },
+        "context_default": { "type": "integer", "minimum": 512 },
+        "capabilities": { "type": "array", "items": { "enum": ["chat", "code", "thinking", "tools-native", "tools-xml", "vision", "multilingual", "long-context"] } },
+        "supports_thinking_toggle": { "type": "boolean" },
+        "sampling": { "type": "object", "additionalProperties": false, "required": ["no_think"],
+          "properties": { "no_think": { "$ref": "#/$defs/sampling" }, "think": { "$ref": "#/$defs/sampling" } } },
+        "min_ram_gb": { "type": "number" },
+        "tier": { "enum": ["tiny", "small", "medium"] },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "isDefault": { "type": "boolean" },
+        "verified": { "type": "boolean", "description": "repo/file confirmed to exist at catalog time" },
+        "why": { "type": "string", "description": "one line shown on the card" },
+        "notes": { "type": "string" }
+      }
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "$comment": "Router decision (ADR-003/004). The action enum is rebuilt at runtime from the assistant's allowed tools + 'answer'. Flat on purpose: small models + GBNF grammar handle flat objects best.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["action"],
+  "properties": {
+    "action": { "type": "string", "enum": ["answer", "read_file", "list_dir", "search_files", "grep_text", "scan_folder", "file_info", "doc_search", "calculate", "now"] },
+    "path": { "type": "string", "maxLength": 1024 },
+    "query": { "type": "string", "maxLength": 200 },
+    "expression": { "type": "string", "maxLength": 200 }
+  }
+}

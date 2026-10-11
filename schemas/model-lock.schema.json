@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nanonexus.local/schemas/model-lock.schema.json",
+  "title": "vendor/models/<id>/lock.json (written by scripts/fetch-model.mjs)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "id", "source", "file", "sha256", "bytes", "fetched_at"],
+  "properties": {
+    "schema": { "const": 1 },
+    "id": { "type": "string" },
+    "name": { "type": "string" },
+    "source": { "enum": ["huggingface", "local"] },
+    "repo": { "type": "string" },
+    "revision": { "type": "string", "description": "resolved commit sha" },
+    "file": { "type": "string" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "bytes": { "type": "integer", "minimum": 1 },
+    "license": { "type": "string" },
+    "catalog_id": { "type": ["string", "null"] },
+    "source_url": { "type": "string" },
+    "fetched_at": { "type": "string" }
+  }
+}

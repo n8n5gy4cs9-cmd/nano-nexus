@@ -1,0 +1,10 @@
+{
+  "$comment": "AI content category for a text document (Folder Scout optional pass). Fallback: other/0.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["category", "confidence"],
+  "properties": {
+    "category": { "type": "string", "enum": ["invoice", "receipt", "contract", "letter", "report", "resume", "notes", "manual", "article", "academic_paper", "presentation", "dataset", "code", "config", "log", "recipe", "travel", "medical", "legal", "financial_statement", "tax", "game_design", "other"] },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+  }
+}

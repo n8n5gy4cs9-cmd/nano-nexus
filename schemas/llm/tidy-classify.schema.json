@@ -1,0 +1,14 @@
+{
+  "$comment": "Target folder for ambiguous files (prompts/internal/tidy_classify.md). target.enum is rebuilt at runtime = planned folder names + 'leave'. Fallback per file: leave.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["assignments"],
+  "properties": {
+    "assignments": { "type": "array", "minItems": 1, "maxItems": 30, "items": {
+      "type": "object", "additionalProperties": false, "required": ["id", "target"],
+      "properties": {
+        "id": { "type": "string", "maxLength": 16 },
+        "target": { "type": "string", "enum": ["Images", "Documents", "Installers", "Archives", "Audio", "Video", "Code", "leave"] }
+      } } }
+  }
+}
