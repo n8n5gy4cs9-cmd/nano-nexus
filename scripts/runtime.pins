@@ -1,0 +1,7 @@
+# Pinned llama.cpp runtime (sourced by scripts/setup-runtime.sh and read by scripts/fetch-runtime-windows.mjs).
+# Upgrade procedure: change TAG + COMMIT together, rebuild, run `cargo test -p nexus-llm -- --ignored`,
+# and only commit if it passes (see docs/architecture/BUNDLING.md §2).
+LLAMA_CPP_REPO=https://github.com/ggml-org/llama.cpp.git
+LLAMA_CPP_TAG=b11552
+LLAMA_CPP_COMMIT=23b0202a189c44a54625aadcb37a946dd1d6278d
+MACOS_DEPLOYMENT_TARGET=13.3

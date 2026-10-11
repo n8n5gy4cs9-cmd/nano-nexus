@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 10/233 tasks done (4%) · **Next:** TP.10 AI agent handbook (`AGENTS.md`, `CLAUDE.md`, `docs/agent-playbook/`, `.claude/skills/`)
+**Progress:** 13/233 tasks done (5%) · **Next:** T00.01 Root Cargo workspace (resolver 3, edition 2024, rust-version 1.90), rust-toolchain.toml, rustfmt.toml, clippy.toml
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -23,9 +23,9 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **TP.07** 18 built-in assistants with researched system prompts (`assistants/`) (2026-10-11)
 - [x] **TP.08** Internal pipeline prompts (`prompts/internal/`) and JSON Schemas (`schemas/`) (2026-10-11)
 - [x] **TP.09** Model catalog (`catalog/models.json`) + bundle profiles (`bundles/`) (2026-10-11)
-- [ ] **TP.10** AI agent handbook (`AGENTS.md`, `CLAUDE.md`, `docs/agent-playbook/`, `.claude/skills/`)
-- [ ] **TP.11** Helper scripts: `doctor.sh`, `progress.sh`, `check.sh`, `setup-runtime.sh`, `fetch-model.mjs`
-- [ ] **TP.12** User guide `guide.html` (builds, offline bundles, Windows from Mac, LAN share)
+- [x] **TP.10** AI agent handbook (`AGENTS.md`, `CLAUDE.md`, `docs/agent-playbook/`, `.claude/skills/`) (2026-10-11)
+- [x] **TP.11** Helper scripts: `doctor.sh`, `progress.sh`, `check.sh`, `setup-runtime.sh`, `fetch-model.mjs` (2026-10-11)
+- [x] **TP.12** User guide `guide.html` (builds, offline bundles, Windows from Mac, LAN share) (2026-10-11)
 - [x] **TP.13** `docs/SPIKES.md` + `docs/QUESTIONS.md` skeletons (2026-10-11)
 
 ## M00: Bootstrap · [spec](docs/milestones/M00-bootstrap.md)

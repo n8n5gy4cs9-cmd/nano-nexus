@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NanoNexus Build Guide</title>
+<meta name="description" content="How to build NanoNexus on your Mac for macOS and Windows, choose which AI models are bundled, set up offline machines, and use it from your phone.">
+<style>
+  :root {
+    --bg: oklch(0.985 0.003 275); --surface: oklch(1 0 0); --surface-2: oklch(0.965 0.006 275);
+    --border: oklch(0.885 0.010 275); --text: oklch(0.22 0.02 275); --muted: oklch(0.46 0.02 275);
+    --accent: oklch(0.56 0.21 288); --accent-2: oklch(0.62 0.13 215); --ok: oklch(0.58 0.15 155);
+    --warn: oklch(0.68 0.15 70); --danger: oklch(0.58 0.21 25); --code-bg: oklch(0.975 0.004 275);
+    --grad: linear-gradient(135deg, var(--accent), var(--accent-2));
+    --radius: 12px; --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: oklch(0.155 0.012 275); --surface: oklch(0.205 0.014 275); --surface-2: oklch(0.24 0.016 275);
+      --border: oklch(0.33 0.018 275); --text: oklch(0.955 0.006 275); --muted: oklch(0.74 0.014 275);
+      --accent: oklch(0.70 0.18 288); --accent-2: oklch(0.82 0.12 205); --ok: oklch(0.76 0.15 155);
+      --warn: oklch(0.83 0.14 80); --danger: oklch(0.68 0.20 25); --code-bg: oklch(0.18 0.012 275);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: oklch(0.155 0.012 275); --surface: oklch(0.205 0.014 275); --surface-2: oklch(0.24 0.016 275);
+    --border: oklch(0.33 0.018 275); --text: oklch(0.955 0.006 275); --muted: oklch(0.74 0.014 275);
+    --accent: oklch(0.70 0.18 288); --accent-2: oklch(0.82 0.12 205); --ok: oklch(0.76 0.15 155);
+    --warn: oklch(0.83 0.14 80); --danger: oklch(0.68 0.20 25); --code-bg: oklch(0.18 0.012 275);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.65 system-ui, -apple-system, "Segoe UI", Inter, sans-serif; }
+  a { color: var(--accent); }
+  .layout { display: grid; grid-template-columns: 270px minmax(0, 1fr); max-width: 1240px; margin: 0 auto; }
+  nav.toc { position: sticky; top: 0; height: 100vh; overflow: auto; padding: 28px 18px; border-right: 1px solid var(--border); }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 650; font-size: 17px; margin-bottom: 18px; }
+  .hex { width: 28px; height: 28px; }
+  nav.toc ol { list-style: none; margin: 0; padding: 0; counter-reset: s; }
+  nav.toc li a { display: block; padding: 6px 10px; border-radius: 8px; color: var(--muted); text-decoration: none; font-size: 14px; }
+  nav.toc li a:hover, nav.toc li a.active { background: var(--surface-2); color: var(--text); }
+  .theme-btn { margin-top: 18px; width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; font: inherit; font-size: 13px; }
+  main { padding: 40px 48px 120px; min-width: 0; }
+  header.hero { padding: 28px; border-radius: 18px; background: var(--surface); border: 1px solid var(--border); position: relative; overflow: hidden; }
+  header.hero::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 4px; background: var(--grad); }
+  h1 { font-size: 30px; line-height: 1.2; margin: 0 0 8px; letter-spacing: -0.01em; }
+  h2 { font-size: 22px; margin: 56px 0 12px; padding-top: 8px; letter-spacing: -0.005em; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  h3 { font-size: 17px; margin: 28px 0 8px; }
+  p.lead { color: var(--muted); font-size: 16px; margin: 0; }
+  .badge { font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+  .b-now { color: var(--ok); } .b-plan { color: var(--warn); } .b-mac { color: var(--accent); } .b-win { color: var(--accent-2); }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin: 18px 0; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+  .card h4 { margin: 0 0 6px; font-size: 15px; }
+  .card p { margin: 0; color: var(--muted); font-size: 14px; }
+  .steps { counter-reset: step; list-style: none; padding: 0; margin: 12px 0; }
+  .steps > li { counter-increment: step; position: relative; padding: 0 0 18px 44px; }
+  .steps > li::before { content: counter(step); position: absolute; left: 0; top: 0; width: 28px; height: 28px; border-radius: 50%; background: var(--grad); color: white; font-weight: 700; font-size: 14px; display: grid; place-items: center; }
+  .steps > li::after { content: ""; position: absolute; left: 13.5px; top: 32px; bottom: 4px; width: 1px; background: var(--border); }
+  .steps > li:last-child::after { display: none; }
+  pre { position: relative; background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; overflow: auto; font: 13px/1.6 var(--mono); margin: 10px 0; }
+  code { font-family: var(--mono); font-size: 0.92em; background: var(--surface-2); padding: 1px 5px; border-radius: 5px; }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  .copy { position: absolute; top: 8px; right: 8px; font: 12px system-ui, sans-serif; padding: 3px 9px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); cursor: pointer; opacity: 0; transition: opacity .15s; }
+  pre:hover .copy, .copy:focus { opacity: 1; }
+  .c { color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; display: block; overflow-x: auto; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { background: var(--surface-2); font-weight: 600; white-space: nowrap; }
+  tr:last-child td { border-bottom: 0; }
+  .note { border-left: 3px solid var(--accent); background: var(--surface); padding: 12px 16px; border-radius: 0 10px 10px 0; margin: 14px 0; }
+  .note.warn { border-color: var(--warn); } .note.ok { border-color: var(--ok); }
+  .note strong:first-child { display: block; margin-bottom: 2px; }
+  details { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; margin: 8px 0; }
+  summary { cursor: pointer; font-weight: 600; }
+  /* App Builder mock */
+  .mock { border: 1px solid var(--border); border-radius: 14px; overflow: hidden; background: var(--surface); margin: 16px 0; box-shadow: 0 10px 30px oklch(0 0 0 / 0.12); }
+  .mock .bar { display: flex; gap: 6px; align-items: center; padding: 10px 14px; background: var(--surface-2); border-bottom: 1px solid var(--border); font-size: 12px; color: var(--muted); }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border); }
+  .mock .body { display: grid; grid-template-columns: 1.4fr 1fr; gap: 0; }
+  .mock .col { padding: 14px 16px; }
+  .mock .col + .col { border-left: 1px solid var(--border); }
+  .mock .row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px dashed var(--border); font-size: 13px; }
+  .mock .row:last-child { border-bottom: 0; }
+  .chk { width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid var(--muted); display: grid; place-items: center; font-size: 11px; flex: none; }
+  .chk.on { background: var(--accent); border-color: var(--accent); color: white; }
+  .size { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .pill { font-size: 11px; padding: 1px 7px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
+  .btn { display: inline-block; padding: 8px 14px; border-radius: 9px; background: var(--grad); color: white; font-weight: 600; font-size: 13px; border: 0; }
+  .meter { height: 8px; border-radius: 99px; background: var(--surface-2); overflow: hidden; margin: 6px 0 2px; }
+  .meter > span { display: block; height: 100%; background: var(--grad); }
+  .qr { width: 92px; height: 92px; background:
+      linear-gradient(90deg, var(--text) 50%, transparent 0) 0 0 / 23px 23px,
+      linear-gradient(var(--text) 50%, transparent 0) 0 0 / 23px 23px; opacity: .85; border-radius: 6px; border: 6px solid var(--surface); outline: 1px solid var(--border); }
+  footer { margin-top: 64px; color: var(--muted); font-size: 13px; border-top: 1px solid var(--border); padding-top: 18px; }
+  @media (max-width: 920px) {
+    .layout { grid-template-columns: 1fr; }
+    nav.toc { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--border); padding: 16px; }
+    nav.toc ol { display: flex; flex-wrap: wrap; gap: 4px; }
+    main { padding: 24px 16px 80px; }
+    .mock .body { grid-template-columns: 1fr; }
+    .mock .col + .col { border-left: 0; border-top: 1px solid var(--border); }
+    h1 { font-size: 25px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+<nav class="toc" aria-label="Contents">
+  <div class="brand">
+    <svg class="hex" viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="oklch(0.70 0.18 288)"/><stop offset="1" stop-color="oklch(0.82 0.12 205)"/></linearGradient></defs><path d="M16 2.5 27.7 9.25v13.5L16 29.5 4.3 22.75V9.25z" fill="none" stroke="url(#g)" stroke-width="2.6" stroke-linejoin="round"/><circle cx="16" cy="16" r="3.4" fill="url(#g)"/></svg>
+    NanoNexus Guide
+  </div>
+  <ol>
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#setup">1 · One-time setup (Mac)</a></li>
+    <li><a href="#basic-mac">2 · Basic build: macOS</a></li>
+    <li><a href="#windows">3 · Windows, built on the Mac</a></li>
+    <li><a href="#choose-models">4 · Choose bundled models</a></li>
+    <li><a href="#studio">5 · Offline studio PC recipe</a></li>
+    <li><a href="#packs">6 · Add models later (packs)</a></li>
+    <li><a href="#share">7 · Use it from your phone</a></li>
+    <li><a href="#verify">8 · Verify integrity</a></li>
+    <li><a href="#trouble">9 · Troubleshooting</a></li>
+    <li><a href="#reference">10 · Command reference</a></li>
+  </ol>
+  <button class="theme-btn" id="themeBtn" type="button">◐ Toggle theme</button>
+</nav>
+
+<main>
+<header class="hero">
+  <h1>Build NanoNexus your way</h1>
+  <p class="lead">Everything happens on your Apple Silicon Mac. You get a macOS app and a Windows
+  installer, each with one model or a whole set of models bundled in. This works for machines with no
+  internet, and you can also use your assistants from your phone over Wi-Fi.</p>
+  <p style="margin:14px 0 0;font-size:13px;color:var(--muted)">
+    Status legend: <span class="badge b-now">Available now</span> works today with the scripts in this repo ·
+    <span class="badge b-plan">Planned · Mxx</span> the target workflow, available when that milestone in
+    <code>tasks.md</code> is done. Commands stay the same.
+  </p>
+</header>
+
+<h2 id="overview">Overview</h2>
+<div class="cards">
+  <div class="card"><h4>📦 Basic build</h4><p>The app plus <b>one</b> default model (MiniCPM5 1B Opus-Fable5 V2, ~1.1 GB). Works offline on first launch.</p></div>
+  <div class="card"><h4>🧰 Custom build</h4><p>Pick <b>any set of models</b> (catalog, Hugging Face, or your own <code>.gguf</code> files) in the App Builder, then click Build.</p></div>
+  <div class="card"><h4>💾 Model packs</h4><p>Add models to an already-installed NanoNexus from a USB stick. No rebuild and no internet needed.</p></div>
+  <div class="card"><h4>📱 LAN Share</h4><p>One switch starts a local server on port <b>9889</b>. Scan a QR code and chat from your phone.</p></div>
+</div>
+<table>
+  <tr><th>Goal</th><th>Use</th><th>Section</th></tr>
+  <tr><td>My Mac, default model</td><td><code>scripts/build-app.sh --profile basic</code></td><td><a href="#basic-mac">2</a></td></tr>
+  <tr><td>A Windows PC, default model</td><td><code>scripts/build-windows.sh --profile basic --arch x64</code></td><td><a href="#windows">3</a></td></tr>
+  <tr><td>Several models inside the app</td><td>App Builder (<code>node scripts/app-builder.mjs</code>)</td><td><a href="#choose-models">4</a></td></tr>
+  <tr><td>An offline studio PC</td><td>App Builder → Windows → <b>Offline kit</b></td><td><a href="#studio">5</a></td></tr>
+  <tr><td>More models on an installed app</td><td>Model pack → Models → Import model pack…</td><td><a href="#packs">6</a></td></tr>
+  <tr><td>Chat from the phone</td><td>📡 Share → ON → scan the QR</td><td><a href="#share">7</a></td></tr>
+</table>
+
+<h2 id="setup">1 · One-time setup on the Mac <span class="badge b-now">Available now</span></h2>
+<ol class="steps">
+  <li><b>Developer tools.</b> Install the Xcode Command Line Tools and <a href="https://brew.sh">Homebrew</a>, then the build tools:
+<pre><code>xcode-select --install
+brew install cmake git
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh     <span class="c"># Rust (stable ≥ 1.90)</span>
+brew install node@22 &amp;&amp; corepack enable                           <span class="c"># Node 22 + pnpm</span></code></pre></li>
+  <li><b>Check everything.</b>
+<pre><code>scripts/doctor.sh</code></pre>
+  Fix every <b>✖</b> line. Yellow <b>!</b> lines are advice.</li>
+  <li><b>Create a stable signing identity</b> (recommended). Without it, macOS asks again for Desktop and Documents access after every rebuild.
+    <br>Keychain Access → <i>Certificate Assistant</i> → <i>Create a Certificate…</i> → Name: <code>NanoNexus Local Signing</code>, Identity Type: <i>Self-Signed Root</i>, Certificate Type: <b>Code Signing</b>. Then:
+<pre><code>echo 'export NEXUS_SIGN_IDENTITY="NanoNexus Local Signing"' &gt;&gt; ~/.zshrc &amp;&amp; source ~/.zshrc</code></pre></li>
+  <li><b>Build the AI runtime</b>: pinned llama.cpp <code>b11552</code>, Metal, arm64, static. It takes a few minutes.
+<pre><code>scripts/setup-runtime.sh</code></pre></li>
+  <li><b>Download and verify the default model</b> (~1.1 GB, SHA-256 checked, revision pinned):
+<pre><code>node scripts/fetch-model.mjs
+node scripts/fetch-model.mjs --verify</code></pre></li>
+</ol>
+<div class="note"><strong>Where things go</strong>Everything heavy lives in <code>vendor/</code> (git-ignored):
+<code>vendor/runtime/</code> for <code>llama-server</code> builds and <code>vendor/models/&lt;id&gt;/</code> for GGUF files with their <code>lock.json</code>. Nothing large is ever committed.</div>
+
+<h2 id="basic-mac">2 · Basic build: macOS <span class="badge b-plan">Planned · M12</span> <span class="badge b-mac">🍎</span></h2>
+<p>The basic build ships exactly one model, the default from <code>bundles/basic.json</code>.</p>
+<pre><code>scripts/build-app.sh --profile basic</code></pre>
+<p>What it does: checks the toolchain → re-verifies the model and runtime against their locks → stages the files → builds the app → re-hashes everything inside the built <code>.app</code> → signs it with your identity → zips it.</p>
+<table>
+  <tr><th>Output</th><th>Where</th></tr>
+  <tr><td>App</td><td><code>target/release/bundle/macos/NanoNexus.app</code></td></tr>
+  <tr><td>Zip + checksums</td><td><code>dist/basic/NanoNexus-&lt;version&gt;-basic-macos-arm64.zip</code>, <code>SHA256SUMS.txt</code></td></tr>
+</table>
+<p>Drag <b>NanoNexus.app</b> to <code>/Applications</code>. It finds its runtime and models wherever it lives. To run it on <i>another</i> Mac, copy the zip and run <code>xattr -dr com.apple.quarantine NanoNexus.app</code> there once (or notarize it, M16).</p>
+
+<h2 id="windows">3 · Windows, built on your Mac <span class="badge b-plan">Planned · M13</span> <span class="badge b-win">🪟 output</span></h2>
+<p>You never need a Windows build machine. The Mac cross-compiles the app (<code>cargo-xwin</code>), packages it with NSIS, and uses the official llama.cpp Windows binaries of the <b>same pinned version</b>, verified by SHA-256.</p>
+<h3>One-time Windows toolchain</h3>
+<pre><code>rustup target add x86_64-pc-windows-msvc aarch64-pc-windows-msvc
+cargo install --locked cargo-xwin
+brew install nsis llvm
+echo 'export PATH="$(brew --prefix llvm)/bin:$PATH"; export XWIN_CACHE_DIR=~/.cache/xwin' &gt;&gt; ~/.zshrc &amp;&amp; source ~/.zshrc
+scripts/doctor.sh --windows
+node scripts/fetch-runtime-windows.mjs --arch x64      <span class="c"># Vulkan GPU + CPU fallback (add --cpu-only for the smallest)</span>
+node scripts/fetch-runtime-windows.mjs --arch arm64    <span class="c"># Windows on ARM (and VM testing on the Mac)</span></code></pre>
+<h3>Build</h3>
+<pre><code>scripts/build-windows.sh --profile basic --arch x64                    <span class="c"># installer (default for small payloads)</span>
+scripts/build-windows.sh --profile basic --arch x64 --format portable  <span class="c"># unzip-and-run, no install</span>
+scripts/build-windows.sh --profile basic --arch arm64                  <span class="c"># for Windows on ARM</span></code></pre>
+<table>
+  <tr><th>Format</th><th>Best for</th><th>What you copy to the PC</th><th>Internet on the PC?</th></tr>
+  <tr><td><b>Installer</b></td><td>Normal PCs, payload ≤ 1.8 GB</td><td><code>NanoNexus-…-windows-x64-setup.exe</code></td><td>No on Windows 11. Windows 10 may need WebView2 once</td></tr>
+  <tr><td><b>Portable ZIP</b></td><td>No admin rights, USB use</td><td>Unzip the folder, run <code>nano-nexus.exe</code>. Data stays in <code>.\data\</code></td><td>No (Windows 11)</td></tr>
+  <tr><td><b>Offline kit</b></td><td>Big multi-model bundles, studio PCs</td><td>Folder: <code>setup.exe</code> + <code>models-extra\</code> + WebView2 offline installer + <code>INSTALL.txt</code></td><td><b>Never</b></td></tr>
+</table>
+<div class="note warn"><strong>Why three formats?</strong>NSIS installers can't be much bigger than 2 GB. When the models add up to more than 1.8 GB, the builder automatically switches to the offline kit (or portable ZIP), so any number of models works.</div>
+<div class="note"><strong>Testing without a PC</strong>In a Windows 11 <b>ARM</b> VM on your Mac (UTM or Parallels), the arm64 build runs natively and the x64 build runs under Windows' x64 emulation (CPU only, slower, fine for smoke tests). Do final GPU and performance checks on the real PC.</div>
+
+<h2 id="choose-models">4 · Choose which models are bundled <span class="badge b-plan">Planned · M12</span></h2>
+<h3>The easy way: App Builder</h3>
+<pre><code>node scripts/app-builder.mjs</code></pre>
+<p>Your browser opens a private page on <code>127.0.0.1</code> (protected by a one-time token):</p>
+<figure class="mock" aria-label="App Builder preview (illustration)">
+  <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span>&nbsp; NanoNexus App Builder · 127.0.0.1</div>
+  <div class="body">
+    <div class="col">
+      <div style="font-weight:650;margin-bottom:6px">Models to bundle</div>
+      <div class="row"><span class="chk on">✓</span>MiniCPM5 1B · Opus-Fable5 V2 <span class="pill">default</span><span class="size">1.1 GB</span></div>
+      <div class="row"><span class="chk on">✓</span>MiniCPM5 2B <span class="pill">tools</span><span class="size">1.56 GB</span></div>
+      <div class="row"><span class="chk on">✓</span>Qwen3.5 4B <span class="pill">best small</span><span class="size">2.8 GB</span></div>
+      <div class="row"><span class="chk">&nbsp;</span>Gemma 4 E4B <span class="pill">writing</span><span class="size">3.0 GB</span></div>
+      <div class="row"><span class="chk">&nbsp;</span>Qwen2.5 Coder 1.5B <span class="pill">code</span><span class="size">1.9 GB</span></div>
+      <div class="row" style="color:var(--accent)">＋ Add from Hugging Face &nbsp;·&nbsp; ＋ Add local .gguf</div>
+    </div>
+    <div class="col">
+      <div style="font-weight:650">Targets</div>
+      <div class="row"><span class="chk on">✓</span>macOS (Apple Silicon)</div>
+      <div class="row"><span class="chk on">✓</span>Windows x64 <span class="pill">Offline kit (auto)</span></div>
+      <div class="row"><span class="chk">&nbsp;</span>Windows arm64</div>
+      <div style="margin-top:10px;font-size:13px">Payload 5.46 GB · free disk 212 GB</div>
+      <div class="meter"><span style="width:38%"></span></div>
+      <div style="font-size:12px;color:var(--muted)">Windows: over 1.8 GB, so it uses the offline kit</div>
+      <div style="margin-top:12px;display:flex;gap:8px;align-items:center"><span class="btn">Build</span><span class="pill">Save profile "studio"</span></div>
+    </div>
+  </div>
+</figure>
+<ol class="steps">
+  <li><b>Tick the models.</b> Sizes and a RAM-fit hint are shown. Add any Hugging Face GGUF (repo + quant) or a <code>.gguf</code> on your disk.</li>
+  <li><b>Pick the default model</b>, the one that loads first.</li>
+  <li><b>Pick targets</b>: macOS, Windows x64, Windows arm64, plus the Windows format (Auto is recommended).</li>
+  <li><b>Save the profile</b> (stored in <code>bundles/local/&lt;name&gt;.json</code>) and click <b>Build</b>. Logs stream live. At the end you get the artifacts, their SHA-256s, and Reveal-in-Finder buttons.</li>
+</ol>
+<h3>The scriptable way: a profile file</h3>
+<p>Copy the example and edit it. Each model is a catalog id, a Hugging Face repo, or a local file:</p>
+<pre><code>cp bundles/studio.example.json bundles/local/studio.json</code></pre>
+<pre><code>{
+  "schema": 1,
+  "name": "studio",
+  "models": [
+    "minicpm5-1b-fable5-v2-q8",
+    "minicpm5-2b-q4",
+    { "repo": "Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF", "quant": "Q8_0", "as": "coder-1.5b" },
+    { "local": "~/Models/my-finetune.Q4_K_M.gguf", "as": "my-finetune" }
+  ],
+  "default": "minicpm5-1b-fable5-v2-q8",
+  "targets": ["windows-x64", "macos-arm64"],
+  "windows": { "format": "kit", "webview": "offlineInstaller", "runtime": "vulkan" }
+}</code></pre>
+<pre><code>node scripts/fetch-model.mjs --profile studio          <span class="c"># available now: downloads + verifies all models</span>
+node scripts/app-builder.mjs --profile studio --target all --yes   <span class="c"># headless build (M12/M13)</span></code></pre>
+<p>Catalog ids are listed in <code>catalog/models.json</code>. You can also fetch single models now:</p>
+<pre><code>node scripts/fetch-model.mjs --id qwen3.5-4b-q4
+node scripts/fetch-model.mjs --repo owner/Some-Model-GGUF --quant Q4_K_M --as some-model
+node scripts/fetch-model.mjs --local ~/Models/x.gguf --as my-x
+node scripts/fetch-model.mjs --list</code></pre>
+
+<h2 id="studio">5 · Recipe: an offline studio PC (Windows, no internet) <span class="badge b-plan">Planned · M13</span></h2>
+<ol class="steps">
+  <li><b>On the Mac</b>, open the App Builder, tick the models you want on the studio PC, choose target <b>Windows x64</b> with format <b>Offline kit</b>, save the profile as <code>studio</code>, and click <b>Build</b>.</li>
+  <li><b>Copy</b> the folder <code>dist/studio/NanoNexus-…-studio-windows-x64-kit/</code> to a USB drive (exFAT works for large files on both Mac and Windows).</li>
+  <li><b>On the PC</b>, open the folder on the USB drive and run <code>setup.exe</code>. If you see <i>"Windows protected your PC"</i>, click <b>More info → Run anyway</b> (the build is unsigned, which is fine for personal use). The installer copies <code>models-extra\</code> next to the app.</li>
+  <li><b>First launch</b>: NanoNexus verifies every extra model by SHA-256 (with a progress bar) and lists them under Models → <b>Bundled</b>. Pick the active model there.</li>
+  <li>Optional: turn on <b>📡 Share</b> to use the studio PC's assistants from other devices on the studio network (section 7).</li>
+</ol>
+<div class="note ok"><strong>No internet is ever needed</strong>The kit includes the WebView2 offline installer, the Windows llama.cpp runtime, and all models. Updates work the same way: build a new kit, or send just new models as a <a href="#packs">model pack</a>.</div>
+
+<h2 id="packs">6 · Add models later, without rebuilding <span class="badge b-plan">Planned · M12</span></h2>
+<p>A <b>model pack</b> is a folder with <code>pack.json</code> plus GGUF files. It works for macOS and Windows installs alike.</p>
+<h3>Make a pack</h3>
+<pre><code>node scripts/make-model-pack.mjs --id gemma-4-e4b-q4 --id qwen3.5-4b-q4 --out /Volumes/USB
+<span class="c"># or in the app: Models → select models → Export model pack…</span></code></pre>
+<h3>Install a pack (offline)</h3>
+<ol class="steps">
+  <li>Plug in the USB drive. In NanoNexus open <b>Models → Import model pack…</b> and choose the <code>NanoNexus-ModelPack-…</code> folder.</li>
+  <li>Choose <b>Copy into NanoNexus</b> (recommended) or <b>Use from this folder</b> (saves disk, but the drive must stay connected).</li>
+  <li>Every file is SHA-256-verified, and tampered or corrupted files are rejected. The models then appear under Installed.</li>
+</ol>
+<p>You can also add a whole folder of GGUFs as a watched <b>extra model folder</b>: Settings → Models → Extra folders (for example, a NAS share).</p>
+
+<h2 id="share">7 · Use it from your phone (LAN Share) <span class="badge b-plan">Planned · M14</span></h2>
+<ol class="steps">
+  <li>In the NanoNexus title bar, click <b>📡 Share</b> and flip the switch <b>ON</b>. It listens on port <b>9889</b> by default.</li>
+  <li>The popover shows the address (for example <code>http://192.168.1.20:9889</code> or <code>http://nanonexus.local:9889</code>) and a QR code:
+    <div style="display:flex;gap:16px;align-items:center;margin:10px 0"><div class="qr" aria-hidden="true"></div><div style="font-size:13px;color:var(--muted)">Scan with the phone camera<br>or open the address and type the 6-digit PIN.<br>Codes expire after 5 minutes.</div></div></li>
+  <li>On the phone, name the device (for example "My iPhone") and tap <b>Pair</b>. Chat, switch assistants, browse history, and read reports. The mobile layout has a bottom tab bar, and desktop browsers get the full layout.</li>
+  <li>Optional: <b>Add to Home Screen</b> for an app-like icon.</li>
+  <li><b>Settings → Sharing</b> holds everything else: the port, which network to listen on, the Bonjour name, optional HTTPS, what remote devices may do (default: chat + read granted folders; file changes stay on the computer), allowed assistants, session length, and paired devices (rename or revoke).</li>
+</ol>
+<div class="note warn"><strong>First start prompts</strong>macOS may ask <i>"Allow incoming network connections?"</i>. Click <b>Allow</b>. Windows Firewall asks which networks to allow: tick <b>Private networks</b> only. Sharing is off by default and every device must pair. The AI engine itself is never exposed, only NanoNexus's own protected API.</div>
+
+<h2 id="verify">8 · Verify integrity <span class="badge b-now">Available now</span> for models</h2>
+<pre><code>node scripts/fetch-model.mjs --verify                  <span class="c"># re-hash every downloaded model against its lock</span>
+shasum -a 256 -c dist/basic/SHA256SUMS.txt             <span class="c"># check built artifacts (M12+)</span>
+node scripts/verify-payload.mjs path/to/NanoNexus.app  <span class="c"># re-hash everything inside a built app (M12+)</span></code></pre>
+<p>In the app: <b>Models → Verify bundled models</b> re-hashes the models inside the installed app.</p>
+
+<h2 id="trouble">9 · Troubleshooting</h2>
+<details><summary>macOS keeps asking for Desktop/Documents access after each rebuild</summary><p>The app was ad-hoc signed, so its identity changes on every build. Set up the signing identity from <a href="#setup">step 1.3</a> and rebuild.</p></details>
+<details><summary>"Windows protected your PC" (SmartScreen)</summary><p>Click <b>More info → Run anyway</b>. Personal builds are unsigned. Windows code signing from the Mac is optional (M16).</p></details>
+<details><summary>Windows build fails or the installer is too big</summary><p>NSIS has a ~2 GB limit. Use <code>--format kit</code> or <code>--format portable</code> (Auto picks one for you). Also run <code>scripts/doctor.sh --windows</code>: <code>makensis</code>, <code>clang-cl</code>, and <code>lld-link</code> must be on PATH.</p></details>
+<details><summary>The app opens on Windows 10 but shows a blank window</summary><p>WebView2 is missing. Use an offline kit (it includes the WebView2 offline installer) or install WebView2 once.</p></details>
+<details><summary>Slow on the studio PC / "CPU" shown in the runtime panel</summary><p>The Vulkan GPU backend couldn't load, usually because the GPU drivers are old. Update the graphics drivers. NanoNexus falls back to CPU automatically. Smaller models (1B Q4) are much faster on CPU.</p></details>
+<details><summary>Port 9889 already in use</summary><p>NanoNexus offers the next free port. You can also change it in Settings → Sharing. To see what uses it: <code>lsof -iTCP:9889 -sTCP:LISTEN</code> (Mac) or <code>netstat -ano | findstr 9889</code> (Windows).</p></details>
+<details><summary>The phone can't open the address</summary><p>Make sure both devices are on the <b>same</b> Wi-Fi (not a guest network), that sharing is ON, and that you allowed the firewall prompt. Some routers block device-to-device traffic ("AP/client isolation"). Turn that off or use another network. Try the IP address instead of <code>nanonexus.local</code>.</p></details>
+<details><summary>Model download fails with 401/403</summary><p>The repo is gated or private. Accept its license on Hugging Face, create a read token, and run <code>export HF_TOKEN=hf_…</code> before fetching.</p></details>
+<details><summary>"Not enough disk space"</summary><p>Building copies models into the app, so you need about 2× the total model size free plus 5 GB. <code>scripts/doctor.sh</code> shows free space.</p></details>
+<details><summary>A model repeats itself or rambles</summary><p>The MiniCPM5 models need <code>min_p = 0</code> (catalog presets set this). For other models, use the catalog's sampling preset or lower the temperature in the assistant settings.</p></details>
+
+<h2 id="reference">10 · Command reference</h2>
+<table>
+  <tr><th>Command</th><th>What it does</th><th>Status</th></tr>
+  <tr><td><code>scripts/doctor.sh [--windows]</code></td><td>Check the toolchain, disk, signing, and vendor state</td><td><span class="badge b-now">now</span></td></tr>
+  <tr><td><code>scripts/progress.sh [--next|--write]</code></td><td>Project progress from <code>tasks.md</code></td><td><span class="badge b-now">now</span></td></tr>
+  <tr><td><code>scripts/setup-runtime.sh</code></td><td>Build the pinned macOS <code>llama-server</code></td><td><span class="badge b-now">now</span></td></tr>
+  <tr><td><code>node scripts/fetch-model.mjs …</code></td><td>Download, import, verify, and list models (<code>--profile</code>, <code>--id</code>, <code>--repo</code>, <code>--local</code>)</td><td><span class="badge b-now">now</span></td></tr>
+  <tr><td><code>scripts/check.sh</code></td><td>Run all project checks</td><td><span class="badge b-now">now</span></td></tr>
+  <tr><td><code>node scripts/app-builder.mjs</code></td><td>App Builder UI: choose models and targets, then build</td><td><span class="badge b-plan">M12</span></td></tr>
+  <tr><td><code>scripts/build-app.sh --profile P</code></td><td>Signed, verified macOS app</td><td><span class="badge b-plan">M12</span></td></tr>
+  <tr><td><code>node scripts/make-model-pack.mjs</code></td><td>Make a model pack for USB sideloading</td><td><span class="badge b-plan">M12</span></td></tr>
+  <tr><td><code>node scripts/fetch-runtime-windows.mjs</code></td><td>Pinned, verified Windows llama.cpp runtime</td><td><span class="badge b-plan">M03/M13</span></td></tr>
+  <tr><td><code>scripts/build-windows.sh --profile P --arch A [--format F]</code></td><td>Windows installer, portable ZIP, or offline kit, built on the Mac</td><td><span class="badge b-plan">M13</span></td></tr>
+</table>
+
+<footer>
+  NanoNexus is a personal, private, offline AI workbench. Plan: <code>docs/PLAN.md</code> · tasks: <code>tasks.md</code> ·
+  architecture: <code>docs/architecture/</code>. The default model is a community fine-tune of OpenBMB MiniCPM5-1B. Its "Opus-Fable5"
+  name is the uploader's label, not an Anthropic release.
+</footer>
+</main>
+</div>
+<script>
+  // Theme toggle (remembers your choice in this browser)
+  (function () {
+    var root = document.documentElement, key = 'nn-guide-theme';
+    try { var saved = localStorage.getItem(key); if (saved) root.setAttribute('data-theme', saved); } catch (e) {}
+    document.getElementById('themeBtn').addEventListener('click', function () {
+      var dark = root.getAttribute('data-theme') ? root.getAttribute('data-theme') === 'dark'
+        : window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var next = dark ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      try { localStorage.setItem(key, next); } catch (e) {}
+    });
+  })();
+  // Copy buttons on code blocks
+  document.querySelectorAll('pre').forEach(function (pre) {
+    var b = document.createElement('button');
+    b.className = 'copy'; b.type = 'button'; b.textContent = 'Copy';
+    b.addEventListener('click', function () {
+      var text = pre.querySelector('code').innerText.replace(/\s+#.*$/gm, '');
+      navigator.clipboard.writeText(text).then(function () { b.textContent = 'Copied'; setTimeout(function () { b.textContent = 'Copy'; }, 1200); });
+    });
+    pre.appendChild(b);
+  });
+  // Highlight the current section in the table of contents
+  var links = Array.prototype.slice.call(document.querySelectorAll('nav.toc a'));
+  var obs = new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) {
+      if (en.isIntersecting) {
+        links.forEach(function (l) { l.classList.toggle('active', l.getAttribute('href') === '#' + en.target.id); });
+      }
+    });
+  }, { rootMargin: '0px 0px -70% 0px' });
+  document.querySelectorAll('h2[id]').forEach(function (h) { obs.observe(h); });
+</script>
+</body>
+</html>
