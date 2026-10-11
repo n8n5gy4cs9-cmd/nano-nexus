@@ -62,7 +62,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T02.09** `Scheduler` (Interactive/Background, bounded 8, cancel) + ordering/cancel tests (2026-10-11)
 - [x] **T02.10** `structured::chat_json` (validate, reask once, Fallback) + matrix tests (2026-10-11)
 - [x] **T02.11** Examples `chat.rs` / `json.rs` + `tests/real_model.rs` (#[ignore]) — written + compile-checked; ignored tests must be run on the Mac (2026-10-11)
-- [ ] ⭐ **T02.12** 🍎 Exit check: `cargo test -p nexus-llm -- --ignored` passes; no orphans; timings in SPIKES.md
+- [ ] ⭐ **T02.12** 🍎 Exit check: `cargo test -p nexus-llm -- --ignored` passes; no orphans; timings in SPIKES.md — ⏳ Mac-only; owner to run
 
 ## M03: App shell and design system · [spec](docs/milestones/M03-app-shell.md)
 - [ ] **T03.01** Scaffold `apps/desktop` (Vite + React 19 + TS strict) + `src-tauri` (Tauri 2.12), add to workspace
