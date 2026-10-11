@@ -1,0 +1,27 @@
+{
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "NanoNexus",
+        "width": 1280,
+        "height": 820,
+        "minWidth": 900,
+        "minHeight": 600,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "transparent": true
+      }
+    ],
+    "macOSPrivateApi": true
+  },
+  "bundle": {
+    "targets": ["app"],
+    "externalBin": ["../../../vendor/runtime/macos-arm64/llama-server"],
+    "macOS": {
+      "minimumSystemVersion": "13.0",
+      "infoPlist": "Info.plist",
+      "entitlements": "entitlements.plist"
+    }
+  }
+}

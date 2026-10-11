@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 34/217 tasks done (15%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 35/217 tasks done (16%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -66,7 +66,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 
 ## M03: App shell and design system · [spec](docs/milestones/M03-app-shell.md)
 - [ ] **T03.01** Scaffold `apps/desktop` (Vite + React 19 + TS strict) + `src-tauri` (Tauri 2.12), add to workspace
-- [ ] **T03.02** Platform configs: `tauri.conf.json`, `tauri.macos.conf.json`, `tauri.windows.conf.json`, Info.plist, entitlements, capabilities, CSP
+- [x] **T03.02** Platform configs: `tauri.conf.json`, `tauri.macos.conf.json`, `tauri.windows.conf.json`, Info.plist, entitlements, capabilities, CSP (2026-10-11)
 - [ ] **T03.03** Tailwind v4 + `tokens.css` + globals + fonts (Inter, JetBrains Mono) + theme switcher (light/dark/system)
 - [ ] **T03.04** shadcn/ui init + primitives themed to tokens (UI-DESIGN §6)
 - [ ] **T03.05** AppState + setup (paths, DB open, supervisor start in background) + exit handling (shutdown on ExitRequested/Exit)

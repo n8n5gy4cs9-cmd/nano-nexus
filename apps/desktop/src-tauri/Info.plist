@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>NSDesktopFolderUsageDescription</key>
+  <string>NanoNexus reads files on your Desktop only when you ask an assistant to analyze them.</string>
+  <key>NSDocumentsFolderUsageDescription</key>
+  <string>NanoNexus reads files in Documents only when you ask an assistant to analyze them.</string>
+  <key>NSDownloadsFolderUsageDescription</key>
+  <string>NanoNexus scans Downloads only when you ask it to (for example, a Folder Scout report).</string>
+  <key>NSRemovableVolumesUsageDescription</key>
+  <string>NanoNexus can analyze folders and import model packs from external drives you select.</string>
+  <key>NSNetworkVolumesUsageDescription</key>
+  <string>NanoNexus can analyze folders on network drives you select.</string>
+</dict>
+</plist>
