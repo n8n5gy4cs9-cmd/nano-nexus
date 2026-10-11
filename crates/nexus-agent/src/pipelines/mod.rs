@@ -5,6 +5,7 @@
 
 pub mod doc;
 pub mod folder;
+pub mod rename;
 pub mod simple;
 #[cfg(test)]
 mod testkit;

@@ -530,7 +530,10 @@ mod path_tests {
     fn markup_after_a_path_is_cut_off() {
         let home = Path::new("/home/me");
         let raw = r#"/home/me/Downloads")</param><function name="#;
-        assert_eq!(resolve_path(raw, home, &[]).unwrap(), Path::new("/home/me/Downloads"));
+        assert_eq!(
+            resolve_path(raw, home, &[]).unwrap(),
+            Path::new("/home/me/Downloads")
+        );
     }
 }
 

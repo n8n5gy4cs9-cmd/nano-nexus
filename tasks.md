@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 161/234 tasks done (68%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 162/234 tasks done (69%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -179,7 +179,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T09.06** Non-code refs: config/manifest scanner (package.json, tsconfig, Cargo.toml, pyproject, *.csproj, go.mod, YAML/JSON/TOML), string-lookup detection, opt-in docs/comments + tests (2026-10-11) — `code::noncode`: config/manifest path+qualified-name scan (segment-wise, quoted single words), string lookups (recognised calls auto, other equal strings = possible/ambiguous), docs and comments stored as `Doc`/`Comment` refs (the planner includes them only when opted in, T09.10). `Location.file >= OTHER_BASE` = config/doc file, use `CodeIndex::path_of`
 - [x] **T09.07** Reserved-name lists per language (keywords, builtins, entry points, dunders, tests, overrides) + `PUBLIC_API`/`OVERRIDE` flags + per-project ignore list (2026-10-11) — `code::reserved`: keyword/builtin lists in `queries/<lang>/{keywords,globals}.txt`, entry points, dunders, tests (attrs/names/paths), overrides (syntax, special methods, project inheritance), ignore list (`IndexOptions.ignore`: names with `*`, `path:<prefix>`), `DYNAMIC_REFS`; flagged `RESERVED` symbols are never proposed
 - [x] **T09.08** Naming rules engine (all rules §5.5, symbols + files + folders) + conventions per kind/language + tests (2026-10-11) — `code::rules`: conventions per language/kind, all §5.5 rules except `typo` (optional, not built), `Case::{matches,convert,pattern}` (heck), `detect()` -> candidates with a deterministic `suggested` name, project-style detection for JS/TS file names. `heck` pinned in the workspace for case conversion
-- [ ] **T09.09** Proposal pipeline (batching ≤ 20, `<sym>` blocks incl. files/folders, pattern schema, validator, reask, needs_manual) + mock tests
+- [x] **T09.09** Proposal pipeline (batching ≤ 20, `<sym>` blocks incl. files/folders, pattern schema, validator, reask, needs_manual) + mock tests (2026-10-11) — `nexus-analyze::code::propose` (`<sym>` blocks, `Validator`) + `nexus-agent::pipelines::rename::propose` (case-only issues fixed by rule; batches ≤ 20 per language/kind/convention with the convention regex in the schema; one reask with the validator's words; fallback = deterministic suggestion or `needs_manual`; "Try again" = temp +0.2 and rejected names). Scripted-model tests
 - [ ] **T09.10** Planner → ChangeSet (byte ranges + file/folder moves, import/config/string refs, overlaps, collisions, case-only renames via temp name) + git-dirty detection + tests
 - [ ] **T09.11** Find: symbol + usages search, project overview, router tool `find_symbol` + tests
 - [ ] **T09.12** Verify with the project's own checker (cargo check, tsc, compileall, dotnet build, go build, mvn/gradle), fixed args, streamed output

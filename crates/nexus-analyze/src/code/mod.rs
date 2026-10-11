@@ -6,6 +6,7 @@ pub mod index;
 pub mod lang;
 pub mod model;
 pub mod noncode;
+pub mod propose;
 pub mod reserved;
 pub mod rules;
 pub mod tags;
