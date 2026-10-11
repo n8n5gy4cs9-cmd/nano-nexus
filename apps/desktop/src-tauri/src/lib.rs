@@ -178,6 +178,9 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     service::models::init(&app.state::<Ctx>());
     let share_ctx: Ctx = (*app.state::<Ctx>()).clone();
     tauri::async_runtime::spawn(service::share::init(share_ctx));
+    // Bundled knowledge libraries: register and (incrementally) index. A no-op without `resources/knowledge`.
+    let kb_ctx: Ctx = (*app.state::<Ctx>()).clone();
+    tauri::async_runtime::spawn(async move { service::knowledge::sync_bundled(&kb_ctx).await });
     runtime::start_in_background(app.handle());
     exit_on_signals(app.handle());
     Ok(())

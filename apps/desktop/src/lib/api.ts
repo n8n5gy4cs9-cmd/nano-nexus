@@ -55,6 +55,7 @@ import type {
 
 import type { EditorAiEvent, EditorAiRequest, EditorSaveResult } from "@/features/editor/types";
 import type { PairingView, SharePolicy, ShareDevice, ShareStatus } from "@/features/share/types";
+import type { KbIndexResult, KbLibrary, KbLibraryDetail, KbPassage, KbProgress } from "@/features/library/types";
 
 import { getTransport } from "./transport";
 import type { Unsubscribe } from "./transport";
@@ -234,6 +235,22 @@ export const api = {
     ai: (jobId: string, request: EditorAiRequest, onEvent: (e: EditorAiEvent) => void) =>
       getTransport().stream<EditorAiEvent>("editor_ai", { jobId, request }, onEvent),
     aiCancel: (jobId: string) => getTransport().call<boolean>("editor_ai_cancel", { jobId }),
+  },
+  knowledge: {
+    list: () => getTransport().call<KbLibrary[]>("kb_list"),
+    detail: (id: string) => getTransport().call<KbLibraryDetail>("kb_detail", { id }),
+    /** Create a library from picked/dropped folders or files; index it next with `reindex`. */
+    add: (name: string | null, paths: string[], reference: boolean) =>
+      getTransport().call<KbLibrary>("kb_add", { name, paths, reference }),
+    /** Index (incrementally); progress after every file. */
+    reindex: (jobId: string, libraryId: string, onProgress: (p: KbProgress) => void) =>
+      getTransport().stream<KbProgress, KbIndexResult>("kb_reindex", { jobId, libraryId }, onProgress),
+    cancel: (jobId: string) => getTransport().call<boolean>("kb_cancel", { jobId }),
+    setEnabled: (id: string, enabled: boolean) => getTransport().call<null>("kb_set_enabled", { id, enabled }),
+    remove: (id: string) => getTransport().call<null>("kb_remove", { id }),
+    search: (query: string, libraryIds: string[] | null = null, k = 6) =>
+      getTransport().call<KbPassage[]>("kb_search", { query, libraryIds, k }),
+    passage: (chunkId: number) => getTransport().call<KbPassage>("kb_passage", { chunkId }),
   },
   share: {
     status: () => getTransport().call<ShareStatus>("share_status"),

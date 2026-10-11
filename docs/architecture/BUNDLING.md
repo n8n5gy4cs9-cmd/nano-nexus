@@ -256,3 +256,15 @@ pub fn bundled_manifest(app: &AppHandle) -> Option<BundleManifest> { /* resource
 pub fn extra_model_dirs(app: &AppHandle, settings: &Settings) -> Vec<PathBuf> { /* <exe_dir>/models-extra, user folders */ }
 ```
 llama.cpp opens GGUF files **by path** (mmap). Never use `include_bytes!` and never copy them to temp.
+
+## 12. Knowledge libraries in a build (M17)
+- A profile may list `"knowledge": ["knowledge/reaper-manual", {"path": "/abs/js-book", "id": "js-book", "name": "JavaScript Book"}]`.
+  Strings are folders of documents (md, txt, json, html, pdf, epub, docx, csv, source files).
+- `stage-bundle` calls `scripts/knowledge-manifest.mjs` (`stageKnowledge`): sources are copied to
+  `resources/knowledge/<id>/` and `resources/knowledge/manifest.json` is written
+  (`{schema, libraries:[{id, name, dir, bytes, files:[{path, bytes, sha256}]}]}`).
+- `verify-payload` calls `verifyKnowledge`: re-hashes every file, flags missing, changed, and unlisted files.
+- The App Builder shows `knowledgeSize()` (libraries, files, bytes) next to the model sizes.
+- At first launch the app registers each manifest library as `bundled` (read-only, cannot be removed,
+  can be disabled) and indexes it incrementally by file hash (`service::knowledge::sync_bundled`).
+  Shipping a prebuilt index (ATTACH of `knowledge.db`) is a later optimization, see QUESTIONS Q-6.

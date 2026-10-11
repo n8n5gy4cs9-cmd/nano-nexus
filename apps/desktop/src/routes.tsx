@@ -3,6 +3,7 @@ import {
   Download,
   FolderSearch,
   History,
+  Library,
   MessageSquare,
   PenLine,
   Settings,
@@ -18,6 +19,7 @@ import { AssistantsPage } from "@/features/assistants/AssistantsPage";
 import { AnalyzerPage } from "@/features/analyzer/AnalyzerPage";
 import { ReportPage } from "@/features/analyzer/ReportPage";
 import { ChangesPage } from "@/features/changes/ChangesPage";
+import { LibraryPage } from "@/features/library/LibraryPage";
 import { ModelsPage } from "@/features/models/ModelsPage";
 import { PermissionsPage } from "@/features/permissions/PermissionsPage";
 import { IS_WEB } from "@/lib/target";
@@ -35,7 +37,7 @@ export interface NavSection {
   digit?: number;
 }
 
-/** The eight main sections, in sidebar order, plus Settings. */
+/** The nine main sections, in sidebar order, plus Settings. */
 export const NAV: NavSection[] = [
   { path: "/", label: "Chat", icon: MessageSquare, tagline: "Talk to a private assistant running on your computer.", digit: 1 },
   { path: "/assistants", label: "Assistants", icon: Sparkles, tagline: "Specialists for files, code, and writing.", digit: 2 },
@@ -45,6 +47,7 @@ export const NAV: NavSection[] = [
   { path: "/editor", label: "Editor", icon: Code2, tagline: "A code editor with AI at hand.", digit: 6 },
   { path: "/changes", label: "Changes", icon: History, tagline: "Review, apply, and undo planned changes.", digit: 7 },
   { path: "/permissions", label: "Permissions", icon: Shield, tagline: "Choose which folders NanoNexus can use.", digit: 8 },
+  { path: "/library", label: "Library", icon: Library, tagline: "Offline reference books the assistant can search and cite.", digit: 9 },
 ];
 
 export const SETTINGS_SECTION: NavSection = {
@@ -54,7 +57,7 @@ export const SETTINGS_SECTION: NavSection = {
   tagline: "Appearance, runtime, models, and privacy.",
 };
 
-const DESKTOP_ONLY = new Set(["/rename", "/editor", "/changes", "/permissions", "/models"]);
+const DESKTOP_ONLY = new Set(["/rename", "/editor", "/changes", "/permissions", "/models", "/library"]);
 
 function pageFor(s: NavSection) {
   if (IS_WEB && DESKTOP_ONLY.has(s.path)) return <DesktopOnly title={s.label} />;
@@ -65,6 +68,7 @@ function pageFor(s: NavSection) {
   if (s.path === "/editor") return <EditorPage />;
   if (s.path === "/changes") return <ChangesPage />;
   if (s.path === "/permissions") return <PermissionsPage />;
+  if (s.path === "/library") return <LibraryPage />;
   return <PlaceholderPage section={s} />;
 }
 

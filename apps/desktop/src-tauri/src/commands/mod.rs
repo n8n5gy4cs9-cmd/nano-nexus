@@ -8,6 +8,7 @@ pub mod chat;
 pub mod conversations;
 pub mod editor;
 pub mod fs;
+pub mod knowledge;
 pub mod models;
 pub mod notifications;
 pub mod permissions;

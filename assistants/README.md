@@ -24,6 +24,7 @@ their sources: [`docs/architecture/ASSISTANTS.md` §2](../docs/architecture/ASSI
 | `polyglot.toml` | Polyglot | chat | Translation that keeps placeholders |
 | `shell-sage.toml` | Shell Sage | chat | Command explainer with safety ratings, never runs anything |
 | `prompt-architect.toml` | Prompt Architect | chat | Writes new assistants as TOML |
+| `librarian.toml` | Librarian | router (`kb_search`, always routes) | Answers from offline libraries with verified `[n]` citations |
 | `_TEMPLATE.toml` | — | — | Starting point for your own assistants (not loaded) |
 | `regex-smith.example.toml` | Regex Smith | chat | Tutorial example (not loaded; import it to try) |
 

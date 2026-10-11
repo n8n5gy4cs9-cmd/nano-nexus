@@ -12,6 +12,10 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
     ),
     ("0004_reports", include_str!("../migrations/0004_reports.sql")),
     ("0005_share", include_str!("../migrations/0005_share.sql")),
+    (
+        "0006_knowledge",
+        include_str!("../migrations/0006_knowledge.sql"),
+    ),
 ];
 
 /// Current `PRAGMA user_version`.

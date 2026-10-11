@@ -312,7 +312,7 @@ mod tests {
     fn all_builtins_load() {
         let r = Registry::builtin();
         assert!(r.problems().is_empty(), "{:?}", r.problems());
-        assert_eq!(r.list().len(), 17);
+        assert_eq!(r.list().len(), 18);
         assert_eq!(r.list()[0].spec.id, "nexus");
     }
 

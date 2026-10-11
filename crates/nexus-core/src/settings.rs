@@ -92,6 +92,12 @@ pub struct Settings {
     pub share_max_devices: u32,
     #[serde(rename = "share.notify_pairing")]
     pub share_notify_pairing: bool,
+    /// Knowledge libraries (M17): inject retrieved passages into ordinary chats. Off = prompts are unchanged.
+    #[serde(rename = "knowledge.chat_context")]
+    pub knowledge_chat_context: bool,
+    /// Token budget of the injected passages (and of `kb_search` results).
+    #[serde(rename = "knowledge.max_tokens")]
+    pub knowledge_max_tokens: u32,
 }
 
 impl Default for Settings {
@@ -126,6 +132,8 @@ impl Default for Settings {
             share_session_days: 30,
             share_max_devices: 5,
             share_notify_pairing: true,
+            knowledge_chat_context: false,
+            knowledge_max_tokens: 1200,
         }
     }
 }

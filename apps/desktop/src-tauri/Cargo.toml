@@ -23,6 +23,7 @@ nexus-core = { path = "../../../crates/nexus-core" }
 nexus-agent = { path = "../../../crates/nexus-agent" }
 nexus-analyze = { path = "../../../crates/nexus-analyze" }
 nexus-fs = { path = "../../../crates/nexus-fs" }
+nexus-knowledge = { path = "../../../crates/nexus-knowledge" }
 nexus-models = { path = "../../../crates/nexus-models" }
 nexus-llm = { path = "../../../crates/nexus-llm" }
 nexus-store = { path = "../../../crates/nexus-store" }

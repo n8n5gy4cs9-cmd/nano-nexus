@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 
 import type { ErrorCode, Message as StoredMessage } from "@/bindings";
 import { AssistantIcon, Button, IconButton, Textarea } from "@/components/ui";
+import { PassageDialog } from "@/features/library/PassageDialog";
+import { parsePassageUrl } from "@/features/library/types";
 import { api } from "@/lib/api";
 import { extractAssistantToml } from "@/lib/assistant-toml";
 import { cn } from "@/lib/cn";
@@ -115,7 +117,14 @@ export function AssistantMessage({
   onRestart?: (() => void) | undefined;
 }) {
   const [copied, setCopied] = useState(false);
+  const [passage, setPassage] = useState<number | null>(null);
   const navigate = useNavigate();
+  // Library citations open the passage in a dialog; every other link goes to the OS browser.
+  const onLink = (url: string) => {
+    const id = parsePassageUrl(url);
+    if (id !== null) setPassage(id);
+    else openLink(url);
+  };
   const builderToml = !v.streaming && v.content ? extractAssistantToml(v.content) : null;
   const copy = async () => {
     try {
@@ -136,10 +145,11 @@ export function AssistantMessage({
       {v.reasoning ? <ThoughtsBlock text={v.reasoning} streaming={v.streaming && v.content === ""} startedAt={v.thinkingStartedAt} /> : null}
       {v.statusText ? <p className="my-1 text-small text-muted">{v.statusText}</p> : null}
       {v.content ? (
-        <Markdown source={v.content} onOpenLink={openLink} className={cn(v.streaming && "streaming-caret")} />
+        <Markdown source={v.content} onOpenLink={onLink} className={cn(v.streaming && "streaming-caret")} />
       ) : v.streaming && !v.reasoning ? (
         <p className="animate-pulse text-muted">…</p>
       ) : null}
+      {passage !== null ? <PassageDialog chunkId={passage} onClose={() => setPassage(null)} /> : null}
       {builderToml ? (
         <Button
           size="sm"

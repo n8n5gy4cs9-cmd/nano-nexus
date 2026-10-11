@@ -23,6 +23,7 @@ graduation-cap
 hammer
 hexagon
 languages
+library
 lightbulb
 list-checks
 list-collapse

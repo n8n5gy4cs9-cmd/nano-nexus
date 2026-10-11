@@ -233,3 +233,11 @@ pub enum ChatEvent {
 
 `IpcError { code, message, detail }`: `detail` contains the debug chain (shown only in an
 expandable "Details" section and in logs).
+
+## M17 addendum: knowledge libraries
+Tables (`0006_knowledge.sql`): `kb_libraries`, `kb_documents`, `kb_chunks`, and the external-content FTS5 table
+`kb_chunks_fts(heading_path, text)` (porter + unicode61, `bm25(…, 3.0, 1.0)`).
+Commands: `kb_list`, `kb_detail`, `kb_add(name?, paths, reference)`, `kb_reindex(jobId, libraryId, onEvent: KbProgress) -> KbIndexResult`,
+`kb_cancel(jobId)`, `kb_set_enabled`, `kb_remove`, `kb_search(query, libraryIds?, k)`, `kb_passage(chunkId)`.
+Settings: `knowledge.chat_context` (bool, default false), `knowledge.max_tokens` (default 1200).
+Citation links in answers use `https://nanonexus.local/passage/<chunk_id>`; the chat opens them as a passage dialog.

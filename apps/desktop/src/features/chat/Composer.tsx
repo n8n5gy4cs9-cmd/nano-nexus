@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import type { AttachmentInput } from "@/bindings";
 
 import { Button, IconButton, Switch, Textarea } from "@/components/ui";
+import { LibrariesChip } from "@/features/library/LibrariesChip";
 import { api } from "@/lib/api";
 import { toIpcException } from "@/lib/ipc";
 import { cn } from "@/lib/cn";
@@ -145,6 +146,7 @@ export function Composer({ placeholder, streaming, think, onThinkChange, onSend,
             <Switch checked={think} onCheckedChange={onThinkChange} aria-label="Think harder" />
             Think harder
           </label>
+          <LibrariesChip />
           <div className="ml-auto flex items-center gap-3">
             <div
               role="meter"

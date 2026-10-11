@@ -54,3 +54,22 @@ Options: A) Show split models in search but refuse to download them with a clear
 as its own download and register the model when the last one verifies.
 Recommendation: A until a split model is actually needed.
 Answer (owner): _pending_
+
+## Q-6: Prebuilt knowledge index for bundled libraries (2026-10-11, task T17.11)
+Context: M17 says bundled libraries ship a prebuilt index (ATTACH `knowledge.db`) so first launch needs no indexing.
+The M12 stage/verify scripts do not exist yet, and `nexus-store` has a single connection, so ATTACH of a second DB is a
+larger change than the rest of M17.
+Options: A) Ship sources + `manifest.json` (hashed, verified) and index incrementally on first launch in the background
+(`service::knowledge::sync_bundled`, current). B) Build `knowledge.db` at stage time with a small Rust bin using the same
+crate and ATTACH it read-only.
+Recommendation: A now; B once M12 lands and a real 100+ MB library makes first-launch indexing noticeable.
+Answer (owner): _pending_
+
+## Q-7: Migration number and Nexus integration for libraries (2026-10-11, tasks T17.01, T17.07)
+Context: the spec names `0007_knowledge.sql` but the migration list is gapless, so the file is `0006_knowledge.sql`
+(same convention as `0005_share.sql`). Also, adding `kb_search` to Nexus's `tools.allowed` would change Nexus's rendered
+prompt for everyone, which violates "libraries off = identical prompts".
+Options: A) Keep 0006; Nexus uses the setting `knowledge.chat_context` (context injection, no prompt change when off);
+only the Librarian lists `kb_search`. B) Add `kb_search` to Nexus and accept new prompt snapshots.
+Recommendation: A.
+Answer (owner): _pending_

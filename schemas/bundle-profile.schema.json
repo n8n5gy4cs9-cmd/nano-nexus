@@ -31,6 +31,17 @@
         "runtime": { "enum": ["vulkan", "cpu"] }
       }
     },
+    "knowledge": {
+      "type": "array", "uniqueItems": true,
+      "description": "optional offline reference libraries copied into resources/knowledge/ (BUNDLING §12)",
+      "items": {
+        "oneOf": [
+          { "type": "string", "description": "folder of documents (relative to the repo root, or absolute)" },
+          { "type": "object", "additionalProperties": false, "required": ["path"],
+            "properties": { "path": { "type": "string" }, "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" }, "name": { "type": "string" } } }
+        ]
+      }
+    },
     "share": {
       "type": "object", "additionalProperties": false,
       "description": "optional LAN Share defaults baked into the build",

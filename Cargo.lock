@@ -2981,6 +2981,7 @@ dependencies = [
  "nexus-analyze",
  "nexus-core",
  "nexus-fs",
+ "nexus-knowledge",
  "nexus-llm",
  "nexus-models",
  "nexus-store",
@@ -3122,6 +3123,29 @@ dependencies = [
  "thiserror 2.0.21",
  "tracing",
  "trash",
+]
+
+[[package]]
+name = "nexus-knowledge"
+version = "0.1.0"
+dependencies = [
+ "blake3",
+ "csv",
+ "nexus-analyze",
+ "nexus-core",
+ "nexus-store",
+ "quick-xml 0.37.5",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "specta",
+ "tempfile",
+ "thiserror 2.0.21",
+ "tokio-util",
+ "tracing",
+ "uuid",
+ "walkdir",
+ "zip",
 ]
 
 [[package]]

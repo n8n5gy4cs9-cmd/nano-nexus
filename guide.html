@@ -123,7 +123,8 @@
     <li><a href="#share">7 · Use it from your phone</a></li>
     <li><a href="#verify">8 · Verify integrity</a></li>
     <li><a href="#trouble">9 · Troubleshooting</a></li>
-    <li><a href="#reference">10 · Command reference</a></li>
+    <li><a href="#libraries">10 · Offline libraries (books &amp; manuals)</a></li>
+    <li><a href="#reference">11 · Command reference</a></li>
   </ol>
   <button class="theme-btn" id="themeBtn" type="button">◐ Toggle theme</button>
 </nav>
@@ -329,7 +330,16 @@ node scripts/verify-payload.mjs path/to/NanoNexus.app  <span class="c"># re-hash
 <details><summary>"Not enough disk space"</summary><p>Building copies models into the app, so you need about 2× the total model size free plus 5 GB. <code>scripts/doctor.sh</code> shows free space.</p></details>
 <details><summary>A model repeats itself or rambles</summary><p>The MiniCPM5 models need <code>min_p = 0</code> (catalog presets set this). For other models, use the catalog's sampling preset or lower the temperature in the assistant settings.</p></details>
 
-<h2 id="reference">10 · Command reference</h2>
+<h2 id="libraries">10 · Offline libraries: ask your books and manuals <span class="badge b-plan">Planned · M17</span></h2>
+<p>Add a folder (or files) of Markdown, text, JSON, HTML, PDF, EPUB, DOCX, CSV or source code in <b>Library</b>. NanoNexus indexes it on your computer (no model calls, no network) and the <b>Librarian</b> assistant answers from it with <code>[1]</code>-style citations that open the exact passage. If the books do not cover the question, it says <i>not in the library</i>.</p>
+<ul>
+  <li><b>Try it:</b> add <code>docs/samples/knowledge/mixing-basics</code>, then ask the Librarian “how do I set up a send?”.</li>
+  <li><b>In any chat:</b> switch on the <b>Libraries</b> chip in the composer. Off (the default) means chats behave exactly as before.</li>
+  <li><b>Ship it in a build:</b> add <code>"knowledge": ["path/to/folder"]</code> to a bundle profile (<a href="docs/architecture/BUNDLING.md">BUNDLING §12</a>).</li>
+  <li>Scanned PDFs without a text layer are skipped with a note (no OCR yet).</li>
+</ul>
+
+<h2 id="reference">11 · Command reference</h2>
 <table>
   <tr><th>Command</th><th>What it does</th><th>Status</th></tr>
   <tr><td><code>scripts/doctor.sh [--windows]</code></td><td>Check the toolchain, disk, signing, and vendor state</td><td><span class="badge b-now">now</span></td></tr>

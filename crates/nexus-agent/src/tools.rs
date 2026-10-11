@@ -160,6 +160,22 @@ pub struct ToolCx {
     pub budget_tokens: u32,
     /// Documents attached to this chat, searchable by `doc_search`.
     pub docs: Vec<Arc<DocIndex>>,
+    /// Offline knowledge libraries behind `kb_search` (M17). `None` when no library is enabled.
+    pub kb: Option<Arc<dyn KnowledgeSource>>,
+}
+
+/// Result of a library search: the numbered `<doc>` context block and how many passages it holds.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct KnowledgeHits {
+    /// `<doc n="1" source="..." page="..">...</doc>` blocks with the grounding rules; empty when nothing matched.
+    pub context: String,
+    pub passages: usize,
+}
+
+/// Implemented by the app over `nexus-knowledge` (keeps this crate free of the knowledge store).
+pub trait KnowledgeSource: Send + Sync {
+    /// Search the enabled libraries (optionally one, by id or name). Passages are numbered from 1 per call.
+    fn search(&self, query: &str, library: Option<&str>, max_tokens: u32) -> Result<KnowledgeHits, String>;
 }
 
 impl ToolCx {
@@ -169,6 +185,7 @@ impl ToolCx {
             reason: String::new(),
             budget_tokens: DEFAULT_TOOL_BUDGET,
             docs: Vec::new(),
+            kb: None,
         }
     }
 }
@@ -1018,6 +1035,52 @@ impl Tool for DocSearch {
     }
 }
 
+/// `kb_search(query, library?)`: passages from the offline knowledge libraries, numbered for `[n]` citations.
+pub struct KbSearch;
+
+#[async_trait]
+impl Tool for KbSearch {
+    fn name(&self) -> &'static str {
+        "kb_search"
+    }
+    fn description(&self) -> &'static str {
+        "Search the user's offline reference libraries (manuals, books) and return cited passages."
+    }
+    fn signature(&self) -> &'static str {
+        "kb_search(query, library?)"
+    }
+    fn required_access(&self, _args: &ToolArgs) -> Vec<(PathBuf, Access)> {
+        Vec::new()
+    }
+    async fn run(&self, args: ToolArgs, cx: &ToolCx) -> Result<ToolOutput, ToolError> {
+        let query = arg_str(&args, "query")?.to_owned();
+        let library = args.get("library").and_then(|v| v.as_str()).map(str::to_owned);
+        let Some(kb) = cx.kb.clone() else {
+            return Err(ToolError::Invalid(
+                "No knowledge library is enabled. Ask the user to add or enable one on the Library page.".into(),
+            ));
+        };
+        let budget = cx.budget_tokens.min(1200);
+        let hits = kb
+            .search(&query, library.as_deref(), budget)
+            .map_err(ToolError::Invalid)?;
+        let body = if hits.passages == 0 {
+            "(no matching passages: the answer is not in the library)\n".to_owned()
+        } else {
+            format!("{}\n", hits.context)
+        };
+        Ok(ToolOutput {
+            llm_text: format!("<tool_result name=\"kb_search\" query=\"{}\">\n{body}</tool_result>", query.replace('"', "'")),
+            ui: Some(serde_json::json!({"query": query, "passages": hits.passages})),
+            summary: format!(
+                "Searched the libraries for “{query}” ({} passage{})",
+                hits.passages,
+                if hits.passages == 1 { "" } else { "s" }
+            ),
+        })
+    }
+}
+
 /// The built-in tool set.
 pub fn builtin_tools() -> Vec<Arc<dyn Tool>> {
     vec![
@@ -1028,6 +1091,7 @@ pub fn builtin_tools() -> Vec<Arc<dyn Tool>> {
         Arc::new(FileInfo),
         Arc::new(ScanFolder),
         Arc::new(DocSearch),
+        Arc::new(KbSearch),
         Arc::new(Calculate),
         Arc::new(Now),
     ]

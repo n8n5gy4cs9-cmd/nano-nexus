@@ -5,7 +5,7 @@ use specta_typescript::Typescript;
 use tauri_specta::{Builder, collect_commands, collect_events};
 
 use crate::commands::{
-    analyzer, app, assistants, attachments, chat, conversations, editor, fs, models, notifications, permissions, runtime,
+    analyzer, app, assistants, attachments, chat, conversations, editor, fs, knowledge, models, notifications, permissions, runtime,
     settings, share,
 };
 
@@ -111,6 +111,15 @@ pub fn builder() -> Builder<tauri::Wry> {
             share::share_devices_list,
             share::share_device_update,
             share::share_device_revoke,
+            knowledge::kb_list,
+            knowledge::kb_detail,
+            knowledge::kb_add,
+            knowledge::kb_reindex,
+            knowledge::kb_cancel,
+            knowledge::kb_set_enabled,
+            knowledge::kb_remove,
+            knowledge::kb_search,
+            knowledge::kb_passage,
         ])
         .events(collect_events![
             runtime::RuntimeStatus,

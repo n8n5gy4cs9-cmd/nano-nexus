@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use nexus_agent::router::{RouterRequest, SchedulerRouter, run_router};
-use nexus_agent::tools::{EngineGatekeeper, ToolCx, builtin_tools};
+use nexus_agent::tools::{EngineGatekeeper, KnowledgeSource, ToolCx, builtin_tools};
 use nexus_agent::{
     AttachmentBlock, HistoryMessage, PromptContext, StoredSummary, TurnInput, prompt, render_system_prompt,
 };
@@ -406,6 +406,11 @@ fn start_turn(
         ctx_size: settings.runtime_ctx_size,
     };
 
+    // Knowledge libraries (M17): only touched when a tool asks for them or the setting is on, and only
+    // when an enabled, indexed library exists. Otherwise nothing below changes the turn.
+    let kb_tool = tool_names.iter().any(|n| n == "kb_search");
+    let kb_inject = settings.knowledge_chat_context && !is_pipeline && !kb_tool;
+    let kb_tokens = settings.knowledge_max_tokens.clamp(200, 4000);
     let ctx = Arc::clone(ctx);
     let assistant_id = placeholder.id.clone();
     let conv_id = conv.id.clone();
@@ -443,6 +448,23 @@ fn start_turn(
                 Err(e) => early_text = Some(e.to_string()),
             }
         }
+        let kb_source = if kb_tool || kb_inject {
+            super::knowledge::AppKnowledge::if_enabled(&ctx)
+        } else {
+            None
+        };
+        if kb_inject
+            && early_text.is_none()
+            && let Some(kb) = &kb_source
+            && nexus_knowledge::prompt::looks_like_lookup(&input.user_text)
+            && let Some(block) = kb.context_for(&input.user_text, kb_tokens)
+        {
+            input.attachments.push(AttachmentBlock {
+                label: "Libraries".into(),
+                path: None,
+                text: block,
+            });
+        }
         if routed && early_text.is_none() {
             let gate = EngineGatekeeper::new(
                 ctx.perms.clone(),
@@ -451,6 +473,7 @@ fn start_turn(
             );
             let mut cx = ToolCx::new(Arc::new(gate));
             cx.docs = docs;
+            cx.kb = kb_source.clone().map(|k| k as Arc<dyn KnowledgeSource>);
             let request = RouterRequest {
                 user_text: &input.user_text,
                 allowed_tools: tool_names,
@@ -493,6 +516,16 @@ fn start_turn(
                 persisting.send(ChatEvent::Content { delta: note.clone() });
                 outcome.content.push_str(&note);
             }
+        }
+        // Verified citations: invented `[n]` markers are dropped and the real ones get a Sources list.
+        if let Some(kb) = kb_source.as_ref().filter(|_| outcome.status == MessageStatus::Done) {
+            let verified = kb.finalize_answer(&outcome.content);
+            if let Some(tail) = verified.strip_prefix(outcome.content.as_str())
+                && !tail.is_empty()
+            {
+                persisting.send(ChatEvent::Content { delta: tail.to_owned() });
+            }
+            outcome.content = verified;
         }
         coalescing.flush();
 

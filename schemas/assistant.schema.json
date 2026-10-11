@@ -53,7 +53,7 @@
     },
     "tools": {
       "type": "object", "additionalProperties": false,
-      "properties": { "allowed": { "type": "array", "uniqueItems": true, "items": { "enum": ["read_file", "list_dir", "search_files", "grep_text", "scan_folder", "file_info", "doc_search", "calculate", "now"] } } }
+      "properties": { "allowed": { "type": "array", "uniqueItems": true, "items": { "enum": ["read_file", "list_dir", "search_files", "grep_text", "scan_folder", "file_info", "doc_search", "kb_search", "calculate", "now"] } } }
     },
     "ui": {
       "type": "object", "additionalProperties": false,
