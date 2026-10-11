@@ -41,3 +41,5 @@ sysinfo = { version = "0.39", default-features = false, features = ["system"] } 
 tauri = "2.12" # never 3.x (ADR-001)
 tauri-build = "2.7"
 rusqlite = { version = "0.40", features = ["bundled"] } # bundled SQLite incl. FTS5 (DATA-AND-IPC §1)
+tauri-specta = { version = "=2.0.0-rc.25", features = ["derive", "typescript"] } # ADR-006; exact pin during the rc period
+specta-typescript = "=0.0.12"

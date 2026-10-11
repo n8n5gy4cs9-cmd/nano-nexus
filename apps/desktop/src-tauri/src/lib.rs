@@ -1,5 +1,7 @@
 //! NanoNexus desktop shell: thin Tauri commands over the `nexus-*` crates.
 
+pub mod bindings;
+pub mod commands;
 pub mod runtime;
 pub mod runtime_paths;
 pub mod state;
@@ -10,6 +12,7 @@ use nexus_core::paths::AppPaths;
 use nexus_llm::{Scheduler, Supervisor};
 use nexus_store::Store;
 use tauri::{Manager, RunEvent};
+use tauri_specta::Event as _;
 
 use crate::state::AppState;
 
@@ -25,6 +28,20 @@ fn resolve_paths(app: &tauri::App) -> Result<AppPaths, Box<dyn std::error::Error
         app.path().app_data_dir()?,
         app.path().app_log_dir()?,
     ))
+}
+
+/// Forward every supervisor state change to the webview as `runtime:status`.
+fn bridge_runtime_status(app: &tauri::AppHandle) {
+    let app = app.clone();
+    let mut rx = app.state::<AppState>().supervisor.subscribe();
+    tauri::async_runtime::spawn(async move {
+        while rx.changed().await.is_ok() {
+            let state = rx.borrow_and_update().clone();
+            if let Err(e) = commands::runtime::RuntimeStatus(state).emit(&app) {
+                tracing::warn!("could not emit runtime:status: {e}");
+            }
+        }
+    });
 }
 
 fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
@@ -45,6 +62,7 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         scheduler,
         settings: RwLock::new(settings),
     });
+    bridge_runtime_status(app.handle());
     runtime::start_in_background(app.handle());
     Ok(())
 }

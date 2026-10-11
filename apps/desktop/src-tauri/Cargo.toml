@@ -26,6 +26,9 @@ nexus-llm = { path = "../../../crates/nexus-llm" }
 nexus-store = { path = "../../../crates/nexus-store" }
 tokio-util.workspace = true
 serde.workspace = true
+specta.workspace = true
+specta-typescript.workspace = true
+tauri-specta.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
 tracing.workspace = true

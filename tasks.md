@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 40/217 tasks done (18%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 41/217 tasks done (18%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -71,7 +71,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T03.04** shadcn/ui init + primitives themed to tokens (UI-DESIGN §6) (2026-10-11)
 - [x] **T03.05** AppState + setup (paths, DB open, supervisor start in background) + exit handling (shutdown on ExitRequested/Exit) (2026-10-11)
 - [x] **T03.06** `runtime_paths.rs` (macOS externalBin, Windows resource runtime, manifest/index.json model resolution, NEXUS_MODEL_PATH) (2026-10-11)
-- [ ] **T03.07** 🔬 **S6** tauri-specta bindings (`app_info`, `runtime_*`, `settings_*`) → `src/bindings.ts` (fallback ts-rs per ADR-006)
+- [x] **T03.07** 🔬 **S6** tauri-specta bindings (`app_info`, `runtime_*`, `settings_*`) → `src/bindings.ts` (fallback ts-rs per ADR-006) (2026-10-11)
 - [ ] **T03.08** Frontend `lib/transport/` (Transport interface + tauriTransport) + `lib/api.ts` facade + ESLint rule banning `invoke` in features
 - [ ] **T03.09** Shell UI: TitleBar (drag region), Sidebar nav (8 sections), placeholder pages, Inspector toggle
 - [ ] **T03.10** RuntimePill + popover (status, model, ctx, logs, restart) wired to `runtime:status`
