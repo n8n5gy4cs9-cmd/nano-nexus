@@ -1,6 +1,6 @@
 /** Human-readable byte size (1024-based), e.g. `1.1 GB`. */
-export function formatBytes(bytes: number): string {
-  if (!Number.isFinite(bytes) || bytes < 0) return "—";
+export function formatBytes(bytes: number | null | undefined): string {
+  if (bytes == null || !Number.isFinite(bytes) || bytes < 0) return "—";
   const units = ["B", "KB", "MB", "GB", "TB"];
   let v = bytes;
   let i = 0;
@@ -21,7 +21,8 @@ export function formatDuration(ms: number): string {
 }
 
 /** `just now`, `5 min ago`, `2 h ago`, `yesterday`, `3 d ago`, then a date. */
-export function relativeTime(thenMs: number, nowMs: number = Date.now()): string {
+export function relativeTime(thenMs: number | null | undefined, nowMs: number = Date.now()): string {
+  if (thenMs == null) return "—";
   const diff = nowMs - thenMs;
   if (diff < 45_000) return "just now";
   const min = Math.round(diff / 60_000);

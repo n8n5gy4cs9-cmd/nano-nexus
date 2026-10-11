@@ -54,8 +54,12 @@ const api = (p, o = {}) => fetch(p + (p.includes('?') ? '&' : '?') + 't=' + T, o
 const $ = id => document.getElementById(id);
 const gb = b => b >= 1073741824 ? (b / 1073741824).toFixed(2) + ' GB' : (b / 1048576).toFixed(0) + ' MB';
 const state = { ggufs: [], catalog: new Set(), books: [] };
+const KEY = 'nanonexus.appBuilder.v1';
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ name: $('name').value, ggufs: state.ggufs, catalog: [...state.catalog], books: state.books, def: $('def').value, target: document.querySelector('input[name=t]:checked')?.value, fmt: $('fmt').value })); } catch {} };
+const saved = (() => { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch { return null; } })();
 
 function renderChosen() {
+  save();
   $('chosen').innerHTML = '';
   state.ggufs.forEach((g, i) => {
     const d = document.createElement('div'); d.className = 'sel';
@@ -70,6 +74,7 @@ function renderChosen() {
 const slug = s => s.toLowerCase().replace(/[^a-z0-9.]+/g, '-').replace(/^-+|-+$/g, '') || 'model';
 const gid = g => slug(g.file.replace(/\.gguf$/i, ''));
 function renderDefault() {
+  save();
   const opts = [...state.ggufs.map(g => [gid(g), g.name || g.file]), ...[...state.catalog].map(c => [c, c])];
   const cur = $('def').value;
   $('def').innerHTML = opts.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
@@ -94,14 +99,25 @@ api('/api/info').then(info => {
   $('dl').innerHTML = info.downloadsGguf.length ? '' : '<div class="mut">No .gguf files found in ' + info.downloads + '</div>';
   info.downloadsGguf.forEach(e => { const b = document.createElement('label'); b.innerHTML = `<input type="checkbox"> ${e.name} <span class="mut">${gb(e.size)}</span>`; b.querySelector('input').onchange = ev => { if (ev.target.checked) addGguf(e); else { state.ggufs = state.ggufs.filter(g => g.path !== e.path); renderChosen(); } }; $('dl').append(b); });
   info.catalog.forEach(m => { const b = document.createElement('label'); b.innerHTML = `<input type="checkbox"> ${m.name} <span class="mut">${m.quant ?? ''}</span>`; b.querySelector('input').onchange = ev => { ev.target.checked ? state.catalog.add(m.id) : state.catalog.delete(m.id); renderDefault(); }; $('cat').append(b); });
+  if (saved) {
+    $('name').value = saved.name || $('name').value;
+    state.ggufs = (saved.ggufs || []).filter(g => g.path);
+    state.books = saved.books || [];
+    (saved.catalog || []).forEach(c => state.catalog.add(c));
+    $('fmt').value = saved.fmt || 'auto';
+    document.querySelectorAll('#cat input').forEach((i, n) => { i.checked = state.catalog.has(info.catalog[n].id); });
+    document.querySelectorAll('#dl input').forEach((i, n) => { i.checked = state.ggufs.some(g => g.path === info.downloadsGguf[n].path); });
+    renderChosen(); renderBooks(); if (saved.def) $('def').value = saved.def;
+  }
   const mac = info.platform === 'darwin';
-  document.querySelector(`input[name=t][value=${mac ? 'mac' : 'windows'}]`).checked = true;
+  document.querySelector(`input[name=t][value=${saved?.target && (mac || saved.target !== 'mac') ? saved.target : (mac ? 'mac' : 'windows')}]`).checked = true;
   if (!mac) document.querySelector('input[name=t][value=mac]').disabled = true;
   $('browseG').onclick = () => browser($('browserG'), info.downloads, true, addGguf);
-  $('browseK').onclick = () => browser($('browserK'), info.home, false, p => { if (!state.books.includes(p)) state.books.push(p); renderBooks(); });
+  $('browseK').onclick = () => browser($('browserK'), info.home, false, p => { if ((p === info.downloads || p === info.home) && !confirm(p + ' is a very large folder and all of it would be copied into the app. Use it anyway?')) return; if (!state.books.includes(p)) state.books.push(p); renderBooks(); });
 }).catch(e => $('msg').textContent = e.message);
 
 function renderBooks() {
+  save();
   $('books').innerHTML = '';
   state.books.forEach((p, i) => { const d = document.createElement('div'); d.className = 'sel'; d.innerHTML = `<span>📚 ${p}</span><button>Remove</button>`; d.querySelector('button').onclick = () => { state.books.splice(i, 1); renderBooks(); }; $('books').append(d); });
 }
@@ -118,5 +134,6 @@ $('go').onclick = async () => {
   try { await api('/api/build', { method: 'POST', body: JSON.stringify(body) }); } catch (e) { return ($('msg').textContent = e.message); }
   $('go').disabled = true; $('stop').disabled = false; $('msg').textContent = 'Building… this can take several minutes.'; watch();
 };
+document.addEventListener('change', save); $('name').addEventListener('input', save);
 $('stop').onclick = () => api('/api/cancel', { method: 'POST' });
 </script></body></html>
