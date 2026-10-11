@@ -23,6 +23,7 @@ tauri = { workspace = true, features = ["macos-private-api"] }
 tauri.workspace = true
 nexus-core = { path = "../../../crates/nexus-core" }
 nexus-agent = { path = "../../../crates/nexus-agent" }
+nexus-analyze = { path = "../../../crates/nexus-analyze" }
 nexus-fs = { path = "../../../crates/nexus-fs" }
 nexus-models = { path = "../../../crates/nexus-models" }
 nexus-llm = { path = "../../../crates/nexus-llm" }

@@ -78,6 +78,33 @@ fn var_names(list: &str) -> Vec<String> {
     out
 }
 
+/// Sampling from a prompt's `sampling:` line: `temperature=0.3 top_p=0.9 max_tokens=600 thinking=false`.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct PromptSampling {
+    pub temperature: f32,
+    pub top_p: f32,
+    pub max_tokens: u32,
+}
+
+/// Read the sampling line of a prompt file (sensible defaults for anything missing).
+pub fn sampling_of(src: &str) -> PromptSampling {
+    let meta = parse_meta(src);
+    let mut s = PromptSampling {
+        temperature: 0.3,
+        top_p: 0.9,
+        max_tokens: 600,
+    };
+    for part in meta.sampling.split_whitespace() {
+        match part.split_once('=') {
+            Some(("temperature", v)) => s.temperature = v.parse().unwrap_or(s.temperature),
+            Some(("top_p", v)) => s.top_p = v.parse().unwrap_or(s.top_p),
+            Some(("max_tokens", v)) => s.max_tokens = v.parse().unwrap_or(s.max_tokens),
+            _ => {}
+        }
+    }
+    s
+}
+
 /// Parse the meta header (empty when absent).
 pub fn parse_meta(src: &str) -> PromptMeta {
     let t = src.trim_start();

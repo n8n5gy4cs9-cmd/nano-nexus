@@ -466,6 +466,7 @@ pub async fn run_router(
             gate: cx.gate.clone(),
             reason: cx.reason.clone(),
             budget_tokens: cx.budget_tokens,
+            docs: cx.docs.clone(),
         };
         cx_run.reason = format!("to run {}", call.tool);
         let run = match tool.run(call.args, &cx_run).await {

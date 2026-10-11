@@ -26,6 +26,7 @@ include_dir.workspace = true
 async-trait.workspace = true
 specta.workspace = true
 nexus-fs = { path = "../nexus-fs" }
+nexus-analyze = { path = "../nexus-analyze" }
 
 [dev-dependencies]
 axum.workspace = true

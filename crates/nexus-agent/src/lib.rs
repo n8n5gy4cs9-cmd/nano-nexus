@@ -7,6 +7,7 @@
 pub mod budget;
 pub mod internal;
 pub mod jobs;
+pub mod pipelines;
 pub mod prompt;
 pub mod registry;
 pub mod router;

@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 111/229 tasks done (48%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 114/229 tasks done (49%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -160,9 +160,9 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T08.10** Secrets scanner (rules + entropy + redaction) + tests with fake secrets (2026-10-11)
 - [x] **T08.11** Log parser + template clustering + timeline + tests (2026-10-11)
 - [x] **T08.12** CSV/JSON profiler (streaming, reservoir sampling) + tests (2026-10-11)
-- [ ] **T08.13** Pipelines `folder_report` + narrative number validator
-- [ ] **T08.14** Pipelines `doc_summarize` (map-reduce) + `doc_qa` (BM25 + citations) + `doc_search` tool
-- [ ] **T08.15** Pipelines `tidy_plan`, `secrets_report`, `log_triage`, `data_profile`, `commit_message` + `scan_folder` tool
+- [x] **T08.13** Pipelines `folder_report` + narrative number validator (2026-10-11)
+- [x] **T08.14** Pipelines `doc_summarize` (map-reduce) + `doc_qa` (BM25 + citations) + `doc_search` tool (2026-10-11)
+- [x] **T08.15** Pipelines `tidy_plan`, `secrets_report`, `log_triage`, `data_profile`, `commit_message` + `scan_folder` tool (2026-10-11) — pipelines return a `StreamPlan` + artifact; app wiring is T08.16/T08.20
 - [ ] **T08.16** Store migration 0004 (reports, notifications, watches) + commands `analyze_*`, `reports_*`, `report_narrative`, `cleanup_plan`
 - [ ] **T08.17** UI Analyzer home + scan flow (pick folder → grant → progress → report)
 - [ ] **T08.18** UI report view: KPI cards, canvas treemap (zoom, breadcrumb), category bars, virtualized tabs, AI summary card

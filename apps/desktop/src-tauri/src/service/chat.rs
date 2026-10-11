@@ -63,13 +63,32 @@ fn home_dir() -> std::path::PathBuf {
         .unwrap_or_default()
 }
 
-/// Tools the router may use for `spec`: its allowed list, minus the ones that are not built yet.
+/// Tools the router may use for `spec`: its allowed list (all tools exist now).
 fn router_tools(spec: &nexus_agent::AssistantSpec) -> Vec<String> {
-    spec.tools
-        .allowed
+    spec.tools.allowed.clone()
+}
+
+/// Search indexes for long attached documents, so `doc_search` can cite pages.
+fn attached_docs(
+    attachments: &[nexus_core::chat::Attachment],
+) -> Vec<Arc<nexus_agent::pipelines::doc::DocIndex>> {
+    attachments
         .iter()
-        .filter(|t| !matches!(t.as_str(), "scan_folder" | "doc_search"))
-        .cloned()
+        .filter_map(|a| {
+            let text = a.snapshot.as_deref().filter(|t| t.chars().count() >= 2000)?;
+            let ex = nexus_analyze::extract::Extracted {
+                kind: "plain".into(),
+                title: None,
+                pages: vec![nexus_analyze::extract::Page {
+                    number: 1,
+                    text: text.to_owned(),
+                }],
+                scanned_pages: vec![],
+            };
+            nexus_agent::pipelines::doc::DocIndex::from_extracted(&a.label, &ex)
+                .ok()
+                .map(Arc::new)
+        })
         .collect()
 }
 
@@ -337,6 +356,7 @@ fn start_turn(
         tracing::warn!("prompt rendering failed, using the raw prompt: {e}");
         spec.prompt.system.clone()
     });
+    let docs = attached_docs(&user.attachments);
     let routed = spec.workflow.kind == "router" && !tool_names.is_empty();
     let (max_hops, always_route) = (
         spec.workflow.max_hops.unwrap_or(3),
@@ -389,7 +409,8 @@ fn start_turn(
                 assistant_slug.clone(),
                 Some(Arc::new(super::permissions::BrokerAsker { ctx: ctx.clone() })),
             );
-            let cx = ToolCx::new(Arc::new(gate));
+            let mut cx = ToolCx::new(Arc::new(gate));
+            cx.docs = docs;
             let request = RouterRequest {
                 user_text: &input.user_text,
                 allowed_tools: tool_names,

@@ -13,6 +13,7 @@ use serde::Serialize;
 use serde_json::{Map, Value};
 
 use crate::budget::estimate_tokens;
+use crate::pipelines::doc::{DocIndex, search_lines};
 
 /// Tool arguments as the router validated them (`path`, `query`, `expression`).
 pub type ToolArgs = Map<String, Value>;
@@ -157,6 +158,8 @@ pub struct ToolCx {
     /// Shown in permission prompts: "to read notes.md".
     pub reason: String,
     pub budget_tokens: u32,
+    /// Documents attached to this chat, searchable by `doc_search`.
+    pub docs: Vec<Arc<DocIndex>>,
 }
 
 impl ToolCx {
@@ -165,6 +168,7 @@ impl ToolCx {
             gate,
             reason: String::new(),
             budget_tokens: DEFAULT_TOOL_BUDGET,
+            docs: Vec::new(),
         }
     }
 }
@@ -911,7 +915,7 @@ impl Tool for Now {
 
 // ---- stubs until M08 ----------------------------------------------------------------------------
 
-/// `scan_folder` arrives with the analyzer (M08).
+/// Scan a folder and return its facts (no duplicate hashing, so it stays quick inside a chat turn).
 pub struct ScanFolder;
 
 #[async_trait]
@@ -930,12 +934,43 @@ impl Tool for ScanFolder {
             .map(|p| vec![(p, Access::Read)])
             .unwrap_or_default()
     }
-    async fn run(&self, _args: ToolArgs, _cx: &ToolCx) -> Result<ToolOutput, ToolError> {
-        Err(ToolError::Unavailable("scan_folder"))
+    async fn run(&self, args: ToolArgs, cx: &ToolCx) -> Result<ToolOutput, ToolError> {
+        let given = arg_path(&args)?;
+        let root = cx
+            .gate
+            .authorize(&given, Access::Read, &format!("to scan {}", base(&given)))
+            .await?;
+        if !root.is_dir() {
+            return Err(ToolError::Invalid(format!(
+                "{} is a file; use file_info or read_file.",
+                root.display()
+            )));
+        }
+        let mut opts = nexus_analyze::ScanOptions::new(&root);
+        opts.duplicates = nexus_analyze::DupMode::Off;
+        opts.max_entries = 200_000;
+        let report = tokio::task::spawn_blocking(move || {
+            nexus_analyze::scan_folder(&opts, &|_| {}, &tokio_util::sync::CancellationToken::new())
+        })
+        .await
+        .map_err(|e| ToolError::Invalid(e.to_string()))?
+        .map_err(|e| ToolError::Invalid(e.to_string()))?;
+        let facts = nexus_analyze::facts::folder_facts(&report, &root.display().to_string());
+        let (text, truncated) = truncate_to_tokens(&facts, cx.budget_tokens);
+        Ok(ToolOutput {
+            llm_text: format!(
+                "<tool_result name=\"scan_folder\">\n{text}{}\n</tool_result>",
+                if truncated { "\n[truncated]" } else { "" }
+            ),
+            ui: Some(
+                serde_json::json!({"path": root.display().to_string(), "files": report.totals.files, "bytes": report.totals.bytes}),
+            ),
+            summary: format!("Scanned {} ({} files)", base(&root), report.totals.files),
+        })
     }
 }
 
-/// `doc_search` arrives with the document pipeline (M08).
+/// Search inside the documents attached to this chat (BM25), returning page-cited snippets.
 pub struct DocSearch;
 
 #[async_trait]
@@ -952,8 +987,34 @@ impl Tool for DocSearch {
     fn required_access(&self, _args: &ToolArgs) -> Vec<(PathBuf, Access)> {
         Vec::new()
     }
-    async fn run(&self, _args: ToolArgs, _cx: &ToolCx) -> Result<ToolOutput, ToolError> {
-        Err(ToolError::Unavailable("doc_search"))
+    async fn run(&self, args: ToolArgs, cx: &ToolCx) -> Result<ToolOutput, ToolError> {
+        let query = arg_str(&args, "query")?.to_owned();
+        if cx.docs.is_empty() {
+            return Err(ToolError::Invalid(
+                "No document is attached to this chat. Ask the user to attach one.".into(),
+            ));
+        }
+        let mut out = String::new();
+        let mut hits = 0;
+        for d in &cx.docs {
+            let lines = search_lines(d, &query, 3);
+            hits += lines.len();
+            if !lines.is_empty() {
+                out.push_str(&format!("{}:\n{}\n", d.title, lines.join("\n")));
+            }
+        }
+        if hits == 0 {
+            out.push_str("(no matches)\n");
+        }
+        let (text, _) = truncate_to_tokens(&out, cx.budget_tokens);
+        Ok(ToolOutput {
+            llm_text: format!("<tool_result name=\"doc_search\" query=\"{query}\">\n{text}</tool_result>"),
+            ui: Some(serde_json::json!({"query": query, "matches": hits})),
+            summary: format!(
+                "Searched the document for “{query}” ({hits} match{})",
+                if hits == 1 { "" } else { "es" }
+            ),
+        })
     }
 }
 
@@ -1268,16 +1329,71 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn stubs_say_they_are_unavailable() {
+    async fn scan_folder_returns_facts_within_the_budget() {
+        let d = fixture();
+        let e = engine();
+        grant(&e, d.path(), true);
+        let out = ScanFolder
+            .run(args(&[("path", d.path().to_str().unwrap())]), &cx(e.clone()))
+            .await
+            .unwrap();
+        assert!(
+            out.llm_text.contains("<facts>") && out.llm_text.contains("files: 4"),
+            "{}",
+            out.llm_text
+        );
+        assert!(out.summary.starts_with("Scanned ") && out.summary.contains("(4 files)"));
+        let err = ScanFolder
+            .run(
+                args(&[("path", d.path().join("notes.md").to_str().unwrap())]),
+                &cx(e),
+            )
+            .await
+            .unwrap_err();
+        assert!(err.for_model().contains("is a file"));
+    }
+
+    #[tokio::test]
+    async fn doc_search_cites_pages_and_needs_an_attached_document() {
         let c = cx(engine());
-        assert!(matches!(
-            ScanFolder.run(args(&[("path", "/x")]), &c).await,
-            Err(ToolError::Unavailable(_))
-        ));
-        assert!(matches!(
-            DocSearch.run(args(&[("query", "x")]), &c).await,
-            Err(ToolError::Unavailable(_))
-        ));
+        assert!(
+            DocSearch
+                .run(args(&[("query", "warranty")]), &c)
+                .await
+                .unwrap_err()
+                .for_model()
+                .contains("No document is attached")
+        );
+        let ex = nexus_analyze::extract::Extracted {
+            kind: "pdf".into(),
+            title: None,
+            pages: vec![
+                nexus_analyze::extract::Page {
+                    number: 1,
+                    text: "Shipping takes five days.".into(),
+                },
+                nexus_analyze::extract::Page {
+                    number: 2,
+                    text: "The warranty covers twenty-four months.".into(),
+                },
+            ],
+            scanned_pages: vec![],
+        };
+        let mut c = cx(engine());
+        c.docs
+            .push(Arc::new(DocIndex::from_extracted("terms.pdf", &ex).unwrap()));
+        let out = DocSearch
+            .run(args(&[("query", "warranty months")]), &c)
+            .await
+            .unwrap();
+        assert!(
+            out.llm_text.contains("terms.pdf:") && out.llm_text.contains("p. "),
+            "{}",
+            out.llm_text
+        );
+        assert!(out.summary.contains("1 match"));
+        let none = DocSearch.run(args(&[("query", "zebra")]), &c).await.unwrap();
+        assert!(none.llm_text.contains("(no matches)"));
     }
 
     #[test]
