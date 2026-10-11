@@ -70,6 +70,8 @@ pub struct AppState {
     pub chats: ChatJobs,
     /// Every file access is decided here (grants + deny list + audit).
     pub perms: Arc<PermissionEngine>,
+    /// Queues audit entries and writes them in batches.
+    pub audit: Arc<crate::audit::AuditWriter>,
     /// Conversations with a summary job in flight (at most one each).
     pub summarizing: Mutex<HashSet<ConversationId>>,
     pub bus: tokio::sync::broadcast::Sender<AppEvent>,
@@ -136,12 +138,8 @@ impl AppState {
         let supervisor = Supervisor::new(None);
         let scheduler = Scheduler::new(supervisor.clone());
         let engine = engine.unwrap_or_else(|| Self::default_engine(&scheduler, &supervisor));
-        let perms = Self::build_permissions(
-            &store,
-            &root.join("home"),
-            &paths.data,
-            Arc::new(nexus_fs::NullAudit),
-        );
+        let audit = crate::audit::AuditWriter::start(store.clone());
+        let perms = Self::build_permissions(&store, &root.join("home"), &paths.data, audit.clone());
         Arc::new(AppState {
             paths,
             store,
@@ -150,6 +148,7 @@ impl AppState {
             engine,
             chats: ChatJobs::default(),
             perms,
+            audit,
             summarizing: Default::default(),
             bus: tokio::sync::broadcast::channel(64).0,
             settings: RwLock::new(Settings::default()),

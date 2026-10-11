@@ -1,5 +1,6 @@
 //! NanoNexus desktop shell: thin Tauri commands over the `nexus-*` crates.
 
+pub mod audit;
 pub mod bindings;
 pub mod commands;
 pub mod notify;
@@ -82,7 +83,9 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     }
     let engine = AppState::default_engine(&scheduler, &supervisor);
     let home = app.path().home_dir()?;
-    let perms = AppState::build_permissions(&store, &home, &paths.data, Arc::new(nexus_fs::NullAudit));
+    // The writer task needs the async runtime, like the scheduler.
+    let audit = tauri::async_runtime::block_on(async { audit::AuditWriter::start(store.clone()) });
+    let perms = AppState::build_permissions(&store, &home, &paths.data, audit.clone());
     app.manage(Ctx::new(AppState {
         paths,
         store,
@@ -91,6 +94,7 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         engine,
         chats: Default::default(),
         perms,
+        audit,
         summarizing: Default::default(),
         bus: tokio::sync::broadcast::channel(64).0,
         settings: RwLock::new(settings),
@@ -136,7 +140,10 @@ pub fn run() {
             matches!(event, RunEvent::ExitRequested { .. } | RunEvent::Exit),
             handle.try_state::<Ctx>(),
         ) {
-            tauri::async_runtime::block_on(state.supervisor.shutdown());
+            tauri::async_runtime::block_on(async {
+                state.supervisor.shutdown().await;
+                state.audit.flush().await;
+            });
         }
     });
 }
