@@ -4,7 +4,7 @@ use nexus_core::events::{NotificationAction, NotificationLevel, NotificationPayl
 use nexus_core::ids::NotificationId;
 use rusqlite::{Row, params};
 
-use crate::{Store, StoreError};
+use crate::{Store, StoreError, now_ms};
 
 /// What a caller supplies; id, `read`, and the timestamp are assigned on insert.
 #[derive(Clone, Debug)]
@@ -46,13 +46,6 @@ fn row(r: &Row<'_>) -> rusqlite::Result<NotificationPayload> {
         read: r.get::<_, i64>("read")? != 0,
         created_at: r.get("created_at")?,
     })
-}
-
-fn now_ms() -> i64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_millis() as i64)
-        .unwrap_or(0)
 }
 
 impl Store {

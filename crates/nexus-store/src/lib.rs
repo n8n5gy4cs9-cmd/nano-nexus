@@ -3,6 +3,7 @@
 //!
 //! **Never edit an applied migration; add a new one.**
 
+pub mod chat;
 mod migrate;
 pub mod notifications;
 pub mod settings;
@@ -13,8 +14,17 @@ use std::sync::{Mutex, MutexGuard};
 use nexus_core::error::NexusError;
 use rusqlite::Connection;
 
+pub use chat::{ConversationPatch, MessageFinish};
 pub use migrate::{MIGRATIONS, schema_version};
 pub use notifications::NewNotification;
+
+/// Current time as unix milliseconds (UTC).
+pub(crate) fn now_ms() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis() as i64)
+        .unwrap_or(0)
+}
 
 /// Errors from the store.
 #[derive(Debug, thiserror::Error)]
@@ -27,6 +37,8 @@ pub enum StoreError {
     Invalid { key: String, reason: String },
     #[error("database was created by a newer NanoNexus (schema {found}, this build knows {known})")]
     TooNew { found: u32, known: u32 },
+    #[error("{0} not found")]
+    NotFound(&'static str),
     #[error("database lock poisoned")]
     Poisoned,
 }
@@ -35,6 +47,7 @@ impl From<StoreError> for NexusError {
     fn from(e: StoreError) -> Self {
         match e {
             StoreError::Invalid { .. } => NexusError::InvalidInput(e.to_string()),
+            StoreError::NotFound(what) => NexusError::NotFound(what.to_owned()),
             other => NexusError::Internal(other.to_string()),
         }
     }
