@@ -1,6 +1,7 @@
 //! Rename Forge: code understanding (M09). Tree-sitter parsing, symbol index, import resolution.
 
 pub mod file_facts;
+pub mod imports;
 pub mod index;
 pub mod lang;
 pub mod model;

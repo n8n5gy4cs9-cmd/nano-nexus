@@ -14,6 +14,7 @@
 (method_invocation object: (_) name: (identifier) @ref.member)
 
 (import_declaration [(scoped_identifier) (identifier)] @import.module)
+(package_declaration [(scoped_identifier) (identifier)] @import.module)
 
 [(identifier) (type_identifier)] @ref
 (string_literal) @string

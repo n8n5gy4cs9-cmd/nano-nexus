@@ -67,6 +67,13 @@ pub struct TextFact {
     pub text: String,
 }
 
+/// One import statement: its module specifier and the names it brings in.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ImportFact {
+    pub module: TextFact,
+    pub names: Vec<TextFact>,
+}
+
 /// Everything the index remembers about one parsed file.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FileFacts {
@@ -74,6 +81,7 @@ pub struct FileFacts {
     pub refs: Vec<RefFact>,
     pub import_modules: Vec<TextFact>,
     pub import_names: Vec<TextFact>,
+    pub imports: Vec<ImportFact>,
     pub strings: Vec<TextFact>,
     pub package: Option<String>,
 }
@@ -551,6 +559,7 @@ pub fn extract(lang: Lang, src: &[u8]) -> Option<FileFacts> {
     };
     let import_modules = texts(TagKind::ImportModule);
     let import_names = texts(TagKind::ImportName);
+    let imports = group_imports(lang, root, &import_modules, &import_names);
     let strings = texts(TagKind::Str);
 
     let package = package_of(lang, root, src);
@@ -559,9 +568,44 @@ pub fn extract(lang: Lang, src: &[u8]) -> Option<FileFacts> {
         refs,
         import_modules,
         import_names,
+        imports,
         strings,
         package,
     })
+}
+
+/// Attach each imported name to the statement of its module specifier.
+fn group_imports(lang: Lang, root: Node<'_>, modules: &[TextFact], names: &[TextFact]) -> Vec<ImportFact> {
+    let stmt_kinds: &[&str] = match lang {
+        Lang::Python => &["import_statement", "import_from_statement"],
+        Lang::JavaScript | Lang::TypeScript | Lang::Tsx => &["import_statement", "export_statement", "call_expression"],
+        Lang::Rust => &["use_declaration", "mod_item"],
+        Lang::Go => &["import_spec"],
+        Lang::Java => &["import_declaration", "package_declaration"],
+        Lang::CSharp => &["using_directive"],
+    };
+    modules
+        .iter()
+        .map(|m| {
+            let range = root
+                .descendant_for_byte_range(m.span.start as usize, m.span.end as usize)
+                .and_then(|mut n| loop {
+                    if stmt_kinds.contains(&n.kind()) {
+                        break Some((n.start_byte() as u32, n.end_byte() as u32));
+                    }
+                    n = n.parent()?;
+                })
+                .unwrap_or((m.span.start, m.span.end));
+            ImportFact {
+                module: m.clone(),
+                names: names
+                    .iter()
+                    .filter(|n| n.span.start >= range.0 && n.span.end <= range.1)
+                    .cloned()
+                    .collect(),
+            }
+        })
+        .collect()
 }
 
 /// `package x.y;` (Java), `package main` (Go), `namespace A.B` (C#): the package/namespace text.
