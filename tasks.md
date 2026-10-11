@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 19/217 tasks done (8%) · **Next:** T00.07 Root `package.json`, `pnpm-workspace.yaml`, `.nvmrc`, `.editorconfig`
+**Progress:** 20/217 tasks done (9%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md`
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -35,7 +35,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T00.04** `nexus-core::error` (ErrorCode, NexusError, IpcError) + serialization tests (2026-10-11)
 - [x] **T00.05** `nexus-core::paths` (AppPaths, ensure_dirs, portable mode) + tests (2026-10-11)
 - [x] **T00.06** `nexus-core::settings` (all keys + defaults, incl. share.*) + `events` types + tests (2026-10-11)
-- [ ] **T00.07** Root `package.json`, `pnpm-workspace.yaml`, `.nvmrc`, `.editorconfig`
+- [x] **T00.07** Root `package.json`, `pnpm-workspace.yaml`, `.nvmrc`, `.editorconfig` (2026-10-11)
 - [ ] **T00.08** 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md`
 - [ ] **T00.09** (optional) GitHub Actions: `scripts/check.sh` on macos-14
 - [ ] ⭐ **T00.10** Exit check: `scripts/check.sh` green; `cargo doc -p nexus-core` has no warnings
