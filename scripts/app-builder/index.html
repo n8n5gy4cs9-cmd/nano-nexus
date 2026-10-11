@@ -55,8 +55,9 @@ const $ = id => document.getElementById(id);
 const gb = b => b >= 1073741824 ? (b / 1073741824).toFixed(2) + ' GB' : (b / 1048576).toFixed(0) + ' MB';
 const state = { ggufs: [], catalog: new Set(), books: [] };
 const KEY = 'nanonexus.appBuilder.v1';
-const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ name: $('name').value, ggufs: state.ggufs, catalog: [...state.catalog], books: state.books, def: $('def').value, target: document.querySelector('input[name=t]:checked')?.value, fmt: $('fmt').value })); } catch {} };
-const saved = (() => { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch { return null; } })();
+let saveTimer = null;
+const save = () => { try { const snap = JSON.stringify({ name: $('name').value, ggufs: state.ggufs, catalog: [...state.catalog], books: state.books, def: $('def').value, target: document.querySelector('input[name=t]:checked')?.value, fmt: $('fmt').value }); localStorage.setItem(KEY, snap); clearTimeout(saveTimer); saveTimer = setTimeout(() => api('/api/state', { method: 'PUT', body: snap }).catch(() => {}), 300); } catch {} };
+let saved = (() => { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch { return null; } })();
 
 function renderChosen() {
   save();
@@ -95,7 +96,8 @@ function browser(el, dir, pickFiles, onPick) {
   }).catch(e => alert(e.message));
 }
 
-api('/api/info').then(info => {
+// The server keeps the last choices in bundles/local/app-builder-state.json, so they survive a new port/token.
+api('/api/state').catch(() => null).then(s => { if (s) saved = s; return api('/api/info'); }).then(info => {
   $('dl').innerHTML = info.downloadsGguf.length ? '' : '<div class="mut">No .gguf files found in ' + info.downloads + '</div>';
   info.downloadsGguf.forEach(e => { const b = document.createElement('label'); b.innerHTML = `<input type="checkbox"> ${e.name} <span class="mut">${gb(e.size)}</span>`; b.querySelector('input').onchange = ev => { if (ev.target.checked) addGguf(e); else { state.ggufs = state.ggufs.filter(g => g.path !== e.path); renderChosen(); } }; $('dl').append(b); });
   info.catalog.forEach(m => { const b = document.createElement('label'); b.innerHTML = `<input type="checkbox"> ${m.name} <span class="mut">${m.quant ?? ''}</span>`; b.querySelector('input').onchange = ev => { ev.target.checked ? state.catalog.add(m.id) : state.catalog.delete(m.id); renderDefault(); }; $('cat').append(b); });

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // app-builder.mjs: a tiny local web UI around scripts/bundle.mjs. Pick models (your own .gguf from
 // Downloads or anywhere, catalog models), reference-library folders, a target, and press Build.
+// Remembers your last choices in bundles/local/app-builder-state.json (git-ignored).
 // Listens on 127.0.0.1 only, behind a random token in the URL; exits after 30 idle minutes.
 //
 //   node scripts/app-builder.mjs [--port 8787] [--no-open]
@@ -15,6 +16,23 @@ import { fileURLToPath } from 'node:url';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 const IDLE_MS = 30 * 60 * 1000;
+const DEFAULT_PORT = 8787;
+const STATE_FILE = path.join(ROOT, 'bundles', 'local', 'app-builder-state.json');
+
+/** The last choices made in the page (null when none). */
+export function readState() {
+  try {
+    return JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+export function writeState(state) {
+  if (!state || typeof state !== 'object' || Array.isArray(state)) throw new Error('bad state');
+  fs.mkdirSync(path.dirname(STATE_FILE), { recursive: true });
+  fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2) + '\n');
+}
 
 export function listDir(dir) {
   const abs = path.resolve(dir);
@@ -67,7 +85,7 @@ export function buildArgs(b) {
   return args;
 }
 
-export function startServer({ port = 0, open = true } = {}) {
+export function startServer({ port = DEFAULT_PORT, open = true } = {}) {
   const token = crypto.randomBytes(16).toString('hex');
   let last = Date.now();
   let job = null; // { child, log: string[], done: boolean, code: number|null }
@@ -113,6 +131,20 @@ export function startServer({ port = 0, open = true } = {}) {
           catalog,
           running: !!job && !job.done,
         });
+      }
+      if (url.pathname === '/api/state') {
+        if (req.method !== 'PUT') return json(res, 200, readState());
+        let body = '';
+        req.on('data', (c) => body.length < 200_000 && (body += c));
+        req.on('end', () => {
+          try {
+            writeState(JSON.parse(body || 'null'));
+            json(res, 200, { ok: true });
+          } catch (e) {
+            json(res, 400, { error: e.message });
+          }
+        });
+        return;
       }
       if (url.pathname === '/api/ls') return json(res, 200, listDir(url.searchParams.get('dir') || os.homedir()));
       if (url.pathname === '/api/log') {
@@ -167,8 +199,10 @@ export function startServer({ port = 0, open = true } = {}) {
   }, 60_000);
   idle.unref();
 
+  // A fixed port keeps the page's origin (and its remembered choices) the same between runs;
+  // if it is taken, use any free port (the server-side state file still restores the choices).
   return new Promise((resolve) => {
-    server.listen(port, '127.0.0.1', () => {
+    const onListening = () => {
       const url = `http://127.0.0.1:${server.address().port}/?t=${token}`;
       console.log(`NanoNexus App Builder: ${url}\n(Ctrl-C to stop)`);
       if (open) {
@@ -176,7 +210,12 @@ export function startServer({ port = 0, open = true } = {}) {
         spawn(cmd[0], cmd[1], { stdio: 'ignore', detached: true }).on('error', () => {}).unref();
       }
       resolve({ server, url, token });
+    };
+    server.once('error', (e) => {
+      if (e.code === 'EADDRINUSE' && port !== 0) server.listen(0, '127.0.0.1', onListening);
+      else throw e;
     });
+    server.listen(port, '127.0.0.1', onListening);
   });
 }
 
@@ -184,5 +223,5 @@ const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPat
 if (isMain) {
   const a = process.argv.slice(2);
   const pi = a.indexOf('--port');
-  startServer({ port: pi >= 0 ? Number(a[pi + 1]) : 0, open: !a.includes('--no-open') });
+  startServer({ port: pi >= 0 ? Number(a[pi + 1]) : DEFAULT_PORT, open: !a.includes('--no-open') });
 }
