@@ -57,6 +57,8 @@ impl ChatJobs {
 pub enum AppEvent {
     /// A conversation's title or summary changed.
     ConversationUpdated(ConversationId),
+    /// A tool needs a folder grant; the UI shows the permission modal.
+    PermissionRequest(crate::service::permissions::PermissionRequest),
 }
 
 /// Everything services need. Later milestones add jobs, permissions, and the assistant registry.
@@ -70,6 +72,7 @@ pub struct AppState {
     pub chats: ChatJobs,
     /// Every file access is decided here (grants + deny list + audit).
     pub perms: Arc<PermissionEngine>,
+    pub broker: crate::service::permissions::PermissionBroker,
     /// Queues audit entries and writes them in batches.
     pub audit: Arc<crate::audit::AuditWriter>,
     /// Conversations with a summary job in flight (at most one each).
@@ -148,6 +151,7 @@ impl AppState {
             engine,
             chats: ChatJobs::default(),
             perms,
+            broker: Default::default(),
             audit,
             summarizing: Default::default(),
             bus: tokio::sync::broadcast::channel(64).0,

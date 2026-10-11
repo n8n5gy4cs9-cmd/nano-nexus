@@ -53,9 +53,30 @@ fn bridge_app_events(app: &tauri::AppHandle) {
     let mut rx = app.state::<Ctx>().bus.subscribe();
     tauri::async_runtime::spawn(async move {
         while let Ok(event) = rx.recv().await {
-            let state::AppEvent::ConversationUpdated(id) = event;
-            if let Err(e) = commands::chat::ConversationUpdated(id).emit(&app) {
-                tracing::warn!("could not emit conversation:updated: {e}");
+            match event {
+                state::AppEvent::ConversationUpdated(id) => {
+                    if let Err(e) = commands::chat::ConversationUpdated(id).emit(&app) {
+                        tracing::warn!("could not emit conversation:updated: {e}");
+                    }
+                }
+                state::AppEvent::PermissionRequest(req) => {
+                    let focused = app.get_webview_window("main").and_then(|w| w.is_focused().ok()).unwrap_or(false);
+                    if !focused {
+                        let _ = notify::notify(
+                            &app,
+                            nexus_store::NewNotification {
+                                level: nexus_core::events::NotificationLevel::Info,
+                                kind: "permission".into(),
+                                title: format!("{} needs access", req.assistant),
+                                body: Some(req.path.clone()),
+                                action: None,
+                            },
+                        );
+                    }
+                    if let Err(e) = commands::permissions::PermissionRequested(req).emit(&app) {
+                        tracing::warn!("could not emit permission:request: {e}");
+                    }
+                }
             }
         }
     });
@@ -94,6 +115,7 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         engine,
         chats: Default::default(),
         perms,
+        broker: Default::default(),
         audit,
         summarizing: Default::default(),
         bus: tokio::sync::broadcast::channel(64).0,
