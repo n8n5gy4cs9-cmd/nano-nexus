@@ -15,12 +15,10 @@ workspace = true
 [build-dependencies]
 tauri-build.workspace = true
 
-[target.'cfg(target_os = "macos")'.dependencies]
-# Required by `macOSPrivateApi` in tauri.macos.conf.json (transparent window + vibrancy). Must match the config.
-tauri = { workspace = true, features = ["macos-private-api"] }
-
 [dependencies]
-tauri.workspace = true
+# `macos-private-api` must sit on this plain entry: tauri-build's manifest scan ignores target tables.
+# It is required by `macOSPrivateApi` in tauri.macos.conf.json (transparent window + vibrancy) and is a no-op elsewhere.
+tauri = { workspace = true, features = ["macos-private-api"] }
 nexus-core = { path = "../../../crates/nexus-core" }
 nexus-agent = { path = "../../../crates/nexus-agent" }
 nexus-analyze = { path = "../../../crates/nexus-analyze" }
