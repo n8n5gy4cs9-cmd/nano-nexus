@@ -65,8 +65,8 @@ pub enum NotificationLevel {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
 pub struct NotificationAction {
     pub label: String,
+    /// In-app route, query string included (e.g. `/models?focus=abc`).
     pub route: String,
-    pub args: Option<serde_json::Value>,
 }
 
 /// Payload of `notification:new`.
@@ -132,7 +132,6 @@ mod tests {
             action: Some(NotificationAction {
                 label: "Open".into(),
                 route: "/models".into(),
-                args: None,
             }),
             read: false,
             created_at: 1,

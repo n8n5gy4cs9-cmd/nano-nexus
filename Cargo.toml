@@ -43,3 +43,4 @@ tauri-build = "2.7"
 rusqlite = { version = "0.40", features = ["bundled"] } # bundled SQLite incl. FTS5 (DATA-AND-IPC §1)
 tauri-specta = { version = "=2.0.0-rc.25", features = ["derive", "typescript"] } # ADR-006; exact pin during the rc period
 specta-typescript = "=0.0.12"
+tauri-plugin-notification = "2.6" # OS notifications (ADR-001 plugin set); 2.x only

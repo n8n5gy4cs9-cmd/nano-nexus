@@ -4,7 +4,7 @@
 use specta_typescript::Typescript;
 use tauri_specta::{Builder, collect_commands, collect_events};
 
-use crate::commands::{app, runtime, settings};
+use crate::commands::{app, notifications, runtime, settings};
 
 /// All commands and events.
 pub fn builder() -> Builder<tauri::Wry> {
@@ -16,8 +16,16 @@ pub fn builder() -> Builder<tauri::Wry> {
             runtime::runtime_logs,
             settings::settings_get,
             settings::settings_set,
+            notifications::notifications_list,
+            notifications::notifications_unread_count,
+            notifications::notifications_mark_read,
+            notifications::notifications_clear,
+            notifications::notifications_send_test,
         ])
-        .events(collect_events![runtime::RuntimeStatus])
+        .events(collect_events![
+            runtime::RuntimeStatus,
+            crate::notify::NotificationNew
+        ])
         // Timestamps (ms) and byte counts stay far below 2^53, so numbers are exact.
         .dangerously_cast_bigints_to_number()
 }

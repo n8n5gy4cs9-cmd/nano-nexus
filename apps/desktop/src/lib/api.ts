@@ -3,7 +3,7 @@
  * it works on desktop (Tauri) and, later, in the LAN Share web build. Never call `invoke` directly
  * (an ESLint rule enforces this). Types come from the generated `bindings.ts`.
  */
-import type { AppInfo, RuntimeState, Settings } from "@/bindings";
+import type { AppInfo, NotificationPayload, RuntimeState, Settings } from "@/bindings";
 
 import { getTransport } from "./transport";
 import type { Unsubscribe } from "./transport";
@@ -22,6 +22,17 @@ export const api = {
     /** Subscribe to `runtime:status`. */
     onStatus: (handler: (state: RuntimeState) => void): Promise<Unsubscribe> =>
       getTransport().on<RuntimeState>("runtime:status", handler),
+  },
+  notifications: {
+    list: (limit: number) => getTransport().call<NotificationPayload[]>("notifications_list", { limit }),
+    unreadCount: () => getTransport().call<number>("notifications_unread_count"),
+    /** Empty `ids` marks everything read. */
+    markRead: (ids: string[]) => getTransport().call<null>("notifications_mark_read", { ids }),
+    clear: () => getTransport().call<null>("notifications_clear"),
+    sendTest: () => getTransport().call<NotificationPayload>("notifications_send_test"),
+    /** Subscribe to `notification:new`. */
+    onNew: (handler: (n: NotificationPayload) => void): Promise<Unsubscribe> =>
+      getTransport().on<NotificationPayload>("notification:new", handler),
   },
   settings: {
     get: () => getTransport().call<Settings>("settings_get"),

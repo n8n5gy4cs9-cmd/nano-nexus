@@ -4,6 +4,7 @@
 //! **Never edit an applied migration; add a new one.**
 
 mod migrate;
+pub mod notifications;
 pub mod settings;
 
 use std::path::Path;
@@ -13,6 +14,7 @@ use nexus_core::error::NexusError;
 use rusqlite::Connection;
 
 pub use migrate::{MIGRATIONS, schema_version};
+pub use notifications::NewNotification;
 
 /// Errors from the store.
 #[derive(Debug, thiserror::Error)]

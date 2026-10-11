@@ -3,5 +3,5 @@
   "identifier": "default",
   "description": "Main window permissions. No fs and no shell plugin: all file access goes through our Rust commands. Plugin permissions are added together with the plugin (notification, dialog, opener, window-state).",
   "windows": ["main"],
-  "permissions": ["core:default"]
+  "permissions": ["core:default", "notification:default"]
 }

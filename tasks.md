@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 45/217 tasks done (20%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 46/217 tasks done (21%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -76,7 +76,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T03.09** Shell UI: TitleBar (drag region), Sidebar nav (8 sections), placeholder pages, Inspector toggle (2026-10-11)
 - [x] **T03.10** RuntimePill + popover (status, model, ctx, logs, restart) wired to `runtime:status` (2026-10-11)
 - [x] **T03.11** macOS vibrancy sidebar + transparent window; Windows Mica + native decorations — macOS vibrancy done (config + CSS, untested off-Mac); Windows Mica deferred, see QUESTIONS Q-2 (2026-10-11)
-- [ ] **T03.12** Notifications plumbing: plugin, `notify()` service (DB + emit + OS when unfocused), bell popover, test notification
+- [x] **T03.12** Notifications plumbing: plugin, `notify()` service (DB + emit + OS when unfocused), bell popover, test notification (2026-10-11)
 - [ ] **T03.13** App icon (hexagon nexus) 1024px → `pnpm tauri icon`
 - [ ] **T03.14** 🍎 Walking-skeleton `.app` (overlay config with default model) → move to /Applications → works offline → notification → no orphan
 - [ ] **T03.15** Write `scripts/fetch-runtime-windows.mjs` (GitHub release digest verification, extract, prune, lock) + mock test

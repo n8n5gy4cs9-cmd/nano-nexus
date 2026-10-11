@@ -2,6 +2,7 @@
 
 pub mod bindings;
 pub mod commands;
+pub mod notify;
 pub mod runtime;
 pub mod runtime_paths;
 pub mod state;
@@ -69,10 +70,23 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 
 /// Build and run the Tauri application.
 pub fn run() {
-    let app = match tauri::Builder::default()
-        .setup(setup)
-        .build(tauri::generate_context!())
+    let specta = bindings::builder();
+    // Debug builds regenerate the TypeScript bindings on every launch.
+    #[cfg(debug_assertions)]
+    if let Err(e) =
+        bindings::export(&std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../src/bindings.ts"))
     {
+        eprintln!("could not export bindings.ts: {e}");
+    }
+    let built = tauri::Builder::default()
+        .plugin(tauri_plugin_notification::init())
+        .invoke_handler(specta.invoke_handler())
+        .setup(move |app| {
+            specta.mount_events(app);
+            setup(app)
+        })
+        .build(tauri::generate_context!());
+    let app = match built {
         Ok(app) => app,
         Err(e) => {
             eprintln!("error while building NanoNexus: {e}");

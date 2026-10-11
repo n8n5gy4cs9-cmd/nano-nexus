@@ -12,10 +12,19 @@ export const commands = {
 	settingsGet: () => typedError<Settings, IpcError>(__TAURI_INVOKE("settings_get")),
 	/**  Set one key (dotted name, e.g. `"ui.theme"`). Unknown keys and wrongly typed values are rejected. */
 	settingsSet: (key: string, value: SettingValue) => typedError<Settings, IpcError>(__TAURI_INVOKE("settings_set", { key, value })),
+	/**  Newest first. */
+	notificationsList: (limit: number) => typedError<NotificationPayload[], IpcError>(__TAURI_INVOKE("notifications_list", { limit })),
+	notificationsUnreadCount: () => typedError<number, IpcError>(__TAURI_INVOKE("notifications_unread_count")),
+	/**  Mark the given ids read; an empty list marks everything read. */
+	notificationsMarkRead: (ids: string[]) => typedError<null, IpcError>(__TAURI_INVOKE("notifications_mark_read", { ids })),
+	notificationsClear: () => typedError<null, IpcError>(__TAURI_INVOKE("notifications_clear")),
+	/**  "Send test notification" (shown in dev builds). */
+	notificationsSendTest: () => typedError<NotificationPayload, IpcError>(__TAURI_INVOKE("notifications_send_test")),
 };
 
 /** Events */
 export const events = {
+	notificationNew: makeEvent<NotificationNew>("notification:new"),
 	runtimeStatus: makeEvent<RuntimeStatus>("runtime:status"),
 };
 
@@ -37,6 +46,35 @@ export type IpcError = {
 	code: ErrorCode,
 	message: string,
 	detail: string | null,
+};
+
+/**  A click action attached to a notification. */
+export type NotificationAction = {
+	label: string,
+	/**  In-app route, query string included (e.g. `/models?focus=abc`). */
+	route: string,
+};
+
+/**  A notification. */
+export type NotificationId = string;
+
+/**  Severity of a notification. */
+export type NotificationLevel = "info" | "success" | "warning" | "error";
+
+/**  Global event `notification:new`. */
+export type NotificationNew = NotificationPayload;
+
+/**  Payload of `notification:new`. */
+export type NotificationPayload = {
+	id: NotificationId,
+	level: NotificationLevel,
+	kind: string,
+	title: string,
+	body: string | null,
+	action: NotificationAction | null,
+	read: boolean,
+	/**  Unix milliseconds (UTC). */
+	created_at: number,
 };
 
 /**  State of the llama-server supervisor (published as `runtime:status`). */
