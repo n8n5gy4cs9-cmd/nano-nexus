@@ -23,4 +23,6 @@ tracing.workspace = true
 time.workspace = true
 
 [dev-dependencies]
+axum.workspace = true
 insta.workspace = true
+secrecy.workspace = true

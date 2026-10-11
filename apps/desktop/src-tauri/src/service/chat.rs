@@ -302,6 +302,7 @@ fn start_turn(
 
     let ctx = Arc::clone(ctx);
     let assistant_id = placeholder.id.clone();
+    let conv_id = conv.id.clone();
     let attachments = user.attachments.clone();
     tokio::spawn(async move {
         // engine -> persist (raw, ordered) -> coalesce (16 ms / 32 chars) -> UI
@@ -332,8 +333,118 @@ fn start_turn(
             let _ = ctx.store.set_attachment_tokens(&a.id, *tokens);
         }
         ctx.chats.finish(&assistant_id);
+        if outcome.status == MessageStatus::Done {
+            after_turn(&ctx, &conv_id, &outcome);
+        }
     });
     Ok(placeholder.id)
+}
+
+/// Background follow-ups of a finished answer: a title after the first exchange, and a rolling
+/// summary when older messages no longer fit the context.
+fn after_turn(ctx: &Ctx, conv_id: &ConversationId, outcome: &nexus_agent::TurnOutcome) {
+    maybe_title(ctx, conv_id);
+    if outcome.needs_summary && !outcome.dropped.is_empty() {
+        maybe_summarize(ctx, conv_id, outcome.dropped.clone());
+    }
+}
+
+fn maybe_title(ctx: &Ctx, conv_id: &ConversationId) {
+    let Ok(Some(conv)) = ctx.store.get_conversation(conv_id) else {
+        return;
+    };
+    if conv.title != "New chat" {
+        return;
+    }
+    let Ok(msgs) = ctx.store.list_messages(conv_id) else {
+        return;
+    };
+    let user = msgs.iter().find(|m| m.role == MessageRole::User);
+    let answer = msgs
+        .iter()
+        .find(|m| m.role == MessageRole::Assistant && m.status == MessageStatus::Done);
+    let (Some(user), Some(answer)) = (user, answer) else {
+        return;
+    };
+    // Only the first exchange names the conversation.
+    if msgs.iter().filter(|m| m.role == MessageRole::User).count() != 1 {
+        return;
+    }
+    let (user_text, answer_text) = (user.content.clone(), answer.content.clone());
+    let (ctx, conv_id) = (Arc::clone(ctx), conv_id.clone());
+    tokio::spawn(async move {
+        let title = nexus_agent::generate_title(
+            &ctx.scheduler,
+            &user_text,
+            &answer_text,
+            tokio_util::sync::CancellationToken::new(),
+        )
+        .await;
+        let patch = nexus_store::ConversationPatch {
+            title: Some(title),
+            ..Default::default()
+        };
+        // The user may have renamed it meanwhile; only replace the placeholder title.
+        if let Ok(Some(c)) = ctx.store.get_conversation(&conv_id)
+            && c.title == "New chat"
+            && ctx.store.update_conversation(&conv_id, &patch).is_ok()
+        {
+            let _ = ctx.bus.send(crate::state::AppEvent::ConversationUpdated(conv_id));
+        }
+    });
+}
+
+fn maybe_summarize(ctx: &Ctx, conv_id: &ConversationId, dropped: Vec<MessageId>) {
+    let first_in_flight = ctx
+        .summarizing
+        .lock()
+        .map(|mut s| s.insert(conv_id.clone()))
+        .unwrap_or(false);
+    if !first_in_flight {
+        return;
+    }
+    let (ctx, conv_id) = (Arc::clone(ctx), conv_id.clone());
+    tokio::spawn(async move {
+        let result = async {
+            let previous = ctx
+                .store
+                .get_conversation(&conv_id)
+                .ok()
+                .flatten()
+                .and_then(|c| c.summary);
+            let mut turns = Vec::new();
+            for id in &dropped {
+                if let Ok(Some(m)) = ctx.store.get_message(id)
+                    && matches!(m.role, MessageRole::User | MessageRole::Assistant)
+                {
+                    turns.push(nexus_agent::SummaryTurn {
+                        role: m.role.as_str().to_owned(),
+                        content: m.content,
+                    });
+                }
+            }
+            let text = nexus_agent::summarize_history(
+                &ctx.scheduler,
+                previous.as_deref(),
+                &turns,
+                tokio_util::sync::CancellationToken::new(),
+            )
+            .await
+            .ok()?;
+            let upto = dropped.last()?;
+            ctx.store.set_conversation_summary(&conv_id, &text, upto).ok()?;
+            Some(())
+        }
+        .await;
+        if result.is_some() {
+            let _ = ctx
+                .bus
+                .send(crate::state::AppEvent::ConversationUpdated(conv_id.clone()));
+        }
+        if let Ok(mut s) = ctx.summarizing.lock() {
+            s.remove(&conv_id);
+        }
+    });
 }
 
 fn spec_id(spec: &nexus_agent::AssistantSpec) -> AssistantId {
@@ -496,6 +607,51 @@ mod tests {
         assert_eq!(inputs[0].user_text, "hi");
         assert!(inputs[0].system_prompt.starts_with("You are Nexus"));
         assert_eq!(inputs[0].ctx_size, 8192);
+    }
+
+    #[tokio::test]
+    async fn the_first_exchange_gets_a_title_and_listeners_are_told() {
+        let dir = tempfile::tempdir().unwrap();
+        let ctx = AppState::for_tests_with(dir.path(), Some(Fake::new(&["Sure thing", "Another"])));
+        let mut rx = ctx.bus.subscribe();
+        let sink = VecSink::<ChatEvent>::default();
+        let r = send(
+            &ctx,
+            &Caller::Desktop,
+            args("plan my weekly reaper mixing session", None),
+            Arc::new(sink.clone()),
+        )
+        .unwrap();
+        let event = tokio::time::timeout(Duration::from_secs(2), rx.recv())
+            .await
+            .expect("title event")
+            .unwrap();
+        assert_eq!(
+            event,
+            crate::state::AppEvent::ConversationUpdated(r.conversation_id.clone())
+        );
+        // No model runs in tests, so the deterministic fallback names the chat.
+        let conv = ctx.store.get_conversation(&r.conversation_id).unwrap().unwrap();
+        assert_eq!(conv.title, "Plan My Weekly Reaper Mixing Session");
+        // A second exchange does not rename it.
+        wait_idle(&ctx, &r.assistant_message_id).await;
+        let r2 = send(
+            &ctx,
+            &Caller::Desktop,
+            args("and more", Some(r.conversation_id.clone())),
+            Arc::new(sink),
+        )
+        .unwrap();
+        wait_idle(&ctx, &r2.assistant_message_id).await;
+        tokio::time::sleep(Duration::from_millis(50)).await;
+        assert_eq!(
+            ctx.store
+                .get_conversation(&r.conversation_id)
+                .unwrap()
+                .unwrap()
+                .title,
+            "Plan My Weekly Reaper Mixing Session"
+        );
     }
 
     #[tokio::test]

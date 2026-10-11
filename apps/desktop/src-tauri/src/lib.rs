@@ -46,6 +46,20 @@ fn bridge_runtime_status(app: &tauri::AppHandle) {
     });
 }
 
+/// Forward app-internal events (`AppEvent`) to the webview.
+fn bridge_app_events(app: &tauri::AppHandle) {
+    let app = app.clone();
+    let mut rx = app.state::<Ctx>().bus.subscribe();
+    tauri::async_runtime::spawn(async move {
+        while let Ok(event) = rx.recv().await {
+            let state::AppEvent::ConversationUpdated(id) = event;
+            if let Err(e) = commands::chat::ConversationUpdated(id).emit(&app) {
+                tracing::warn!("could not emit conversation:updated: {e}");
+            }
+        }
+    });
+}
+
 fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let paths = resolve_paths(app)?;
     paths.ensure_dirs()?;
@@ -74,11 +88,14 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         scheduler,
         engine,
         chats: Default::default(),
+        summarizing: Default::default(),
+        bus: tokio::sync::broadcast::channel(64).0,
         settings: RwLock::new(settings),
         resource_dir,
         exe_dir,
     }));
     bridge_runtime_status(app.handle());
+    bridge_app_events(app.handle());
     runtime::start_in_background(app.handle());
     Ok(())
 }

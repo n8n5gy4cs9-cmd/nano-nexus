@@ -1,12 +1,12 @@
 //! Shared application context. It holds no Tauri types, so `service::*` can run under any caller
 //! (the desktop UI now, LAN Share remotes later) and in plain `cargo test`.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, RwLock};
 
 use nexus_agent::{TurnEngine, TurnRunner};
-use nexus_core::ids::MessageId;
+use nexus_core::ids::{ConversationId, MessageId};
 use tokio_util::sync::CancellationToken;
 
 use nexus_core::paths::AppPaths;
@@ -51,6 +51,13 @@ impl ChatJobs {
     }
 }
 
+/// App-internal events that the shell forwards to the webview.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum AppEvent {
+    /// A conversation's title or summary changed.
+    ConversationUpdated(ConversationId),
+}
+
 /// Everything services need. Later milestones add jobs, permissions, and the assistant registry.
 pub struct AppState {
     pub paths: AppPaths,
@@ -60,6 +67,9 @@ pub struct AppState {
     /// Runs chat turns (a scripted fake in tests).
     pub engine: Arc<dyn TurnRunner>,
     pub chats: ChatJobs,
+    /// Conversations with a summary job in flight (at most one each).
+    pub summarizing: Mutex<HashSet<ConversationId>>,
+    pub bus: tokio::sync::broadcast::Sender<AppEvent>,
     pub settings: RwLock<Settings>,
     /// Tauri's `resource_dir()` (bundled models, Windows runtime).
     pub resource_dir: PathBuf,
@@ -106,6 +116,8 @@ impl AppState {
             scheduler,
             engine,
             chats: ChatJobs::default(),
+            summarizing: Default::default(),
+            bus: tokio::sync::broadcast::channel(64).0,
             settings: RwLock::new(Settings::default()),
             resource_dir: root.join("resources"),
             exe_dir: root.join("bin"),

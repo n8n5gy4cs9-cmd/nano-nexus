@@ -2,7 +2,10 @@ use std::sync::Arc;
 
 use nexus_core::chat::ChatEvent;
 use nexus_core::error::IpcError;
+use nexus_core::ids::ConversationId;
 use nexus_core::ids::MessageId;
+use serde::{Deserialize, Serialize};
+use specta::Type;
 use tauri::State;
 use tauri::ipc::Channel;
 
@@ -10,6 +13,11 @@ use super::CmdResult;
 use crate::service::chat::{ChatSendArgs, ChatSendResult};
 use crate::service::{self, Caller, ChannelSink};
 use crate::state::AppState;
+
+/// Global event `conversation:updated`: a title or summary changed.
+#[derive(Clone, Debug, Serialize, Deserialize, Type, tauri_specta::Event)]
+#[tauri_specta(event_name = "conversation:updated")]
+pub struct ConversationUpdated(pub ConversationId);
 
 /// Send a message; the answer streams over `on_event`.
 #[tauri::command]
