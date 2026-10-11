@@ -253,6 +253,27 @@ mod tests {
         p
     }
 
+    /// Writing a script and executing it right away can race with a fork in another test thread
+    /// (ETXTBSY, "Text file busy"). Retry briefly; production never execs a just-written file.
+    async fn spawn_retrying(
+        cfg: &RuntimeConfig,
+        port: u16,
+        token: &SecretString,
+        log: Option<&Path>,
+    ) -> Result<ServerProcess, LlmError> {
+        let mut last = None;
+        for _ in 0..20 {
+            match ServerProcess::spawn(cfg, port, token, log).await {
+                Err(LlmError::Transport(m)) if m.contains("Text file busy") => {
+                    last = Some(LlmError::Transport(m));
+                    tokio::time::sleep(Duration::from_millis(25)).await;
+                }
+                other => return other,
+            }
+        }
+        Err(last.unwrap_or(LlmError::Busy))
+    }
+
     async fn wait_for(p: &ServerProcess, pred: impl Fn(&str) -> bool) {
         for _ in 0..100 {
             if p.log().any(&pred) {
@@ -273,9 +294,7 @@ mod tests {
         let cfg = RuntimeConfig::new(bin, "/m/model.gguf");
         let token = SecretString::from("sekrit-token".to_owned());
         let log_file = dir.path().join("logs/llama-server.log");
-        let mut p = ServerProcess::spawn(&cfg, 4242, &token, Some(&log_file))
-            .await
-            .unwrap();
+        let mut p = spawn_retrying(&cfg, 4242, &token, Some(&log_file)).await.unwrap();
         wait_for(&p, |l| l.starts_with("key:")).await;
         wait_for(&p, |l| l.starts_with("env:PATH=")).await;
         let tail = p.log_tail(200);
@@ -304,7 +323,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let bin = script(dir.path(), "sleep 300 & echo \"child:$!\"; wait");
         let cfg = RuntimeConfig::new(bin, "/m");
-        let mut p = ServerProcess::spawn(&cfg, 1, &SecretString::from("t".to_owned()), None)
+        let mut p = spawn_retrying(&cfg, 1, &SecretString::from("t".to_owned()), None)
             .await
             .unwrap();
         wait_for(&p, |l| l.starts_with("child:")).await;
@@ -333,7 +352,7 @@ mod tests {
             "trap '' TERM; echo ready; while true; do sleep 1; done",
         );
         let cfg = RuntimeConfig::new(bin, "/m");
-        let mut p = ServerProcess::spawn(&cfg, 1, &SecretString::from("t".to_owned()), None)
+        let mut p = spawn_retrying(&cfg, 1, &SecretString::from("t".to_owned()), None)
             .await
             .unwrap();
         wait_for(&p, |l| l == "ready").await;
@@ -351,7 +370,7 @@ mod tests {
             "echo \"couldn't bind HTTP server socket\" >&2; exit 1",
         );
         let cfg = RuntimeConfig::new(bin, "/m");
-        let mut p = ServerProcess::spawn(&cfg, 1, &SecretString::from("t".to_owned()), None)
+        let mut p = spawn_retrying(&cfg, 1, &SecretString::from("t".to_owned()), None)
             .await
             .unwrap();
         let status = p.wait().await.unwrap();
@@ -363,7 +382,7 @@ mod tests {
     #[tokio::test]
     async fn missing_binary_is_a_transport_error() {
         let cfg = RuntimeConfig::new("/definitely/not/here", "/m");
-        let r = ServerProcess::spawn(&cfg, 1, &SecretString::from("t".to_owned()), None).await;
+        let r = spawn_retrying(&cfg, 1, &SecretString::from("t".to_owned()), None).await;
         assert!(matches!(r, Err(LlmError::Transport(_))));
     }
 }

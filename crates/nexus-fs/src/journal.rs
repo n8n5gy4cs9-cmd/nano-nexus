@@ -377,6 +377,131 @@ impl Journal {
         problems
     }
 
+    /// What an undo would run into, without changing anything.
+    pub fn undo_conflicts(&self, id: &str) -> Result<Vec<UndoConflict>, String> {
+        let m = self.read_manifest(id)?;
+        let mut out = Vec::new();
+        for op in &m.ops {
+            if let Some(message) = conflict_of(op) {
+                out.push(UndoConflict {
+                    op_index: op.index(),
+                    path: op_path(op),
+                    message,
+                });
+            }
+        }
+        Ok(out)
+    }
+
+    /// Undo an applied change set, newest operation first. Every restore is re-checked against the
+    /// grants. An operation whose file changed since is a conflict: it is skipped unless `decisions`
+    /// says `RestoreAnyway` for its index.
+    pub fn undo(
+        &self,
+        engine: &PermissionEngine,
+        actor: &str,
+        id: &str,
+        decisions: &std::collections::HashMap<usize, ConflictDecision>,
+    ) -> Result<UndoReport, String> {
+        let mut m = self.read_manifest(id)?;
+        if m.status != "applied" {
+            return Err(format!("this change set is {}, not applied", m.status));
+        }
+        let dir = self.dir_of(id);
+        let mut report = UndoReport::default();
+        for op in m.ops.clone().iter().rev() {
+            let idx = op.index();
+            let (path, access) = undo_access(op);
+            if let Err(e) = engine.check(actor, Path::new(&path), access) {
+                report.problems.push(format!("{path}: {e}"));
+                continue;
+            }
+            let force = decisions.get(&idx) == Some(&ConflictDecision::RestoreAnyway);
+            let conflict = conflict_of(op);
+            if conflict.is_some() && !force && decisions.get(&idx) != Some(&ConflictDecision::KeepCurrent) {
+                report.conflicts.push(UndoConflict {
+                    op_index: idx,
+                    path: path.clone(),
+                    message: conflict.unwrap_or_default(),
+                });
+                continue;
+            }
+            if conflict.is_some() && decisions.get(&idx) == Some(&ConflictDecision::KeepCurrent) {
+                report.skipped.push(idx);
+                continue;
+            }
+            let mode = if force { Revert::UndoForce } else { Revert::Undo };
+            match self.revert(&dir, op, mode) {
+                Ok(()) => report.restored.push(idx),
+                Err(p) => report.problems.push(p),
+            }
+        }
+        if report.conflicts.is_empty() && report.problems.is_empty() {
+            m.status = "undone".into();
+            self.write_manifest(&m)?;
+        }
+        Ok(report)
+    }
+
+    /// Startup recovery: any change set still `applying` was interrupted (crash, power loss). Roll it back.
+    /// Returns the ids that were recovered.
+    pub fn recover_interrupted(&self) -> Vec<String> {
+        let mut recovered = Vec::new();
+        let Ok(entries) = std::fs::read_dir(&self.dir) else {
+            return recovered;
+        };
+        for e in entries.flatten() {
+            let id = e.file_name().to_string_lossy().into_owned();
+            let Ok(mut m) = self.read_manifest(&id) else {
+                continue;
+            };
+            if m.status != "applying" {
+                continue;
+            }
+            let problems = self.rollback(&mut m);
+            m.status = if problems.is_empty() {
+                "rolled_back".into()
+            } else {
+                "failed".into()
+            };
+            m.error = Some("interrupted; rolled back on the next start".into());
+            let _ = self.write_manifest(&m);
+            recovered.push(id);
+        }
+        recovered
+    }
+
+    /// Delete journals older than `max_age_days` or beyond `max_bytes` in total, oldest first.
+    /// Journals of change sets that are still `applying` are never pruned. Returns the ids removed.
+    pub fn prune(&self, now_ms: i64, max_age_days: u32, max_bytes: u64) -> Vec<String> {
+        let mut items: Vec<(i64, String, u64)> = Vec::new();
+        if let Ok(entries) = std::fs::read_dir(&self.dir) {
+            for e in entries.flatten() {
+                let id = e.file_name().to_string_lossy().into_owned();
+                let Ok(m) = self.read_manifest(&id) else { continue };
+                if m.status == "applying" {
+                    continue;
+                }
+                items.push((m.created_at, id.clone(), dir_size(&self.dir_of(&id))));
+            }
+        }
+        items.sort();
+        let cutoff = now_ms - i64::from(max_age_days) * 86_400_000;
+        let mut total: u64 = items.iter().map(|i| i.2).sum();
+        let mut removed = Vec::new();
+        for (created, id, size) in items {
+            if created < cutoff || total > max_bytes {
+                if std::fs::remove_dir_all(self.dir_of(&id)).is_ok() {
+                    total = total.saturating_sub(size);
+                    removed.push(id);
+                }
+            } else {
+                break;
+            }
+        }
+        removed
+    }
+
     /// Revert one operation. `Revert::Rollback` is used for our own just-applied work (no conflicts are
     /// expected); `Undo` is used later and handles a changed file by reporting a conflict.
     pub(crate) fn revert(&self, dir: &Path, op: &JournalOp, mode: Revert) -> Result<(), String> {
@@ -440,7 +565,20 @@ impl Journal {
             } => {
                 let p = Path::new(path);
                 if p.exists() {
-                    return Ok(());
+                    match mode {
+                        Revert::Undo => {
+                            return Err(format!(
+                                "something new exists at {path}, so the original was not restored"
+                            ));
+                        }
+                        Revert::UndoForce => {
+                            // Never overwrite: the newer file goes to the Trash first.
+                            self.trasher
+                                .trash(p)
+                                .map_err(|e| format!("cannot move the newer {path} to the Trash: {e}"))?;
+                        }
+                        Revert::Rollback => return Ok(()),
+                    }
                 }
                 if *is_dir || copy.is_none() {
                     return Err(format!("{path} is in the system Trash; restore it from there"));
@@ -461,8 +599,12 @@ impl Journal {
 /// Which situation a revert runs in.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Revert {
+    /// Our own just-applied work: no conflicts are expected.
     Rollback,
+    /// A user undo: a file that changed since is reported as a conflict.
     Undo,
+    /// A user undo where the user chose "restore anyway" for this operation.
+    UndoForce,
 }
 
 /// Rename, falling back to copy + verify + trash the source when the destination is on another volume.
@@ -504,4 +646,99 @@ fn is_cross_device(e: &std::io::Error) -> bool {
         let _ = e;
         false
     }
+}
+
+/// An operation that cannot be undone cleanly because the file changed since.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct UndoConflict {
+    pub op_index: usize,
+    pub path: String,
+    pub message: String,
+}
+
+/// The user's answer to an [`UndoConflict`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ConflictDecision {
+    /// Leave the current file as it is.
+    KeepCurrent,
+    /// Restore the original over it (a newer file at that path goes to the Trash first).
+    RestoreAnyway,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct UndoReport {
+    pub restored: Vec<usize>,
+    pub conflicts: Vec<UndoConflict>,
+    pub skipped: Vec<usize>,
+    pub problems: Vec<String>,
+}
+
+fn op_path(op: &JournalOp) -> String {
+    match op {
+        JournalOp::Replaced { path, .. }
+        | JournalOp::Created { path, .. }
+        | JournalOp::MadeDir { path, .. }
+        | JournalOp::Trashed { path, .. } => path.clone(),
+        JournalOp::Moved { from, .. } => from.clone(),
+    }
+}
+
+/// Path and access an undo of `op` needs.
+fn undo_access(op: &JournalOp) -> (String, Access) {
+    match op {
+        JournalOp::Replaced { path, .. } => (path.clone(), Access::Write),
+        JournalOp::Created { path, .. } | JournalOp::MadeDir { path, .. } => (path.clone(), Access::Trash),
+        JournalOp::Moved { from, .. } => (from.clone(), Access::Move),
+        JournalOp::Trashed { path, .. } => (path.clone(), Access::Create),
+    }
+}
+
+/// Describe how the current disk differs from what the apply left, if it does.
+fn conflict_of(op: &JournalOp) -> Option<String> {
+    match op {
+        JournalOp::Replaced {
+            path,
+            orig_hash,
+            post_hash,
+            ..
+        } => {
+            let cur = std::fs::read(path).map(|b| hash_bytes(&b)).ok();
+            match cur {
+                Some(h) if h == *post_hash || h == *orig_hash => None,
+                Some(_) => Some(format!("{path} changed after the change set was applied")),
+                None => None,
+            }
+        }
+        JournalOp::Created { path, post_hash, .. } => match std::fs::read(path).map(|b| hash_bytes(&b)) {
+            Ok(h) if h != *post_hash => Some(format!("{path} changed after it was created")),
+            _ => None,
+        },
+        JournalOp::MadeDir { path, .. } => {
+            let p = Path::new(path);
+            let non_empty = p.is_dir()
+                && std::fs::read_dir(p)
+                    .map(|mut r| r.next().is_some())
+                    .unwrap_or(false);
+            non_empty.then(|| format!("{path} is not empty now"))
+        }
+        JournalOp::Moved { from, to, .. } => (Path::new(from).exists() && Path::new(to).exists())
+            .then(|| format!("{from} exists again, so {to} cannot be moved back")),
+        JournalOp::Trashed { path, .. } => Path::new(path)
+            .exists()
+            .then(|| format!("something new exists at {path}")),
+    }
+}
+
+fn dir_size(dir: &Path) -> u64 {
+    let mut total = 0;
+    if let Ok(entries) = std::fs::read_dir(dir) {
+        for e in entries.flatten() {
+            match e.metadata() {
+                Ok(m) if m.is_dir() => total += dir_size(&e.path()),
+                Ok(m) => total += m.len(),
+                Err(_) => {}
+            }
+        }
+    }
+    total
 }

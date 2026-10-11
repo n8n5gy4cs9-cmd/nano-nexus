@@ -15,6 +15,7 @@ pub use canon::{CanonError, CanonicalPath, canonicalize, is_direct_child, is_wit
 pub use deny::{DenyList, DenyRule, builtin_rules};
 pub use engine::{FsError, NewGrant, PermissionEngine};
 pub use journal::{
-    AppliedChangeSet, ApplyError, Journal, JournalOp, Manifest, SystemTrash, Trasher, move_path, write_atomic,
+    AppliedChangeSet, ApplyError, ConflictDecision, Journal, JournalOp, Manifest, SystemTrash, Trasher,
+    UndoConflict, UndoReport, move_path, write_atomic,
 };
 pub use preview::{Analysis, ResolvedOp, analyze, apply_edits, hash_bytes, hash_file, preview};
