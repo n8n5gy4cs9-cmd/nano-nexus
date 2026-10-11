@@ -22,6 +22,8 @@ pub struct RuntimeConfig {
     pub metrics: bool,
     /// How long to wait for `/health` + `/v1/models` before giving up.
     pub ready_timeout: Duration,
+    /// Spawn attempts (new port each time) before giving up; the contract says 16.
+    pub max_attempts: u8,
 }
 
 impl RuntimeConfig {
@@ -37,6 +39,7 @@ impl RuntimeConfig {
             threads: None,
             metrics: false,
             ready_timeout: Duration::from_secs(90),
+            max_attempts: 16,
         }
     }
 

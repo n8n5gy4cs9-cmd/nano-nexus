@@ -522,6 +522,7 @@ dependencies = [
  "futures-util",
  "getrandom",
  "nexus-core",
+ "nexus-llm",
  "nix",
  "reqwest",
  "secrecy",

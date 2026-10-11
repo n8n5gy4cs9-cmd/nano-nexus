@@ -8,7 +8,17 @@ license.workspace = true
 [lints]
 workspace = true
 
+[features]
+# Builds the `mock-llama` test binary (a fake llama-server). Enabled for tests via the self dev-dependency.
+test-mock = ["dep:axum"]
+
+[[bin]]
+name = "mock-llama"
+path = "tests/bin/mock_llama.rs"
+required-features = ["test-mock"]
+
 [dependencies]
+axum = { workspace = true, optional = true }
 nexus-core = { path = "../nexus-core" }
 bytes.workspace = true
 futures-util.workspace = true
@@ -18,7 +28,7 @@ secrecy.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
-tokio.workspace = true
+tokio = { workspace = true, features = ["net"] }
 tokio-util.workspace = true
 tracing.workspace = true
 
@@ -29,6 +39,5 @@ nix = { workspace = true, features = ["signal", "process"] }
 win32job.workspace = true
 
 [dev-dependencies]
+nexus-llm = { path = ".", features = ["test-mock"] }
 tempfile.workspace = true
-axum.workspace = true
-tokio = { workspace = true, features = ["net", "rt-multi-thread", "macros", "time"] }
