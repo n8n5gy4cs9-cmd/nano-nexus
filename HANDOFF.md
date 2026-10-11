@@ -24,7 +24,7 @@ Everything below in the app crate and frontend is **uncompiled / unlinted / unte
 - T11.05 watches (`nexus-analyze::watch`, `nexus-store::watches`, `service/watches.rs`, new `notify` 8.2 dep); T11.06 `WatchesSection`.
 - T18.03 Duo tier badge + "Use strong model".
 - Local TS types (`features/jobs/types.ts`, `features/analyzer/watches.ts`) mirror Rust types until `bindings.ts` regenerates.
-- Left: T11.07 (tray/autostart, optional), T11.08 / T18.02 (Mac), T18.04 / T18.05 (v0.2), T11 "Watch this folder" button on report page, Settings → Notifications UI, component tests for the new UI, T09.15+.
+- Left: T11.07 (tray/autostart, optional), T11.08 / T18.02 (Mac), T18.04 / T18.05 (v0.2), T11 "Watch this folder" button on report page, component tests (Settings page exists now at `/settings`, untested) for the new UI, T09.15+.
 
 ## Done this session
 - T09.09 verified (was WIP) · T09.10 planner · T09.11 find · T09.12 verify · T09.13 strings mode · T09.14 store/service/commands · T11.01 JobRegistry.
