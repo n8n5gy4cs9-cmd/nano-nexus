@@ -1,9 +1,11 @@
 import { Plus } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 
 import { cn } from "@/lib/cn";
 import { modLabel, type Platform } from "@/lib/platform";
 import { NAV, SETTINGS_SECTION, type NavSection } from "@/routes";
+
+import { ConversationList } from "./ConversationList";
 
 function NavItem({ section, platform }: { section: NavSection; platform: Platform }) {
   const Icon = section.icon;
@@ -32,6 +34,7 @@ function NavItem({ section, platform }: { section: NavSection; platform: Platfor
 }
 
 export function Sidebar({ platform }: { platform: Platform }) {
+  const navigate = useNavigate();
   return (
     <aside className="flex w-[248px] shrink-0 flex-col border-r border-border bg-sidebar" aria-label="Sidebar">
       {/* On macOS the traffic lights sit here, so this strip is also a window drag region. */}
@@ -42,6 +45,7 @@ export function Sidebar({ platform }: { platform: Platform }) {
       <div className="px-2 pb-2">
         <button
           type="button"
+          onClick={() => void navigate("/")}
           className="flex h-8 w-full items-center gap-2 rounded-button border border-border bg-surface px-2.5 text-body text-text shadow-1 transition-colors hover:bg-surface-2"
         >
           <Plus className="size-4" />
@@ -54,7 +58,9 @@ export function Sidebar({ platform }: { platform: Platform }) {
           <NavItem key={s.path} section={s} platform={platform} />
         ))}
       </nav>
-      <div className="mt-3 flex-1 overflow-y-auto px-4 py-2 text-caption text-faint">Conversations will appear here.</div>
+      <div className="mt-3 flex min-h-0 flex-1 flex-col">
+        <ConversationList />
+      </div>
       <div className="border-t border-border p-2">
         <NavItem section={SETTINGS_SECTION} platform={platform} />
       </div>

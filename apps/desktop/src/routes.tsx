@@ -47,10 +47,10 @@ export const routes: RouteObject[] = [
   {
     path: "/",
     element: <AppShell />,
-    children: [...NAV, SETTINGS_SECTION].map((s) => ({
+    children: [{ path: "c/:conversationId", element: <PlaceholderPage section={NAV[0] as NavSection} /> }, ...[...NAV, SETTINGS_SECTION].map((s) => ({
       ...(s.path === "/" ? { index: true as const } : { path: s.path.slice(1) }),
       element: <PlaceholderPage section={s} />,
-    })),
+    }))],
   },
 ];
 

@@ -3,7 +3,18 @@
  * it works on desktop (Tauri) and, later, in the LAN Share web build. Never call `invoke` directly
  * (an ESLint rule enforces this). Types come from the generated `bindings.ts`.
  */
-import type { AppInfo, NotificationPayload, RuntimeState, Settings } from "@/bindings";
+import type {
+  AppInfo,
+  ChatEvent,
+  ChatSendArgs,
+  ChatSendResult,
+  ConversationSummary,
+  ConversationUpdate,
+  ConversationWithMessages,
+  NotificationPayload,
+  RuntimeState,
+  Settings,
+} from "@/bindings";
 
 import { getTransport } from "./transport";
 import type { Unsubscribe } from "./transport";
@@ -22,6 +33,26 @@ export const api = {
     /** Subscribe to `runtime:status`. */
     onStatus: (handler: (state: RuntimeState) => void): Promise<Unsubscribe> =>
       getTransport().on<RuntimeState>("runtime:status", handler),
+  },
+  conversations: {
+    list: (query: string | null, limit: number, before: number | null = null) =>
+      getTransport().call<ConversationSummary[]>("conversations_list", { query, limit, before }),
+    get: (id: string) => getTransport().call<ConversationWithMessages>("conversation_get", { id }),
+    update: (id: string, update: ConversationUpdate) => getTransport().call<null>("conversation_update", { id, update }),
+    delete: (id: string) => getTransport().call<null>("conversation_delete", { id }),
+    exportMd: (id: string) => getTransport().call<string>("conversation_export_md", { id }),
+    /** Subscribe to `conversation:updated` (a title or summary changed). */
+    onUpdated: (handler: (id: string) => void): Promise<Unsubscribe> =>
+      getTransport().on<string>("conversation:updated", handler),
+  },
+  chat: {
+    send: (args: ChatSendArgs, onEvent: (e: ChatEvent) => void) =>
+      getTransport().stream<ChatEvent, ChatSendResult>("chat_send", { args }, onEvent),
+    stop: (assistantMessageId: string) => getTransport().call<boolean>("chat_stop", { assistantMessageId }),
+    regenerate: (assistantMessageId: string, think: boolean, onEvent: (e: ChatEvent) => void) =>
+      getTransport().stream<ChatEvent, ChatSendResult>("chat_regenerate", { assistantMessageId, think }, onEvent),
+    editResend: (userMessageId: string, text: string, think: boolean, onEvent: (e: ChatEvent) => void) =>
+      getTransport().stream<ChatEvent, ChatSendResult>("chat_edit_resend", { userMessageId, text, think }, onEvent),
   },
   notifications: {
     list: (limit: number) => getTransport().call<NotificationPayload[]>("notifications_list", { limit }),
