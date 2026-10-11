@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 //! S-expression and capture snapshots of the fixture sources (one test per language, T09.03).
 //! A grammar or query change shows up as a snapshot diff. Review it, then `cargo insta accept`.
 
