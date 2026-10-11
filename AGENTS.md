@@ -14,7 +14,10 @@ work in small verified steps, and leave the repo better documented than you foun
 If sources disagree, the more specific one wins (milestone > architecture > PRD), **except**
 ADRs and safety rules, which always win. Record the conflict in `docs/QUESTIONS.md`.
 
-## 2. The work loop (one task at a time)
+## 2. The work loop (one task at a time, repeat until blocked)
+**Keep going:** after each task is committed and pushed, immediately start the next unblocked task.
+Do not stop to ask or summarize between tasks; stop only when every remaining task is blocked or
+platform-only (🍎/🪟), or the session limits are hit. **Never open a pull request**; work directly on `main`.
 1. `scripts/progress.sh`: confirm the next task. Read its milestone doc section.
 2. Write a 3–6 line plan (files to touch, tests to add) in your scratch notes (not in the repo).
 3. Implement the **smallest change** that satisfies the task and its tests.
@@ -22,7 +25,7 @@ ADRs and safety rules, which always win. Record the conflict in `docs/QUESTIONS.
    Run the task's specific verify step if it has one.
 5. Tick the task in `tasks.md`: `- [x] **T04.07** … (YYYY-MM-DD)`, plus a short note if something deviated.
    Run `scripts/progress.sh --write` to refresh the progress block.
-6. **Commit and push to `main` immediately after every task:**
+6. **Commit and push to `main` immediately after every task (no branches, no PRs):**
    ```bash
    git add -A && git commit -m "T04.07: stream chat deltas over Channel" && git push origin main
    ```

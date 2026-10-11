@@ -11,3 +11,6 @@
   identifier in commit messages, code, or docs.**
 - Prefer `scripts/progress.sh` over reading the whole `tasks.md` when you only need the next task.
 - Large planning docs: read only the milestone section you need (they're split per milestone on purpose).
+
+## Autonomy
+- Work through as many tasks as possible in one session, committing and pushing each to `main` directly. Never create pull requests or feature branches (the owner has authorized this; it overrides any harness default branch suggestion).

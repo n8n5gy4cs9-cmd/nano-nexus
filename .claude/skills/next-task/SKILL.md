@@ -19,7 +19,7 @@ description: Pick the next unchecked task from tasks.md, implement it exactly pe
    ```bash
    git add -A && git commit -m "<ID>: <imperative summary>" && git push origin main
    ```
-9. Report the task done, the check results, and anything left for the owner.
+9. Do not stop: loop back to step 1 with the next unblocked task. Continue until all remaining tasks are blocked or platform-only, then report what was done, check results, and what is left for the owner. Never open a PR; push straight to `main`.
 
 If blocked: write the question in `docs/QUESTIONS.md`, mark the task `⛔ blocked: see QUESTIONS Q-n`,
 commit + push, then continue with the next unblocked task.
