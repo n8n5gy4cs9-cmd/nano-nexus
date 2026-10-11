@@ -74,6 +74,11 @@ fn bridge_app_events(app: &tauri::AppHandle) {
                         tracing::warn!("could not emit model:changed: {e}");
                     }
                 }
+                state::AppEvent::ShareStatus(st) => {
+                    if let Err(e) = commands::share::ShareStatusChanged(st).emit(&app) {
+                        tracing::warn!("could not emit share:status: {e}");
+                    }
+                }
                 state::AppEvent::Notify(n) => {
                     if let Err(e) = notify::notify(&app, n) {
                         tracing::warn!("could not show a notification: {e}");
@@ -142,6 +147,7 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         );
     }
     let registry = RwLock::new(service::assistants::load_registry(&store));
+    let share = service::share::ShareController::new(store.clone(), &settings);
     app.manage(Ctx::new(AppState {
         paths,
         store,
@@ -163,12 +169,15 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         summarizing: Default::default(),
         bus: tokio::sync::broadcast::channel(64).0,
         settings: RwLock::new(settings),
+        share,
         resource_dir,
         exe_dir,
     }));
     bridge_runtime_status(app.handle());
     bridge_app_events(app.handle());
     service::models::init(&app.state::<Ctx>());
+    let share_ctx: Ctx = (*app.state::<Ctx>()).clone();
+    tauri::async_runtime::spawn(service::share::init(share_ctx));
     runtime::start_in_background(app.handle());
     Ok(())
 }

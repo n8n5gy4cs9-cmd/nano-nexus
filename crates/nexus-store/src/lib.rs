@@ -11,6 +11,7 @@ pub mod models;
 pub mod notifications;
 pub mod reports;
 pub mod settings;
+pub mod share;
 
 use std::path::Path;
 use std::sync::{Mutex, MutexGuard};

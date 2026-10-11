@@ -6,12 +6,14 @@ pub mod attachments;
 pub mod analyzer;
 pub mod chat;
 pub mod conversations;
+pub mod editor;
 pub mod fs;
 pub mod models;
 pub mod notifications;
 pub mod permissions;
 pub mod runtime;
 pub mod settings;
+pub mod share;
 
 use nexus_core::error::IpcError;
 

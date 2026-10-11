@@ -9,4 +9,5 @@ pub mod fs;
 pub mod ids;
 pub mod paths;
 pub mod settings;
+pub mod share;
 pub mod sink;

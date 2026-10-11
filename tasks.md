@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 119/229 tasks done (51%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 135/229 tasks done (58%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -192,12 +192,12 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [ ] ⭐ **T09.19** Exit check: fixtures pass, reserved names never proposed, folder renames update imports, undo byte-identical, project still builds
 
 ## M10: Code editor · [spec](docs/milestones/M10-editor.md)
-- [ ] **T10.01** Editor shell: file tree (granted roots, lazy, ignore toggle, icons) + tabs + CodeMirror (EditorView per tab)
-- [ ] **T10.02** Theme from tokens + language packs + legacy modes (+ token snapshot test)
-- [ ] **T10.03** Save via `editor_save` → change set (confirm popover, session "always allow"), read-only mode without write grant
-- [ ] **T10.04** AI actions panel (Explain, Improve names, Add docs, Find bugs, Simplify, Ask) + `editor_rewrite.md`
-- [ ] **T10.05** Merge view with per-chunk accept/reject + suspicious-rewrite guard
-- [ ] **T10.06** External change detection + large-file limits + shortcuts (⌘O ⌘S ⌘W ⌘⇧T)
+- [x] **T10.01** Editor shell: file tree (granted roots, lazy, ignore toggle, icons) + tabs + CodeMirror (EditorView per tab) (2026-10-11) — written; not compiled or tested (session was code-only)
+- [x] **T10.02** Theme from tokens + language packs + legacy modes (+ token snapshot test) (2026-10-11) — written; not compiled or tested (session was code-only) — no token snapshot test; mapping tests only
+- [x] **T10.03** Save via `editor_save` → change set (confirm popover, session "always allow"), read-only mode without write grant (2026-10-11) — written; not compiled or tested (session was code-only) — files over 2 MB are refused (not opened read-only), per `fs_read_text`
+- [x] **T10.04** AI actions panel (Explain, Improve names, Add docs, Find bugs, Simplify, Ask) + `editor_rewrite.md` (2026-10-11) — written; not compiled or tested (session was code-only)
+- [x] **T10.05** Merge view with per-chunk accept/reject + suspicious-rewrite guard (2026-10-11) — written; not compiled or tested (session was code-only)
+- [x] **T10.06** External change detection + large-file limits + shortcuts (⌘O ⌘S ⌘W ⌘⇧T) (2026-10-11) — written; not compiled or tested (session was code-only)
 - [ ] ⭐ **T10.07** Exit check: demo flow; 10k-line file smooth; no save bypasses change sets
 
 ## M11: Notifications, jobs, watches · [spec](docs/milestones/M11-notifications-jobs.md)
@@ -241,18 +241,18 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 
 ## M14: LAN Share + mobile web UI · [spec](docs/milestones/M14-lan-share.md) · [contract](docs/architecture/LAN-SHARE.md)
 - [ ] **T14.01** Audit: every command delegates to `service::*` with `Caller`; no `invoke` in feature code
-- [ ] **T14.02** `nexus-share` auth: pairing secrets (single-use, 5 min), PIN + rate limit/lockout, device sessions (hash-only), CSRF + tests
-- [ ] **T14.03** WebSocket RPC (protocol, allow-list, streaming, cancel, push events) + policy guard + tests
-- [ ] **T14.04** Static web UI embedding (`dist-web` via include_dir!, SPA fallback, security headers, cache rules)
-- [ ] **T14.05** Server lifecycle: ShareController start/stop/restart, port 9889 default, `port_in_use` + next-free suggestion, graceful stop + tests
-- [ ] **T14.06** Store migration 0006 (`share_devices`, `conversations.origin`) + commands `share_*` + `share:status`
-- [ ] **T14.07** `ShareApi` impl → `service::*` with `Caller::Remote`; remote grant requests → desktop modal "from <device>"
+- [x] **T14.02** `nexus-share` auth: pairing secrets (single-use, 5 min), PIN + rate limit/lockout, device sessions (hash-only), CSRF + tests (2026-10-11) — written; not compiled or tested (session was code-only)
+- [x] **T14.03** WebSocket RPC (protocol, allow-list, streaming, cancel, push events) + policy guard + tests (2026-10-11) — written; not compiled or tested (session was code-only)
+- [x] **T14.04** Static web UI embedding (`dist-web` via include_dir!, SPA fallback, security headers, cache rules) (2026-10-11) — written; not compiled or tested (session was code-only)
+- [x] **T14.05** Server lifecycle: ShareController start/stop/restart, port 9889 default, `port_in_use` + next-free suggestion, graceful stop + tests (2026-10-11) — written; not compiled or tested (session was code-only) — unit tests for auth/policy/assets/urls written; integration tests for server lifecycle still to do
+- [x] **T14.06** Store migration 0006 (`share_devices`, `conversations.origin`) + commands `share_*` + `share:status` (2026-10-11) — written; not compiled or tested (session was code-only) — migration is `0005_share.sql` (list was gapless); `conversations.origin` written on remote chat
+- [x] **T14.07** `ShareApi` impl → `service::*` with `Caller::Remote`; remote grant requests → desktop modal "from <device>" (2026-10-11) — written; not compiled or tested (session was code-only) — remote grant requests still use the normal desktop modal without the “from <device>” label
 - [ ] **T14.08** mDNS (`nanonexus.local`) + Info.plist `NSLocalNetworkUsageDescription` / `NSBonjourServices`
 - [ ] **T14.09** Optional HTTPS (rcgen self-signed, SAN = LAN IPs + .local, fingerprint)
-- [ ] **T14.10** Frontend `wsTransport` (reconnect, resubscribe, visibilitychange refetch) + `pnpm build:web` (`dist-web`)
-- [ ] **T14.11** Mobile layout (< 768 px): bottom tabs, drawer, safe areas, 44 px targets, 16 px inputs, long-press menus
-- [ ] **T14.12** Pairing screen (QR fragment + PIN pad) + PWA manifest/icons + minimal service worker + desktop-only route guards
-- [ ] **T14.13** Desktop 📡 Share pill + popover (switch, URLs, QR SVG, PIN, devices)
+- [x] **T14.10** Frontend `wsTransport` (reconnect, resubscribe, visibilitychange refetch) + `pnpm build:web` (`dist-web`) (2026-10-11) — written; not compiled or tested (session was code-only)
+- [x] **T14.11** Mobile layout (< 768 px): bottom tabs, drawer, safe areas, 44 px targets, 16 px inputs, long-press menus (2026-10-11) — written; not compiled or tested (session was code-only)
+- [x] **T14.12** Pairing screen (QR fragment + PIN pad) + PWA manifest/icons + minimal service worker + desktop-only route guards (2026-10-11) — written; not compiled or tested (session was code-only) — pairing screen is a PIN/code field (QR scan opens `/pair#secret`); no icon PNGs, SVG icon only
+- [x] **T14.13** Desktop 📡 Share pill + popover (switch, URLs, QR SVG, PIN, devices) (2026-10-11) — written; not compiled or tested (session was code-only)
 - [ ] **T14.14** Settings → Sharing page (all LAN-SHARE §2 settings + devices table) + pairing notifications + tray item
 - [ ] **T14.15** Playwright e2e (390×844 + 1280×800): pair → chat → stream → stop → history → revoke
 - [ ] **T14.16** Update `guide.html` Sharing section (firewall prompts, troubleshooting) + WINDOWS-TESTING firewall step

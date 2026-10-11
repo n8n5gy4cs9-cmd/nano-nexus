@@ -93,3 +93,17 @@ samp {
 .tnum {
   font-variant-numeric: tabular-nums;
 }
+
+/* Phones: 16 px inputs stop iOS Safari zooming on focus; 44 px touch targets. */
+@media (max-width: 767px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+  button,
+  [role="button"],
+  a {
+    min-height: 44px;
+  }
+}

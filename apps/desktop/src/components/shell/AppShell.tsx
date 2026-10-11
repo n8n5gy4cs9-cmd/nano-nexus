@@ -8,9 +8,13 @@ import { usePlatform } from "@/hooks/usePlatform";
 import { useUi } from "@/stores/ui";
 import { useLocation } from "react-router-dom";
 
+import { IS_WEB } from "@/lib/target";
+
 import { Inspector } from "./Inspector";
+import { MobileTabBar } from "./MobileTabBar";
 import { NotificationBell } from "./NotificationBell";
 import { RuntimePill } from "./RuntimePill";
+import { SharePill } from "@/features/share/SharePill";
 import { Sidebar } from "./Sidebar";
 import { TitleBar } from "./TitleBar";
 
@@ -46,12 +50,14 @@ export function AppShell() {
         <TitleBar platform={platform} right={
             <>
               <NotificationBell />
+              {IS_WEB ? null : <SharePill />}
               <RuntimePill />
             </>
           } />
         <main className="min-h-0 flex-1 overflow-auto">
           <Outlet />
         </main>
+        <MobileTabBar />
       </div>
       {inspectorOpen ? <Inspector /> : null}
       <PermissionModal />

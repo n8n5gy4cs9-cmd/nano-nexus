@@ -70,6 +70,8 @@ pub enum AppEvent {
     ModelChanged(String),
     /// Show an in-app (and maybe OS) notification.
     Notify(nexus_store::NewNotification),
+    /// LAN Share started, stopped, or its devices changed.
+    ShareStatus(nexus_core::share::ShareStatus),
 }
 
 /// Everything services need. Later milestones add jobs, permissions, and the assistant registry.
@@ -100,6 +102,8 @@ pub struct AppState {
     pub summarizing: Mutex<HashSet<ConversationId>>,
     pub bus: tokio::sync::broadcast::Sender<AppEvent>,
     pub settings: RwLock<Settings>,
+    /// LAN Share server, pairing, and devices (M14).
+    pub share: crate::service::share::ShareController,
     /// Tauri's `resource_dir()` (bundled models, Windows runtime).
     pub resource_dir: PathBuf,
     /// Directory of the running executable (macOS sidecar, portable data, `models-extra`).
@@ -186,6 +190,7 @@ impl AppState {
             Arc::new(nexus_fs::MoveToDirTrash::new(root.join("trash"))),
         ));
         let registry = RwLock::new(crate::service::assistants::load_registry(&store));
+        let store_for_share = store.clone();
         Arc::new(AppState {
             paths,
             store,
@@ -203,6 +208,7 @@ impl AppState {
             audit,
             summarizing: Default::default(),
             bus: tokio::sync::broadcast::channel(64).0,
+            share: crate::service::share::ShareController::new(store_for_share, &Settings::default()),
             settings: RwLock::new(Settings::default()),
             resource_dir: root.join("resources"),
             exe_dir: root.join("bin"),

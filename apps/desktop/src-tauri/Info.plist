@@ -12,5 +12,11 @@
   <string>NanoNexus can analyze folders and import model packs from external drives you select.</string>
   <key>NSNetworkVolumesUsageDescription</key>
   <string>NanoNexus can analyze folders on network drives you select.</string>
+  <key>NSLocalNetworkUsageDescription</key>
+  <string>NanoNexus uses your local network only when you turn on LAN Share, so your phone can reach your assistants.</string>
+  <key>NSBonjourServices</key>
+  <array>
+    <string>_http._tcp</string>
+  </array>
 </dict>
 </plist>

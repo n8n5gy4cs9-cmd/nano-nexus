@@ -1,0 +1,95 @@
+//! Share URLs, LAN address discovery, and the pairing QR (LAN-SHARE §2).
+
+use std::net::{IpAddr, Ipv4Addr};
+
+use qrcode::QrCode;
+use qrcode::render::svg;
+
+/// Private-range rank: 192.168/16 first, then 10/8, then 172.16/12, then anything else.
+fn rank(ip: Ipv4Addr) -> u8 {
+    let o = ip.octets();
+    match (o[0], o[1]) {
+        (192, 168) => 0,
+        (10, _) => 1,
+        (172, 16..=31) => 2,
+        _ => 3,
+    }
+}
+
+/// Non-loopback IPv4 addresses of interfaces that are up, best first.
+pub fn lan_addresses() -> Vec<Ipv4Addr> {
+    let mut found: Vec<Ipv4Addr> = if_addrs::get_if_addrs()
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|i| !i.is_loopback())
+        .filter_map(|i| match i.ip() {
+            IpAddr::V4(v4) if !v4.is_link_local() => Some(v4),
+            _ => None,
+        })
+        .collect();
+    found.sort_by_key(|ip| rank(*ip));
+    found.dedup();
+    found
+}
+
+/// Browser URLs for a server on `bind:port`. A specific bind shows only that address.
+pub fn share_urls(bind: IpAddr, port: u16, https: bool, mdns_name: Option<&str>) -> Vec<String> {
+    let scheme = if https { "https" } else { "http" };
+    let hosts: Vec<String> = if bind.is_unspecified() {
+        lan_addresses().into_iter().map(|i| i.to_string()).collect()
+    } else {
+        vec![bind.to_string()]
+    };
+    let mut urls: Vec<String> = hosts.into_iter().map(|h| format!("{scheme}://{h}:{port}")).collect();
+    if let (Some(name), true) = (mdns_name, bind.is_unspecified()) {
+        urls.push(format!("{scheme}://{name}.local:{port}"));
+    }
+    urls
+}
+
+/// The URL the QR encodes: the secret rides in the fragment so it never reaches a server log.
+pub fn pairing_url(base: &str, secret: &str) -> String {
+    format!("{base}/pair#{secret}")
+}
+
+/// A QR code as an SVG string.
+pub fn qr_svg(data: &str) -> Option<String> {
+    let code = QrCode::new(data.as_bytes()).ok()?;
+    Some(
+        code.render::<svg::Color<'_>>()
+            .min_dimensions(200, 200)
+            .quiet_zone(true)
+            .dark_color(svg::Color("#000000"))
+            .light_color(svg::Color("#ffffff"))
+            .build(),
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn private_ranges_sort_first() {
+        let mut v = vec![Ipv4Addr::new(8, 8, 8, 8), Ipv4Addr::new(10, 0, 0, 2), Ipv4Addr::new(192, 168, 1, 2)];
+        v.sort_by_key(|i| rank(*i));
+        assert_eq!(v[0], Ipv4Addr::new(192, 168, 1, 2));
+        assert_eq!(v[2], Ipv4Addr::new(8, 8, 8, 8));
+    }
+
+    #[test]
+    fn specific_bind_shows_only_that_address() {
+        let urls = share_urls(IpAddr::from([127, 0, 0, 1]), 9889, false, Some("nanonexus"));
+        assert_eq!(urls, vec!["http://127.0.0.1:9889".to_owned()]);
+    }
+
+    #[test]
+    fn pairing_url_uses_a_fragment() {
+        assert_eq!(pairing_url("http://1.2.3.4:9889", "abc"), "http://1.2.3.4:9889/pair#abc");
+    }
+
+    #[test]
+    fn qr_is_an_svg() {
+        assert!(qr_svg("http://192.168.1.20:9889/pair#abc").unwrap().contains("<svg"));
+    }
+}

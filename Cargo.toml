@@ -77,3 +77,5 @@ quick-xml = "0.37" # DOCX word/document.xml parsing
 csv = "1" # streaming CSV/TSV profiling
 kamadak-exif = "0.6" # image EXIF facts (date, camera, GPS flag)
 whatlang = "0.16" # language guess for text reports
+qrcode = { version = "0.14", default-features = false, features = ["svg"] } # pairing QR as an SVG string (LAN-SHARE §2)
+if-addrs = "0.13" # LAN IPv4 discovery for the share URLs

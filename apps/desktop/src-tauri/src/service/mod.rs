@@ -7,6 +7,7 @@ pub mod attachments;
 pub mod chat;
 pub mod coalesce;
 pub mod conversations;
+pub mod editor;
 pub mod fs;
 pub mod models;
 pub mod notifications;
@@ -15,6 +16,7 @@ pub mod pipelines;
 pub mod analyzer;
 pub mod runtime;
 pub mod settings;
+pub mod share;
 pub mod sink;
 
 use nexus_core::settings::SharePolicy;

@@ -20,6 +20,10 @@ import { ReportPage } from "@/features/analyzer/ReportPage";
 import { ChangesPage } from "@/features/changes/ChangesPage";
 import { ModelsPage } from "@/features/models/ModelsPage";
 import { PermissionsPage } from "@/features/permissions/PermissionsPage";
+import { IS_WEB } from "@/lib/target";
+import { SharingSettings } from "@/features/share/SharingSettings";
+import { DesktopOnly } from "@/web/DesktopOnly";
+import { EditorPage } from "@/features/editor/EditorPage";
 import { PlaceholderPage } from "@/features/placeholders/PlaceholderPage";
 
 export interface NavSection {
@@ -50,11 +54,15 @@ export const SETTINGS_SECTION: NavSection = {
   tagline: "Appearance, runtime, models, and privacy.",
 };
 
+const DESKTOP_ONLY = new Set(["/rename", "/editor", "/changes", "/permissions", "/models"]);
+
 function pageFor(s: NavSection) {
+  if (IS_WEB && DESKTOP_ONLY.has(s.path)) return <DesktopOnly title={s.label} />;
   if (s.path === "/") return <ChatView />;
   if (s.path === "/assistants") return <AssistantsPage />;
   if (s.path === "/models") return <ModelsPage />;
   if (s.path === "/analyzer") return <AnalyzerPage />;
+  if (s.path === "/editor") return <EditorPage />;
   if (s.path === "/changes") return <ChangesPage />;
   if (s.path === "/permissions") return <PermissionsPage />;
   return <PlaceholderPage section={s} />;
@@ -64,7 +72,7 @@ export const routes: RouteObject[] = [
   {
     path: "/",
     element: <AppShell />,
-    children: [{ path: "c/:conversationId", element: <ChatView /> }, { path: "analyzer/:id", element: <ReportPage /> }, ...[...NAV, SETTINGS_SECTION].map((s) => ({
+    children: [{ path: "c/:conversationId", element: <ChatView /> }, { path: "analyzer/:id", element: <ReportPage /> }, { path: "settings/sharing", element: IS_WEB ? <DesktopOnly title="Sharing settings" /> : <SharingSettings /> }, ...[...NAV, SETTINGS_SECTION].map((s) => ({
       ...(s.path === "/" ? { index: true as const } : { path: s.path.slice(1) }),
       element: pageFor(s),
     }))],

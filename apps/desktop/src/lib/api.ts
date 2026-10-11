@@ -4,6 +4,9 @@
  * (an ESLint rule enforces this). Types come from the generated `bindings.ts`.
  */
 import type {
+  DirEntryInfo,
+  FileStat,
+  TextFile,
   CleanupPlan,
   ExportFile,
   ExportFormat,
@@ -49,6 +52,9 @@ import type {
   UndoDecision,
   UndoOutcome,
 } from "@/features/permissions/types";
+
+import type { EditorAiEvent, EditorAiRequest, EditorSaveResult } from "@/features/editor/types";
+import type { PairingView, SharePolicy, ShareDevice, ShareStatus } from "@/features/share/types";
 
 import { getTransport } from "./transport";
 import type { Unsubscribe } from "./transport";
@@ -182,6 +188,9 @@ export const api = {
         label: patch.label ?? null,
         expiresAt: patch.expiresAt ?? null,
       }),
+    listDir: (path: string) => getTransport().call<DirEntryInfo[]>("fs_list_dir", { path }),
+    readText: (path: string) => getTransport().call<TextFile>("fs_read_text", { path }),
+    stat: (path: string) => getTransport().call<FileStat>("fs_stat", { path }),
     grantRevoke: (id: string) => getTransport().call<boolean>("fs_grant_revoke", { id }),
     denyList: () => getTransport().call<DenyRuleView[]>("fs_deny_list"),
     denyAdd: (root: string) => getTransport().call<null>("fs_deny_add", { root }),
@@ -214,6 +223,30 @@ export const api = {
     /** Subscribe to `changeset:update`. */
     onUpdate: (handler: (u: { id: string; status: string }) => void): Promise<Unsubscribe> =>
       getTransport().on<{ id: string; status: string }>("changeset:update", handler),
+  },
+  editor: {
+    canWrite: (path: string) => getTransport().call<boolean>("editor_can_write", { path }),
+    /** Saves through a change set; rejects with `conflict` if the file changed since `baseHash`. */
+    save: (path: string, contents: string, baseHash: string | null) =>
+      getTransport().call<EditorSaveResult>("editor_save", { path, contents, baseHash }),
+    ai: (jobId: string, request: EditorAiRequest, onEvent: (e: EditorAiEvent) => void) =>
+      getTransport().stream<EditorAiEvent>("editor_ai", { jobId, request }, onEvent),
+    aiCancel: (jobId: string) => getTransport().call<boolean>("editor_ai_cancel", { jobId }),
+  },
+  share: {
+    status: () => getTransport().call<ShareStatus>("share_status"),
+    start: () => getTransport().call<ShareStatus>("share_start"),
+    stop: () => getTransport().call<ShareStatus>("share_stop"),
+    setEnabled: (enabled: boolean) => getTransport().call<ShareStatus>("share_set_enabled", { enabled }),
+    setSetting: (key: string, value: SettingValue) => getTransport().call<ShareStatus>("share_settings_set", { key, value }),
+    pairingCode: () => getTransport().call<PairingView>("share_pairing_code"),
+    devices: () => getTransport().call<ShareDevice[]>("share_devices_list"),
+    updateDevice: (id: string, name: string | null, policy: SharePolicy | null) =>
+      getTransport().call<null>("share_device_update", { id, name, policy }),
+    revokeDevice: (id: string) => getTransport().call<boolean>("share_device_revoke", { id }),
+    /** Subscribe to `share:status`. */
+    onStatus: (handler: (s: ShareStatus) => void): Promise<Unsubscribe> =>
+      getTransport().on<ShareStatus>("share:status", handler),
   },
   settings: {
     get: () => getTransport().call<Settings>("settings_get"),
