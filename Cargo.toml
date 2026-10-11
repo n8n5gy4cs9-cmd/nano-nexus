@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = [] # T00.02 switches this to ["crates/*"]; apps/desktop/src-tauri is added in M03
+members = ["crates/*"] # apps/desktop/src-tauri is added in M03
 
 [workspace.package]
 edition = "2024"
