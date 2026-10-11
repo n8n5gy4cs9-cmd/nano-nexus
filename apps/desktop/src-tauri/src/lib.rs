@@ -156,6 +156,7 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
             std::env::var("HF_TOKEN").ok().filter(|t| !t.is_empty()),
         )?),
         downloads: Default::default(),
+        analyses: Default::default(),
         registry,
         journal,
         audit,

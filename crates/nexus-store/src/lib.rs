@@ -9,6 +9,7 @@ pub mod fs;
 mod migrate;
 pub mod models;
 pub mod notifications;
+pub mod reports;
 pub mod settings;
 
 use std::path::Path;
@@ -23,6 +24,7 @@ pub use fs::{ChangeSetRow, NewAudit};
 pub use migrate::{MIGRATIONS, schema_version};
 pub use models::{DownloadRow, ModelRow};
 pub use notifications::NewNotification;
+pub use reports::ReportRow;
 
 /// Current time as unix milliseconds (UTC).
 pub(crate) fn now_ms() -> i64 {

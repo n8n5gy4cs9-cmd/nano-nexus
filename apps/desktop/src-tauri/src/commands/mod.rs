@@ -3,6 +3,7 @@
 pub mod app;
 pub mod assistants;
 pub mod attachments;
+pub mod analyzer;
 pub mod chat;
 pub mod conversations;
 pub mod fs;

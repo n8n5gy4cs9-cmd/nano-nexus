@@ -135,8 +135,8 @@ pub fn validate_report(text: &str) -> ValidationReport {
 /// `Err(milestone)` while a pipeline's code does not exist yet. The gallery shows such cards disabled.
 pub fn pipeline_ready(pipeline: &str) -> Result<(), &'static str> {
     match pipeline {
-        "folder_report" | "doc_qa" | "doc_summarize" | "tidy_plan" | "secrets_report" | "log_triage"
-        | "data_profile" | "commit_message" => Err("Available in M08"),
+        "folder_report" | "file_report" | "doc_qa" | "doc_summarize" | "tidy_plan" | "secrets_report"
+        | "log_triage" | "data_profile" | "commit_message" => Ok(()),
         "rename_propose" | "strings_improve" => Err("Available in M09"),
         _ => Err("Not available yet"),
     }

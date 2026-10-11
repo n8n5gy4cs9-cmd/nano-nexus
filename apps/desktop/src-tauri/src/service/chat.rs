@@ -357,6 +357,8 @@ fn start_turn(
         spec.prompt.system.clone()
     });
     let docs = attached_docs(&user.attachments);
+    let is_pipeline = spec.workflow.kind == "pipeline";
+    let pipeline_attachments = user.attachments.clone();
     let routed = spec.workflow.kind == "router" && !tool_names.is_empty();
     let (max_hops, always_route) = (
         spec.workflow.max_hops.unwrap_or(3),
@@ -403,7 +405,28 @@ fn start_turn(
         persisting.send(ChatEvent::Started {
             assistant_message_id: assistant_id.clone(),
         });
-        if routed {
+        let mut early_text: Option<String> = None;
+        let mut check_facts: Option<String> = None;
+        if is_pipeline {
+            match super::pipelines::run_pipeline(&ctx, &input.assistant, &input.user_text, &pipeline_attachments, &persisting, &cancel).await {
+                Ok(Some((out, target))) => {
+                    super::pipelines::store_artifact(&ctx, &out.artifact, &target, &persisting);
+                    for n in &out.notes {
+                        persisting.send(ChatEvent::Status { text: n.clone() });
+                    }
+                    if let Some(plan) = &out.stream {
+                        check_facts = Some(plan.facts.clone());
+                        input = super::pipelines::plan_input(&input.assistant, plan, input.ctx_size);
+                    } else {
+                        early_text = Some(out.text.unwrap_or_default());
+                    }
+                }
+                Ok(None) => {}
+                Err(nexus_agent::pipelines::PipelineError::Cancelled) => early_text = Some(String::new()),
+                Err(e) => early_text = Some(e.to_string()),
+            }
+        }
+        if routed && early_text.is_none() {
             let gate = EngineGatekeeper::new(
                 ctx.perms.clone(),
                 assistant_slug.clone(),
@@ -422,7 +445,38 @@ fn start_turn(
             let routed = run_router(request, &llm, &builtin_tools(), &cx, &persisting, cancel.clone()).await;
             input.attachments.extend(routed.as_attachments());
         }
-        let outcome = ctx.engine.run(input, &persisting, cancel).await;
+        let mut outcome = match early_text {
+            Some(text) => {
+                if !text.is_empty() {
+                    persisting.send(ChatEvent::Content { delta: text.clone() });
+                }
+                persisting.send(ChatEvent::Done { finish_reason: "stop".into(), tokens_out: 0, tps: 0.0, ttft_ms: 0 });
+                nexus_agent::TurnOutcome {
+                    status: MessageStatus::Done,
+                    content: text,
+                    reasoning: None,
+                    finish_reason: Some("stop".into()),
+                    tokens_prompt: None,
+                    tokens_out: None,
+                    tps: None,
+                    ttft_ms: None,
+                    error: None,
+                    dropped: Vec::new(),
+                    needs_summary: false,
+                    attachment_tokens: Vec::new(),
+                }
+            }
+            None => ctx.engine.run(input, &persisting, cancel).await,
+        };
+        // Every number in a pipeline's narrative must come from its facts; say so when one does not.
+        if let Some(facts) = check_facts.filter(|_| outcome.status == MessageStatus::Done) {
+            let bad = nexus_agent::pipelines::unsupported_numbers(&outcome.content, &facts);
+            if !bad.is_empty() {
+                let note = format!("\n\n_Note: I could not verify these numbers against the scan: {}._", bad.join(", "));
+                persisting.send(ChatEvent::Content { delta: note.clone() });
+                outcome.content.push_str(&note);
+            }
+        }
         coalescing.flush();
 
         let mut fin = MessageFinish::new(outcome.status, outcome.content.clone());

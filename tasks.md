@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 114/229 tasks done (49%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 115/229 tasks done (50%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -163,7 +163,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T08.13** Pipelines `folder_report` + narrative number validator (2026-10-11)
 - [x] **T08.14** Pipelines `doc_summarize` (map-reduce) + `doc_qa` (BM25 + citations) + `doc_search` tool (2026-10-11)
 - [x] **T08.15** Pipelines `tidy_plan`, `secrets_report`, `log_triage`, `data_profile`, `commit_message` + `scan_folder` tool (2026-10-11) — pipelines return a `StreamPlan` + artifact; app wiring is T08.16/T08.20
-- [ ] **T08.16** Store migration 0004 (reports, notifications, watches) + commands `analyze_*`, `reports_*`, `report_narrative`, `cleanup_plan`
+- [x] **T08.16** Store migration 0004 (reports, watches) + commands `analyze_folder`, `reports_*`, `report_*`, `report_cleanup_plan`, `file_report`; chat runs pipelines (2026-10-11) — untested by owner request (no build run); narrative saved via `report_narrative_save`, not a separate streaming command; bindings.ts needs regeneration
 - [ ] **T08.17** UI Analyzer home + scan flow (pick folder → grant → progress → report)
 - [ ] **T08.18** UI report view: KPI cards, canvas treemap (zoom, breadcrumb), category bars, virtualized tabs, AI summary card
 - [ ] **T08.19** UI file report views per type + export menu + "Plan cleanup" → Changes

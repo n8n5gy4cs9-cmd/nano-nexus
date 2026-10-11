@@ -5,7 +5,7 @@ use specta_typescript::Typescript;
 use tauri_specta::{Builder, collect_commands, collect_events};
 
 use crate::commands::{
-    app, assistants, attachments, chat, conversations, fs, models, notifications, permissions, runtime,
+    analyzer, app, assistants, attachments, chat, conversations, fs, models, notifications, permissions, runtime,
     settings,
 };
 
@@ -69,6 +69,16 @@ pub fn builder() -> Builder<tauri::Wry> {
             assistants::assistant_import,
             assistants::assistant_render_toml,
             assistants::assistant_draft,
+            analyzer::analyze_folder,
+            analyzer::analyze_cancel,
+            analyzer::reports_list,
+            analyzer::report_folder,
+            analyzer::report_body,
+            analyzer::report_delete,
+            analyzer::report_narrative_save,
+            analyzer::report_export,
+            analyzer::file_report,
+            analyzer::report_cleanup_plan,
             models::models_list,
             models::models_catalog,
             models::models_memory,

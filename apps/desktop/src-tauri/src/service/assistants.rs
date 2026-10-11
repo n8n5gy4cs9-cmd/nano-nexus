@@ -279,8 +279,7 @@ mod tests {
         assert_eq!(cards[0].id, "nexus");
         assert!(cards[0].available);
         let scout = cards.iter().find(|c| c.id == "folder-scout").unwrap();
-        assert!(!scout.available);
-        assert_eq!(scout.unavailable_reason.as_deref(), Some("Available in M08"));
+        assert!(scout.available);
         assert_eq!(
             cards
                 .iter()

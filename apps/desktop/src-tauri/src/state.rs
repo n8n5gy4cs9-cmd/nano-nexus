@@ -88,6 +88,8 @@ pub struct AppState {
     pub hf: Arc<nexus_models::hf::HfClient>,
     /// One download at a time.
     pub downloads: crate::service::models::DownloadManager,
+    /// Folder analyses in flight, by job id (for cancel).
+    pub analyses: crate::service::analyzer::Analyses,
     /// Built-in and user assistants.
     pub registry: RwLock<nexus_agent::registry::Registry>,
     /// The only writer of user files (apply / undo with backups).
@@ -195,6 +197,7 @@ impl AppState {
             broker: Default::default(),
             hf: hf_client,
             downloads: Default::default(),
+            analyses: Default::default(),
             registry,
             journal,
             audit,
