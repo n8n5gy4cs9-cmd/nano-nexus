@@ -5,6 +5,7 @@
 //! assistant registry arrive in M06.
 
 pub mod budget;
+pub mod duo;
 pub mod internal;
 pub mod jobs;
 pub mod pipelines;

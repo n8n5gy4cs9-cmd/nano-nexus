@@ -328,10 +328,18 @@ fn start_turn(
     sink: Arc<dyn Sink<ChatEvent>>,
     requested_by: Option<String>,
 ) -> Result<MessageId, NexusError> {
-    let model_id = match ctx.supervisor.state() {
+    // Duo (v0.1): pick the light or strong model for this message; the swap happens in the turn task.
+    let attach_tokens: u32 = user
+        .attachments
+        .iter()
+        .filter_map(|a| a.snapshot.as_deref())
+        .map(nexus_agent::estimate_tokens)
+        .sum();
+    let duo_model = super::runtime::duo_model_for(ctx, spec.id.as_str(), &user.content, attach_tokens, think);
+    let model_id = duo_model.clone().or_else(|| match ctx.supervisor.state() {
         RuntimeState::Ready { model_id, .. } => Some(model_id),
         _ => None,
-    };
+    });
     let placeholder =
         ctx.store
             .insert_assistant_placeholder(&conv.id, &spec_id(&spec), model_id.as_deref())?;
@@ -427,6 +435,15 @@ fn start_turn(
         persisting.send(ChatEvent::Started {
             assistant_message_id: assistant_id.clone(),
         });
+        if let Some(id) = &duo_model {
+            let already = matches!(ctx.supervisor.state(), RuntimeState::Ready { model_id, .. } if &model_id == id);
+            if !already {
+                persisting.send(ChatEvent::Status {
+                    text: "Duo: switching model…".into(),
+                });
+                super::runtime::ensure_model(&ctx, id).await;
+            }
+        }
         let mut early_text: Option<String> = None;
         let mut check_facts: Option<String> = None;
         if is_pipeline {

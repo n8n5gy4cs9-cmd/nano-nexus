@@ -14,8 +14,8 @@ fn icons() -> Vec<&'static str> {
 }
 
 #[test]
-fn there_are_eighteen_builtins() {
-    assert_eq!(builtin_sources().len(), 18);
+fn there_are_nineteen_builtins() {
+    assert_eq!(builtin_sources().len(), 19);
 }
 
 #[test]

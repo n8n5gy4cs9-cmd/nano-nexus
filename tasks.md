@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 152/229 tasks done (66%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 153/234 tasks done (65%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -296,3 +296,10 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T17.11** Bundling: profile `knowledge[]`, stage-bundle copies sources + prebuilt index, `verify-payload` hashes, App Builder size summary (2026-10-11) — profile `knowledge[]`, `scripts/knowledge-manifest.mjs` (stage/verify/size) ready for stage-bundle/verify-payload once M12 lands; prebuilt index deferred (Q-6) (library crates compiled, clippy-clean, tests pass; app crate + UI not yet built here)
 - [x] **T17.12** Docs: user guide section, sample library, walkthrough (e.g. a Reaper manual, a JavaScript book) (2026-10-11) — guide.html section, `docs/samples/knowledge/mixing-basics` + walkthrough (library crates compiled, clippy-clean, tests pass; app crate + UI not yet built here)
 - [ ] ⭐ **T17.13** 🍎 Exit check: offline cited answers from a bundled library; user-added EPUB/PDF/MD work; libraries off = no behavior change
+
+## M18: Duo assistant (light + strong model) · [spec](docs/milestones/M18-duo.md)
+- [x] **T18.01** v0.1: `duo` assistant, heuristic tier classifier (`nexus-agent::duo`), settings `duo.light_model_id` / `duo.strong_model_id`, per-message model swap in chat, Duo panel on the Models page (2026-10-11) — one model runs at a time (swap on demand); classifier + settings + prompt_lint tested; app crate + UI not built here
+- [ ] **T18.02** 🍎 Try Duo with two real models; tune `HARD_WORDS` / thresholds; note swap latency in SPIKES.md
+- [ ] **T18.03** Show the chosen tier on the message ("light" / "strong") and a "Use strong model" button on light answers
+- [ ] **T18.04** (v0.2) Run both models at the same time (second `Supervisor` + port, memory check via `MemoryInfo`) to remove swap latency
+- [ ] **T18.05** (v0.2) Optional model-based classifier (light model scores difficulty 1–5) and automatic escalation when the light answer looks unsure

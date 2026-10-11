@@ -22,6 +22,7 @@ import { api } from "@/lib/api";
 import { toIpcException } from "@/lib/ipc";
 
 import { CatalogCardView, DownloadStrip, InstalledCard } from "./ModelCards";
+import { DuoPanel } from "./DuoPanel";
 import { ModelDrawer } from "./ModelDrawer";
 import { RuntimePanel } from "./RuntimePanel";
 import { SearchTab } from "./SearchTab";
@@ -131,6 +132,7 @@ export function ModelsPage() {
         <p className="text-body text-muted">Download, switch, and manage the models that run on your computer.</p>
       </header>
       <RuntimePanel />
+      <DuoPanel models={installed.data ?? []} />
       <Tabs value={tab} onValueChange={setTab}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <TabsList>

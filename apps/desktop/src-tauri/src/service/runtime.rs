@@ -20,6 +20,11 @@ pub async fn logs(ctx: &AppCtx, lines: u32) -> Vec<String> {
 /// A launch config from the current settings, or `None` when no model is installed (the UI then
 /// shows "Download a model").
 pub fn build_config(ctx: &AppCtx) -> Option<RuntimeConfig> {
+    build_config_for(ctx, None)
+}
+
+/// Like [`build_config`], but `prefer` (a registered model id, e.g. Duo's pick) wins over the active model.
+pub fn build_config_for(ctx: &AppCtx, prefer: Option<&str>) -> Option<RuntimeConfig> {
     let settings = ctx.settings_snapshot();
     let search = ModelSearch {
         // Developer conveniences exist in debug builds only.
@@ -36,7 +41,12 @@ pub fn build_config(ctx: &AppCtx) -> Option<RuntimeConfig> {
     let registered = search
         .env_override
         .is_none()
-        .then(|| super::models::active_model_id(ctx))
+        .then(|| {
+            prefer
+                .filter(|id| !id.is_empty())
+                .map(str::to_owned)
+                .or_else(|| super::models::active_model_id(ctx))
+        })
         .flatten()
         .and_then(|id| ctx.store.get_model(&id).ok().flatten())
         .filter(|m| std::path::Path::new(&m.path).is_file())
@@ -55,6 +65,35 @@ pub fn build_config(ctx: &AppCtx) -> Option<RuntimeConfig> {
     let mut cfg = RuntimeConfig::from_settings(&settings, binary, model.path);
     cfg.model_id = model.id;
     Some(cfg)
+}
+
+/// Duo (v0.1): the model id this message should run on, or `None` when the assistant is not Duo.
+pub fn duo_model_for(ctx: &AppCtx, assistant_id: &str, text: &str, attachment_tokens: u32, think: bool) -> Option<String> {
+    if assistant_id != "duo" {
+        return None;
+    }
+    let s = ctx.settings_snapshot();
+    let tier = nexus_agent::duo::classify(&nexus_agent::duo::DuoSignals { text, attachment_tokens, think });
+    let active = super::models::active_model_id(ctx).unwrap_or_default();
+    let id = nexus_agent::duo::pick_model(tier, &s.duo_light_model_id, &s.duo_strong_model_id, &active);
+    (!id.is_empty()).then(|| id.to_owned())
+}
+
+/// Make sure the server runs `model_id`, restarting it when another model is loaded. Best effort:
+/// if the model cannot be found or started, the turn runs on whatever is loaded.
+pub async fn ensure_model(ctx: &AppCtx, model_id: &str) {
+    if let RuntimeState::Ready { model_id: current, .. } = ctx.supervisor.state()
+        && current == model_id
+    {
+        return;
+    }
+    let Some(cfg) = build_config_for(ctx, Some(model_id)) else { return };
+    if cfg.model_id != model_id {
+        return; // the id was not found; keep the running model
+    }
+    if let Err(e) = ctx.supervisor.restart(cfg).await {
+        tracing::warn!("duo: could not switch model: {e}");
+    }
 }
 
 /// Restart the server with the current settings. Desktop only.

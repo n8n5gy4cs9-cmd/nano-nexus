@@ -98,6 +98,12 @@ pub struct Settings {
     /// Token budget of the injected passages (and of `kb_search` results).
     #[serde(rename = "knowledge.max_tokens")]
     pub knowledge_max_tokens: u32,
+    /// Duo assistant: model id used for easy questions. Empty = the active model.
+    #[serde(rename = "duo.light_model_id")]
+    pub duo_light_model_id: String,
+    /// Duo assistant: model id used for hard questions. Empty = the active model.
+    #[serde(rename = "duo.strong_model_id")]
+    pub duo_strong_model_id: String,
 }
 
 impl Default for Settings {
@@ -134,6 +140,8 @@ impl Default for Settings {
             share_notify_pairing: true,
             knowledge_chat_context: false,
             knowledge_max_tokens: 1200,
+            duo_light_model_id: String::new(),
+            duo_strong_model_id: String::new(),
         }
     }
 }

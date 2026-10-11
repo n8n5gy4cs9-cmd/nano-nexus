@@ -1057,7 +1057,8 @@ impl Tool for KbSearch {
         let library = args.get("library").and_then(|v| v.as_str()).map(str::to_owned);
         let Some(kb) = cx.kb.clone() else {
             return Err(ToolError::Invalid(
-                "No knowledge library is enabled. Ask the user to add or enable one on the Library page.".into(),
+                "No knowledge library is enabled. Ask the user to add or enable one on the Library page."
+                    .into(),
             ));
         };
         let budget = cx.budget_tokens.min(1200);
@@ -1070,7 +1071,10 @@ impl Tool for KbSearch {
             format!("{}\n", hits.context)
         };
         Ok(ToolOutput {
-            llm_text: format!("<tool_result name=\"kb_search\" query=\"{}\">\n{body}</tool_result>", query.replace('"', "'")),
+            llm_text: format!(
+                "<tool_result name=\"kb_search\" query=\"{}\">\n{body}</tool_result>",
+                query.replace('"', "'")
+            ),
             ui: Some(serde_json::json!({"query": query, "passages": hits.passages})),
             summary: format!(
                 "Searched the libraries for “{query}” ({} passage{})",

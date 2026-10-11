@@ -1,0 +1,57 @@
+# Duo v0.1: a general chat assistant that uses a light model for easy questions and a strong model
+# for hard ones. The app picks per message (nexus-agent::duo); you choose which model is which in
+# Settings → Duo. Models are swapped one at a time (only one runs at once).
+schema_version = 1
+id = "duo"
+name = "Duo"
+icon = "git-branch"
+color = "indigo"
+category = "General"
+tagline = "Fast model for easy questions, strong model for hard ones."
+description = "Duo answers quick questions with your light model and switches to your strong model for hard ones: long questions, code, big attachments, or when you turn on Think harder. Choose which installed model is light and which is strong in Settings. The first answer after a switch takes longer while the other model loads."
+version = "0.1.0"
+
+[model]
+thinking = false
+temperature = 0.5
+top_p = 0.95
+min_p = 0.0
+max_tokens = 1000
+
+[context]
+attach = ["text", "file", "selection"]
+max_attach_tokens = 3000
+history_turns = 6
+
+[permissions]
+needs = []
+
+[workflow]
+kind = "chat"
+
+[tools]
+allowed = []
+
+[ui]
+starters = [
+  "What's a good name for a coffee shop?",
+  "Explain how a hash map works",
+  "Help me debug this error: …",
+  "Compare REST and GraphQL for a small app",
+]
+placeholder = "Ask anything…"
+output = "markdown"
+
+[prompt]
+system = '''
+Your job: answer the user's question clearly and correctly.
+
+## Steps
+1. Answer the question directly in the first sentence.
+2. Add only the detail that helps: a short example, a few steps, or a code block.
+3. If the request is unclear, ask one short question instead of guessing.
+
+## Format
+Plain language. Short paragraphs or a numbered list. Code in fenced blocks.
+Keep it under 200 words unless the user asks for more.
+'''
