@@ -215,15 +215,14 @@ pub fn tick(ctx: &Arc<AppCtx>) {
     }
 }
 
-/// Check once a minute while the app runs.
-pub fn spawn_scheduler(ctx: Arc<AppCtx>) {
+/// Check once a minute while the app runs. Spawn this on the async runtime (it never returns); calling
+/// `tokio::spawn` from the Tauri setup hook panics because no runtime is entered there.
+pub async fn run_scheduler(ctx: Arc<AppCtx>) {
     sync_watchers(&ctx);
-    tokio::spawn(async move {
-        let mut every = tokio::time::interval(Duration::from_secs(60));
-        loop {
-            every.tick().await;
-            sync_watchers(&ctx);
-            tick(&ctx);
-        }
-    });
+    let mut every = tokio::time::interval(Duration::from_secs(60));
+    loop {
+        every.tick().await;
+        sync_watchers(&ctx);
+        tick(&ctx);
+    }
 }
