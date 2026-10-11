@@ -71,3 +71,9 @@ wiremock = "0.6" # fake Hugging Face server in tests (dev)
 ignore = "0.4" # parallel, gitignore-aware directory walker (folder scans)
 rayon = "1" # parallel hashing of duplicate candidates
 infer = "0.19" # magic-byte file type detection
+pdf-extract = "0.9" # PDF text extraction (spike S5); run under catch_unwind, pdftotext fallback
+zip = { version = "2", default-features = false, features = ["deflate"] } # DOCX reading and zip-archive reports
+quick-xml = "0.37" # DOCX word/document.xml parsing
+csv = "1" # streaming CSV/TSV profiling
+kamadak-exif = "0.6" # image EXIF facts (date, camera, GPS flag)
+whatlang = "0.16" # language guess for text reports

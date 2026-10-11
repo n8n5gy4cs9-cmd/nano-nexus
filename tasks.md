@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 105/229 tasks done (45%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 111/229 tasks done (48%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -153,13 +153,13 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T08.03** Duplicates (size → 64 KiB head → full BLAKE3, rayon) + tests (2026-10-11)
 - [x] **T08.04** Aggregates, age buckets, largest dirs, treemap pruning + facts builder (≤ 1 200 tokens) + tests (2026-10-11)
 - [x] **T08.05** Renderers: Markdown, JSON, CSV + tests (2026-10-11)
-- [ ] **T08.06** 🔬 **S5** PDF extractors on your PDFs → SPIKES.md
-- [ ] **T08.07** Extractors: plain/markdown/code, PDF (catch_unwind), DOCX, HTML + fixtures
-- [ ] **T08.08** Chunker (700 tok, overlap, pages) + BM25 + tests
-- [ ] **T08.09** File reports: code, text, pdf, docx, csv/tsv, json, logs, image (EXIF + GPS flag), zip
-- [ ] **T08.10** Secrets scanner (rules + entropy + redaction) + tests with fake secrets
-- [ ] **T08.11** Log parser + template clustering + timeline + tests
-- [ ] **T08.12** CSV/JSON profiler (streaming, reservoir sampling) + tests
+- [ ] **T08.06** 🔬 **S5** PDF extractors on your PDFs → SPIKES.md — ⏳ owner to run on your own PDFs; `pdf-extract` + `pdftotext` fallback are wired and tested on generated PDFs
+- [x] **T08.07** Extractors: plain/markdown/code, PDF (catch_unwind), DOCX, HTML + fixtures (2026-10-11)
+- [x] **T08.08** Chunker (700 tok, overlap, pages) + BM25 + tests (2026-10-11)
+- [x] **T08.09** File reports: code, text, pdf, docx, csv/tsv, json, logs, image (EXIF + GPS flag), zip (2026-10-11) — code facts are pattern-based for now; M09's tree-sitter index will sharpen them
+- [x] **T08.10** Secrets scanner (rules + entropy + redaction) + tests with fake secrets (2026-10-11)
+- [x] **T08.11** Log parser + template clustering + timeline + tests (2026-10-11)
+- [x] **T08.12** CSV/JSON profiler (streaming, reservoir sampling) + tests (2026-10-11)
 - [ ] **T08.13** Pipelines `folder_report` + narrative number validator
 - [ ] **T08.14** Pipelines `doc_summarize` (map-reduce) + `doc_qa` (BM25 + citations) + `doc_search` tool
 - [ ] **T08.15** Pipelines `tidy_plan`, `secrets_report`, `log_triage`, `data_profile`, `commit_message` + `scan_folder` tool
