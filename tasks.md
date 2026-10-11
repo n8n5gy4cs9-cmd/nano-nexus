@@ -281,3 +281,18 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [ ] **T16.07** Windows code signing from the Mac (osslsigncode)
 - [ ] **T16.08** 🔬 S9 cross-compile llama.cpp for Windows on the Mac
 - [ ] **T16.09** Speculative decoding with a draft model
+
+## M17: Knowledge libraries (offline reference books) · [spec](docs/milestones/M17-knowledge.md)
+- [ ] **T17.01** `nexus-knowledge` crate + migration `0007_knowledge.sql` (libraries, documents, chunks, FTS5/BM25) + repos + tests
+- [ ] **T17.02** Extractors: md, txt, json, html (readable text), csv, docx, source files (reuse M08 extractors where present) + fixtures
+- [ ] **T17.03** PDF (page-aware) and EPUB (spine order, chapter titles) extractors + fixtures; skipped-content notes
+- [ ] **T17.04** Heading-aware chunker (600-800 tokens, overlap, breadcrumbs, page numbers) + tests
+- [ ] **T17.05** Index job (Background, incremental by hash, progress, cancel, size/time limits) + tests
+- [ ] **T17.06** `search()` BM25 + heading weights + diversity + neighbor expansion + 500 MB perf fixture test
+- [ ] **T17.07** `kb_search` tool + Librarian assistant + chat context injection (`<doc source=... page=...>`, budgeted) + verified `[n]` citations + "not in the library" rule
+- [ ] **T17.08** Prompt-injection and no-regression tests (libraries off = identical prompts/snapshots)
+- [ ] **T17.09** Commands `kb_*` (list, add, remove, enable, reindex, search, passage) + job events
+- [ ] **T17.10** UI: Library page (add via drag-drop/picker, progress, enable, re-index, remove, passage search) + composer "Libraries" chip + clickable citations
+- [ ] **T17.11** Bundling: profile `knowledge[]`, stage-bundle copies sources + prebuilt index, `verify-payload` hashes, App Builder size summary
+- [ ] **T17.12** Docs: user guide section, sample library, walkthrough (e.g. a Reaper manual, a JavaScript book)
+- [ ] ⭐ **T17.13** 🍎 Exit check: offline cited answers from a bundled library; user-added EPUB/PDF/MD work; libraries off = no behavior change
