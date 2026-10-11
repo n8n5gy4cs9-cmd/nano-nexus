@@ -44,3 +44,6 @@ rusqlite = { version = "0.40", features = ["bundled"] } # bundled SQLite incl. F
 tauri-specta = { version = "=2.0.0-rc.25", features = ["derive", "typescript"] } # ADR-006; exact pin during the rc period
 specta-typescript = "=0.0.12"
 tauri-plugin-notification = "2.6" # OS notifications (ADR-001 plugin set); 2.x only
+minijinja = { version = "3", features = ["serde"] } # assistant prompt templates (ASSISTANTS §2)
+toml = "1" # assistant definitions are TOML (ADR-011)
+insta = "1" # snapshot tests for rendered prompts (dev)
