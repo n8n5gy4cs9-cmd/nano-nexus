@@ -339,6 +339,28 @@ node scripts/verify-payload.mjs path/to/NanoNexus.app  <span class="c"># re-hash
   <li>Scanned PDFs without a text layer are skipped with a note (no OCR yet).</li>
 </ul>
 
+<h3>Bundle libraries into a build (macOS and Windows)</h3>
+<p>A bundled library ships inside the app, so a fresh install can answer from it with no internet and no import step. It appears in <b>Library</b> marked <i>Built in</i> (read-only: it can be switched off but not removed). The same steps work for both platforms because the library files are plain resources; only the build command differs.</p>
+<ol>
+  <li><b>Put the documents in a folder</b> on your Mac, e.g. <code>knowledge/reaper-manual/</code> (md, txt, json, html, pdf, epub, docx, csv, source files). Use only material you may redistribute. Hidden files and unsupported types are ignored.</li>
+  <li><b>Add it to a bundle profile</b> (<code>bundles/local/studio.json</code>, or copy <code>bundles/basic.json</code>):
+<pre><code>{ "schema": 1, "name": "studio", "models": ["minicpm5-1b-fable5-v2-q8"],
+  "default": "minicpm5-1b-fable5-v2-q8", "targets": ["macos-arm64", "windows-x64"],
+  "knowledge": [
+    "knowledge/reaper-manual",
+    { "path": "/Users/me/Books/js-book", "id": "js-book", "name": "JavaScript Book" }
+  ] }</code></pre>
+  A string is a folder path (relative to the repo root or absolute). The object form sets the library id and the name shown in the app. In the App Builder the same list appears under <b>Knowledge libraries</b> with its size added to the summary.</li>
+  <li><b>Build</b> as usual. Staging copies each folder to <code>resources/knowledge/&lt;id&gt;/</code> and writes <code>resources/knowledge/manifest.json</code> with a SHA-256 for every file:
+    <ul>
+      <li>macOS: <code>scripts/build-app.sh --profile studio</code></li>
+      <li>Windows (cross-built on the Mac): <code>scripts/build-windows.sh --profile studio --arch x64</code>, or the Offline kit from <a href="#studio">step 5</a>. Libraries go into the installer, portable folder, or kit alongside the models, and count towards the NSIS size limit.</li>
+    </ul></li>
+  <li><b>Verify:</b> <code>node scripts/knowledge-manifest.mjs verify &lt;path-to&gt;/resources/knowledge</code> re-hashes every file and reports missing, changed, or unlisted ones. The build's verify step runs the same check.</li>
+  <li><b>First launch:</b> the app registers the libraries and indexes them in the background (hash-based, so later launches skip unchanged files). Large libraries take a moment before the first answer; the Library page shows progress.</li>
+</ol>
+<div class="note"><strong>Heads-up</strong>The build scripts for this (<code>stage-bundle</code>, <code>verify-payload</code>) arrive with M12/M13; the profile field, the manifest tool, and the in-app loader are already in place. A prebuilt index (no first-launch indexing) is a planned optimization.</div>
+
 <h2 id="reference">11 · Command reference</h2>
 <table>
   <tr><th>Command</th><th>What it does</th><th>Status</th></tr>
