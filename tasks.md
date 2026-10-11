@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 71/229 tasks done (31%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 72/229 tasks done (31%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -110,7 +110,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T05.05** ChangeSet model + preview (diffs via `similar`, conflicts, missing grants, validation) (2026-10-11)
 - [x] **T05.06** Journal apply (atomic writes, backups, rollback on failure) + Trash (`trash` crate, small-file copies) (2026-10-11)
 - [x] **T05.07** Journal undo (conflict detection, restore) + proptest (≥ 256 cases, byte-identical) (2026-10-11)
-- [ ] **T05.08** OS probes: macOS TCC EPERM detection + deep links; Windows Controlled Folder Access detection
+- [x] **T05.08** OS probes: macOS TCC EPERM detection + deep links; Windows Controlled Folder Access detection (2026-10-11)
 - [ ] **T05.09** Permission broker (oneshot map, 5-min timeout, `permission:request`, OS notify when unfocused) + `permission_respond`
 - [ ] **T05.10** Commands `fs_*`, `os_permissions_*`, `audit_list`, `changesets_*`
 - [ ] **T05.11** UI Permissions page (grants table, macOS privacy cards, protected locations, activity log)

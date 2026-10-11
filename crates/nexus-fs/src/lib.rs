@@ -8,6 +8,7 @@ pub mod canon;
 pub mod deny;
 pub mod engine;
 pub mod journal;
+pub mod os;
 pub mod preview;
 
 pub use audit::{AuditEntry, AuditSink, MemoryAudit, NullAudit};
