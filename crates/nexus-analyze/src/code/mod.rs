@@ -7,6 +7,7 @@ pub mod lang;
 pub mod model;
 pub mod noncode;
 pub mod reserved;
+pub mod rules;
 pub mod tags;
 
 pub use index::{CodeIndex, IndexError, IndexOptions, Symbol, SymbolId, build_index};

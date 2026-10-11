@@ -93,3 +93,4 @@ tree-sitter-c-sharp = "0.23"
 tree-sitter-go = "0.25"
 tree-sitter-java = "0.23"
 postcard = { version = "1.1", default-features = false, features = ["use-std"] } # compact on-disk code index (M09 index.bin)
+heck = "0.5" # case conversion for Rename Forge naming rules (M09)

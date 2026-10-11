@@ -3182,6 +3182,7 @@ version = "0.1.0"
 dependencies = [
  "blake3",
  "csv",
+ "heck 0.5.0",
  "ignore",
  "infer 0.19.0",
  "insta",
