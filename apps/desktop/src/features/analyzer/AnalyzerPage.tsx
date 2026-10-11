@@ -11,6 +11,8 @@ import { formatBytes, relativeTime } from "@/lib/format";
 import { toIpcException } from "@/lib/ipc";
 import { IS_WEB } from "@/lib/target";
 
+import { WatchesSection } from "./WatchesSection";
+
 export const REPORTS_KEY = ["analyzer", "reports"] as const;
 
 const KIND_LABEL: Record<string, string> = { folder: "Folder", file: "File", secrets: "Secrets", logs: "Logs", data: "Data", rename: "Rename" };
@@ -115,6 +117,8 @@ export function AnalyzerPage() {
         )}
       </section>
       )}
+
+      {IS_WEB ? null : <WatchesSection />}
 
       <section className="flex flex-col gap-2">
         <h2 className="text-lead font-semibold">Saved reports</h2>

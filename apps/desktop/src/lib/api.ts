@@ -58,6 +58,7 @@ import type { PairingView, SharePolicy, ShareDevice, ShareStatus } from "@/featu
 import type { KbIndexResult, KbLibrary, KbLibraryDetail, KbPassage, KbProgress } from "@/features/library/types";
 
 import { getTransport } from "./transport";
+import type { ReportDelta, WatchSchedule, WatchView } from "@/features/analyzer/watches";
 import type { JobSummary } from "@/features/jobs/types";
 import type { Unsubscribe } from "./transport";
 
@@ -115,6 +116,15 @@ export const api = {
       getTransport().stream<ChatEvent, ChatSendResult>("chat_regenerate", { assistantMessageId, think }, onEvent),
     editResend: (userMessageId: string, text: string, think: boolean, onEvent: (e: ChatEvent) => void) =>
       getTransport().stream<ChatEvent, ChatSendResult>("chat_edit_resend", { userMessageId, text, think }, onEvent),
+  },
+  watches: {
+    list: () => getTransport().call<WatchView[]>("watches_list"),
+    create: (root: string, schedule: WatchSchedule) => getTransport().call<WatchView>("watch_create", { root, schedule }),
+    setEnabled: (id: string, enabled: boolean) => getTransport().call<null>("watch_set_enabled", { id, enabled }),
+    setSchedule: (id: string, schedule: WatchSchedule) => getTransport().call<null>("watch_set_schedule", { id, schedule }),
+    remove: (id: string) => getTransport().call<boolean>("watch_delete", { id }),
+    /** Scan now; `null` for the first run (it saves the baseline). */
+    runNow: (id: string) => getTransport().call<ReportDelta | null>("watch_run_now", { id }),
   },
   jobs: {
     list: (limit: number) => getTransport().call<JobSummary[]>("jobs_list", { limit }),

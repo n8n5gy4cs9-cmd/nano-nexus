@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 170/234 tasks done (72%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 174/234 tasks done (74%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -206,7 +206,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T11.03** UI Jobs indicator + popover (progress, cancel, open result) (2026-10-11) — `JobsIndicator` in the title bar (hidden until a job exists), `useJobs` (query + `job:update` upsert), `api.jobs`, local `JobSummary` type in `features/jobs/types.ts` (switch to the `bindings.ts` type after it regenerates). **Frontend not linted/typechecked/tested (owner asked for no runs); no component test yet**
 - [x] **T11.04** Notification preferences per kind + routing (click → route) + tests (2026-10-11) — routing is the pure `Settings::wants_os_notification` (master switch, per-kind, unfocused, quiet hours via new `notifications.quiet_start/quiet_end` "HH:MM"), tested in nexus-core; `notify.rs` calls it with the local minute of day (`time` gained `local-offset`; UTC fallback). Click → route already travels as `NotificationAction.route`. **Not done: Settings → Notifications UI (no settings page exists yet); app crate unverified (no GTK)**
 - [x] **T11.05** Watches backend (scheduler, `notify` on-change debounce, `diff_reports`, thresholds) + tests (2026-10-11) — `nexus-analyze::watch` (`diff_reports`, `is_significant`, `notification_text`, `is_due`, `Debounce`, `watch_folder` on `notify` 8.2; refuses home/root), `nexus-store::watches` CRUD, app `service::watches` (minute scheduler, on-change watchers, background runs never prompt, manual run always notifies) + commands `watches_list/watch_create/watch_set_enabled/watch_set_schedule/watch_delete/watch_run_now`. Pure parts have tests; **app crate written but not compiled or run (owner asked for no build/test runs this session)**
-- [ ] **T11.06** UI "Watch this folder" + watches list in Analyzer
+- [x] **T11.06** UI "Watch this folder" + watches list in Analyzer (2026-10-11) — `WatchesSection` on the Analyzer home (desktop only): pick folder + schedule, enable switch, Run now, delete; `api.watches`; local types in `features/analyzer/watches.ts`. Not done: a "Watch this folder" button on a report page. **Frontend not linted/typechecked/tested (owner asked for no runs)**
 - [ ] **T11.07** (optional) Tray icon + launch at login (autostart plugin)
 - [ ] ⭐ **T11.08** 🍎 Exit check: 3 parallel jobs + cancel; OS notifications in background; watch delta notification
 
