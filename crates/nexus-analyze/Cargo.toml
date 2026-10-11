@@ -21,6 +21,7 @@ specta.workspace = true
 thiserror.workspace = true
 time.workspace = true
 tokio-util.workspace = true
+notify.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 pdf-extract.workspace = true

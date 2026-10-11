@@ -17,6 +17,7 @@ pub mod rename;
 pub mod runtime;
 pub mod settings;
 pub mod share;
+pub mod watches;
 
 use nexus_core::error::IpcError;
 

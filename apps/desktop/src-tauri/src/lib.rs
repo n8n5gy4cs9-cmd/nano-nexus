@@ -177,6 +177,7 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         analyses: Default::default(),
         renames: Default::default(),
         jobs,
+        watches: Default::default(),
         registry,
         journal,
         audit,
@@ -195,6 +196,7 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     // Bundled knowledge libraries: register and (incrementally) index. A no-op without `resources/knowledge`.
     let kb_ctx: Ctx = (*app.state::<Ctx>()).clone();
     tauri::async_runtime::spawn(async move { service::knowledge::sync_bundled(&kb_ctx).await });
+    service::watches::spawn_scheduler((*app.state::<Ctx>()).clone());
     runtime::start_in_background(app.handle());
     exit_on_signals(app.handle());
     Ok(())

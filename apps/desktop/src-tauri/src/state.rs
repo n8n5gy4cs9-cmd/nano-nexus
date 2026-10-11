@@ -107,6 +107,8 @@ pub struct AppState {
     pub renames: crate::service::rename::RenameRuntime,
     /// Long-running work shown in the Jobs panel (scan, download, rename proposals).
     pub jobs: nexus_store::JobRegistry,
+    /// Folder watches: file watchers and runs in flight.
+    pub watches: crate::service::watches::WatchRuntime,
     /// Built-in and user assistants.
     pub registry: RwLock<nexus_agent::registry::Registry>,
     /// The only writer of user files (apply / undo with backups).
@@ -233,6 +235,7 @@ impl AppState {
             analyses: Default::default(),
             renames: Default::default(),
             jobs,
+            watches: Default::default(),
             registry,
             journal,
             audit,

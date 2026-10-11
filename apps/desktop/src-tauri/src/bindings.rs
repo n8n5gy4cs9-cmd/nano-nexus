@@ -6,7 +6,7 @@ use tauri_specta::{Builder, collect_commands, collect_events};
 
 use crate::commands::{
     analyzer, app, assistants, attachments, chat, conversations, editor, fs, jobs, knowledge, models, notifications, permissions, rename,
-    runtime, settings, share,
+    runtime, settings, share, watches,
 };
 
 /// All commands and events.
@@ -83,6 +83,12 @@ pub fn builder() -> Builder<tauri::Wry> {
             analyzer::report_cleanup_plan,
             jobs::jobs_list,
             jobs::job_cancel,
+            watches::watches_list,
+            watches::watch_create,
+            watches::watch_set_enabled,
+            watches::watch_set_schedule,
+            watches::watch_delete,
+            watches::watch_run_now,
             rename::rename_session_create,
             rename::rename_sessions,
             rename::rename_session_delete,

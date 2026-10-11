@@ -14,6 +14,7 @@ pub mod rename;
 pub mod reports;
 pub mod settings;
 pub mod share;
+pub mod watches;
 
 use std::path::Path;
 use std::sync::{Mutex, MutexGuard};
@@ -30,6 +31,7 @@ pub use models::{DownloadRow, ModelRow};
 pub use notifications::NewNotification;
 pub use rename::{RenameItemPatch, RenameItemRow, RenameSessionRow};
 pub use reports::ReportRow;
+pub use watches::WatchRow;
 
 /// Current time as unix milliseconds (UTC).
 pub(crate) fn now_ms() -> i64 {

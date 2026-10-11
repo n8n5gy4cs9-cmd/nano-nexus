@@ -18,6 +18,7 @@ pub mod render;
 pub mod report;
 pub mod scan;
 pub mod secrets;
+pub mod watch;
 
 pub use categories::Category;
 pub use dups::DupMode;
