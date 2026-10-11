@@ -12,6 +12,7 @@ pub mod knowledge;
 pub mod models;
 pub mod notifications;
 pub mod permissions;
+pub mod rename;
 pub mod runtime;
 pub mod settings;
 pub mod share;

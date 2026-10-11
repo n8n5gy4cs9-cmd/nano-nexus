@@ -5,8 +5,8 @@ use specta_typescript::Typescript;
 use tauri_specta::{Builder, collect_commands, collect_events};
 
 use crate::commands::{
-    analyzer, app, assistants, attachments, chat, conversations, editor, fs, knowledge, models, notifications, permissions, runtime,
-    settings, share,
+    analyzer, app, assistants, attachments, chat, conversations, editor, fs, knowledge, models, notifications, permissions, rename,
+    runtime, settings, share,
 };
 
 /// All commands and events.
@@ -81,6 +81,18 @@ pub fn builder() -> Builder<tauri::Wry> {
             analyzer::report_export,
             analyzer::file_report,
             analyzer::report_cleanup_plan,
+            rename::rename_session_create,
+            rename::rename_sessions,
+            rename::rename_session_delete,
+            rename::rename_items,
+            rename::rename_propose,
+            rename::rename_item_update,
+            rename::rename_plan,
+            rename::rename_checkers,
+            rename::rename_verify,
+            rename::rename_usages,
+            rename::rename_find,
+            rename::rename_cancel,
             models::models_list,
             models::models_catalog,
             models::models_memory,

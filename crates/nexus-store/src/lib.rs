@@ -9,6 +9,7 @@ pub mod fs;
 mod migrate;
 pub mod models;
 pub mod notifications;
+pub mod rename;
 pub mod reports;
 pub mod settings;
 pub mod share;
@@ -25,6 +26,7 @@ pub use fs::{ChangeSetRow, NewAudit};
 pub use migrate::{MIGRATIONS, schema_version};
 pub use models::{DownloadRow, ModelRow};
 pub use notifications::NewNotification;
+pub use rename::{RenameItemPatch, RenameItemRow, RenameSessionRow};
 pub use reports::ReportRow;
 
 /// Current time as unix milliseconds (UTC).

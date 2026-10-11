@@ -163,6 +163,7 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         )?),
         downloads: Default::default(),
         analyses: Default::default(),
+        renames: Default::default(),
         registry,
         journal,
         audit,

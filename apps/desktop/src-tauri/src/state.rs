@@ -101,6 +101,8 @@ pub struct AppState {
     pub downloads: crate::service::models::DownloadManager,
     /// Folder analyses in flight, by job id (for cancel).
     pub analyses: crate::service::analyzer::Analyses,
+    /// Rename Forge: loaded project indexes and running jobs.
+    pub renames: crate::service::rename::RenameRuntime,
     /// Built-in and user assistants.
     pub registry: RwLock<nexus_agent::registry::Registry>,
     /// The only writer of user files (apply / undo with backups).
@@ -212,6 +214,7 @@ impl AppState {
             hf: hf_client,
             downloads: Default::default(),
             analyses: Default::default(),
+            renames: Default::default(),
             registry,
             journal,
             audit,
