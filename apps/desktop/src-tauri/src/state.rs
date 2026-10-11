@@ -81,6 +81,8 @@ pub enum AppEvent {
     Notify(nexus_store::NewNotification),
     /// LAN Share started, stopped, or its devices changed.
     ShareStatus(nexus_core::share::ShareStatus),
+    /// A job started, progressed, or ended (already throttled by the registry).
+    JobUpdate(nexus_core::events::JobSummary),
 }
 
 /// Everything services need. Later milestones add jobs, permissions, and the assistant registry.
@@ -103,6 +105,8 @@ pub struct AppState {
     pub analyses: crate::service::analyzer::Analyses,
     /// Rename Forge: loaded project indexes and running jobs.
     pub renames: crate::service::rename::RenameRuntime,
+    /// Long-running work shown in the Jobs panel (scan, download, rename proposals).
+    pub jobs: nexus_store::JobRegistry,
     /// Built-in and user assistants.
     pub registry: RwLock<nexus_agent::registry::Registry>,
     /// The only writer of user files (apply / undo with backups).
@@ -157,6 +161,17 @@ impl AppState {
         engine
     }
 
+    /// The job registry: persisted in `store`, updates go to the event bus.
+    pub fn build_jobs(store: &Arc<Store>, bus: &tokio::sync::broadcast::Sender<AppEvent>) -> nexus_store::JobRegistry {
+        let bus = bus.clone();
+        nexus_store::JobRegistry::new(
+            store.clone(),
+            Arc::new(move |j| {
+                let _ = bus.send(AppEvent::JobUpdate(j));
+            }),
+        )
+    }
+
     /// The production turn engine over a scheduler and supervisor.
     pub fn default_engine(scheduler: &Scheduler, supervisor: &Supervisor) -> Arc<dyn TurnRunner> {
         Arc::new(TurnEngine::new(scheduler.clone(), supervisor.clone()))
@@ -202,6 +217,8 @@ impl AppState {
         ));
         let registry = RwLock::new(crate::service::assistants::load_registry(&store));
         let store_for_share = store.clone();
+        let bus = tokio::sync::broadcast::channel(64).0;
+        let jobs = Self::build_jobs(&store, &bus);
         Arc::new(AppState {
             paths,
             store,
@@ -215,11 +232,12 @@ impl AppState {
             downloads: Default::default(),
             analyses: Default::default(),
             renames: Default::default(),
+            jobs,
             registry,
             journal,
             audit,
             summarizing: Default::default(),
-            bus: tokio::sync::broadcast::channel(64).0,
+            bus,
             share: crate::service::share::ShareController::new(store_for_share, &Settings::default()),
             settings: RwLock::new(Settings::default()),
             resource_dir: root.join("resources"),

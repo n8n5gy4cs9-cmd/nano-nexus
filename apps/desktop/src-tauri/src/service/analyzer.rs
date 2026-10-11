@@ -131,18 +131,40 @@ pub async fn analyze_folder(
     duplicates: DupMode,
     progress: Arc<dyn Fn(ScanProgress) + Send + Sync>,
 ) -> Result<String, NexusError> {
+    let shown = display_root(Path::new(root), Some(&home_dir()));
+    let job = ctx.jobs.start("scan", &format!("Scan {shown}"))?;
+    // The Jobs panel and `analyze_cancel` stop the scan through the same token.
+    ctx.analyses.add(job_id, job.token.clone());
+    let jobs_progress = {
+        let (ctx, id) = (Arc::clone(ctx), job.id.clone());
+        move |p: &ScanProgress| ctx.jobs.progress(&id, None, Some(format!("{} files · {}", nexus_analyze::fmt::count(p.files_seen), p.phase)))
+    };
+    let progress: Arc<dyn Fn(ScanProgress) + Send + Sync> = Arc::new(move |p| {
+        jobs_progress(&p);
+        progress(p);
+    });
+    let result = scan_and_save(ctx, &job.token, root, duplicates, progress).await;
+    ctx.analyses.remove(job_id);
+    super::jobs::end(ctx, &job.id, &result, |id| Some(format!("/analyzer?report={id}")));
+    result
+}
+
+async fn scan_and_save(
+    ctx: &Arc<AppCtx>,
+    cancel: &CancellationToken,
+    root: &str,
+    duplicates: DupMode,
+    progress: Arc<dyn Fn(ScanProgress) + Send + Sync>,
+) -> Result<String, NexusError> {
     let gate = gatekeeper(ctx, "user");
     let canon = gate.authorize(Path::new(root), Access::Read, "to analyze this folder").await.map_err(tool_err)?;
     if !canon.is_dir() {
         return Err(NexusError::InvalidInput(format!("{} is not a folder", canon.display())));
     }
-    let cancel = CancellationToken::new();
-    ctx.analyses.add(job_id, cancel.clone());
     let mut opts = ScanOptions::new(&canon);
     opts.duplicates = duplicates;
     let scan_cancel = cancel.clone();
     let result = tokio::task::spawn_blocking(move || scan_folder(&opts, &*progress, &scan_cancel)).await;
-    ctx.analyses.remove(job_id);
     let report = match result.map_err(|e| NexusError::Internal(e.to_string()))? {
         Ok(r) => r,
         Err(nexus_analyze::ScanError::Cancelled) => return Err(NexusError::Cancelled),

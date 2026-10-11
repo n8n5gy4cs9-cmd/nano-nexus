@@ -79,6 +79,11 @@ fn bridge_app_events(app: &tauri::AppHandle) {
                         tracing::warn!("could not emit share:status: {e}");
                     }
                 }
+                state::AppEvent::JobUpdate(j) => {
+                    if let Err(e) = commands::jobs::JobUpdate(j).emit(&app) {
+                        tracing::warn!("could not emit job:update: {e}");
+                    }
+                }
                 state::AppEvent::Notify(n) => {
                     if let Err(e) = notify::notify(&app, n) {
                         tracing::warn!("could not show a notification: {e}");
@@ -147,6 +152,13 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         );
     }
     let registry = RwLock::new(service::assistants::load_registry(&store));
+    let bus = tokio::sync::broadcast::channel(64).0;
+    let jobs = AppState::build_jobs(&store, &bus);
+    match jobs.recover() {
+        Ok(0) => {}
+        Ok(n) => tracing::info!(n, "marked jobs interrupted by a restart as failed"),
+        Err(e) => tracing::warn!("could not recover jobs: {e}"),
+    }
     let share = service::share::ShareController::new(store.clone(), &settings);
     app.manage(Ctx::new(AppState {
         paths,
@@ -164,11 +176,12 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         downloads: Default::default(),
         analyses: Default::default(),
         renames: Default::default(),
+        jobs,
         registry,
         journal,
         audit,
         summarizing: Default::default(),
-        bus: tokio::sync::broadcast::channel(64).0,
+        bus,
         settings: RwLock::new(settings),
         share,
         resource_dir,

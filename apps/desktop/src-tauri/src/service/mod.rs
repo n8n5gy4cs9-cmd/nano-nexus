@@ -10,6 +10,7 @@ pub mod conversations;
 pub mod diagnostics;
 pub mod editor;
 pub mod fs;
+pub mod jobs;
 pub mod knowledge;
 pub mod models;
 pub mod notifications;

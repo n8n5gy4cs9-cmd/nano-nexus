@@ -5,7 +5,7 @@ use specta_typescript::Typescript;
 use tauri_specta::{Builder, collect_commands, collect_events};
 
 use crate::commands::{
-    analyzer, app, assistants, attachments, chat, conversations, editor, fs, knowledge, models, notifications, permissions, rename,
+    analyzer, app, assistants, attachments, chat, conversations, editor, fs, jobs, knowledge, models, notifications, permissions, rename,
     runtime, settings, share,
 };
 
@@ -81,6 +81,8 @@ pub fn builder() -> Builder<tauri::Wry> {
             analyzer::report_export,
             analyzer::file_report,
             analyzer::report_cleanup_plan,
+            jobs::jobs_list,
+            jobs::job_cancel,
             rename::rename_session_create,
             rename::rename_sessions,
             rename::rename_session_delete,
@@ -141,7 +143,8 @@ pub fn builder() -> Builder<tauri::Wry> {
             models::ModelChanged,
             permissions::PermissionRequested,
             chat::ConversationUpdated,
-            share::ShareStatusChanged
+            share::ShareStatusChanged,
+            jobs::JobUpdate
         ])
         // Timestamps (ms) and byte counts stay far below 2^53, so numbers are exact.
         .dangerously_cast_bigints_to_number()

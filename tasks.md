@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 169/234 tasks done (72%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 170/234 tasks done (72%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -202,7 +202,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 
 ## M11: Notifications, jobs, watches · [spec](docs/milestones/M11-notifications-jobs.md)
 - [x] **T11.01** JobRegistry (persist, events 4 Hz, cancel, startup recovery) + tests (2026-10-11) — `nexus-store::jobs::JobRegistry` (+ `Store` job CRUD, `recover_interrupted_jobs`, `prune_jobs`): start/progress/finish/fail/cancelled/cancel, per-job 250 ms throttle (terminal updates always go out), cancel token per job, emit callback instead of Tauri so it is testable. Wiring into `AppCtx`, the `job:update` event and `jobs_list`/`job_cancel` commands comes with T11.02
-- [ ] **T11.02** Migrate scan/download/propose/narrative to jobs
+- [x] **T11.02** Migrate scan/download/propose/narrative to jobs (2026-10-11) — `AppState.jobs` (`JobRegistry`, recovered at startup), `AppEvent::JobUpdate` → `job:update` event, commands `jobs_list` / `job_cancel`, `service::jobs::{list,cancel,end}`. Scan (`scan`), rename index (`index`) and proposals (`propose`) take their cancel token from the job (old cancel commands still work); downloads get a mirror job whose cancel cancels the download and whose progress follows the bytes. **Narrative is a normal chat turn (`ChatJobs`), not a job — left as is.** `RenameRuntime`'s cancel map stays (it now holds the job token). **App crate written but not compiled (no GTK); `bindings.ts` regenerates on the Mac**
 - [ ] **T11.03** UI Jobs indicator + popover (progress, cancel, open result)
 - [x] **T11.04** Notification preferences per kind + routing (click → route) + tests (2026-10-11) — routing is the pure `Settings::wants_os_notification` (master switch, per-kind, unfocused, quiet hours via new `notifications.quiet_start/quiet_end` "HH:MM"), tested in nexus-core; `notify.rs` calls it with the local minute of day (`time` gained `local-offset`; UTC fallback). Click → route already travels as `NotificationAction.route`. **Not done: Settings → Notifications UI (no settings page exists yet); app crate unverified (no GTK)**
 - [ ] **T11.05** Watches backend (scheduler, `notify` on-change debounce, `diff_reports`, thresholds) + tests

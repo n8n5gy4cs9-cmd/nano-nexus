@@ -473,7 +473,24 @@ pub fn pump(ctx: &Ctx) {
     emit_download(ctx, &row.id);
     let ctx = Arc::clone(ctx);
     tokio::spawn(async move {
-        run_download(&ctx, row, cancel, intent).await;
+        let download_id = row.id.clone();
+        let job = ctx.jobs.start("download", &format!("Download {}", row.file)).ok();
+        // Cancelling the job in the Jobs panel cancels the download (and discards the part file).
+        let finished = CancellationToken::new();
+        if let Some(job) = &job {
+            let (ctx, token, finished, id) = (Arc::clone(&ctx), job.token.clone(), finished.clone(), download_id.clone());
+            tokio::spawn(async move {
+                tokio::select! {
+                    _ = token.cancelled() => { signal_running(&ctx, &id, INTENT_CANCEL); }
+                    _ = finished.cancelled() => {}
+                }
+            });
+        }
+        run_download(&ctx, row, cancel, intent, job.as_ref().map(|j| j.id.clone())).await;
+        finished.cancel();
+        if let Some(job) = &job {
+            end_download_job(&ctx, &job.id, &download_id);
+        }
         if let Ok(mut g) = ctx.downloads.running.lock() {
             *g = None;
         }
@@ -481,7 +498,29 @@ pub fn pump(ctx: &Ctx) {
     });
 }
 
-async fn run_download(ctx: &Ctx, row: DownloadRow, cancel: CancellationToken, intent: Arc<AtomicU8>) {
+/// Close the Jobs-panel entry of a download from the row's final status.
+fn end_download_job(ctx: &AppCtx, job: &nexus_core::ids::JobId, download_id: &str) {
+    match ctx.store.get_download(download_id) {
+        Ok(Some(d)) if d.status == "done" => {
+            ctx.jobs.finish(job, Some(format!("/models?focus={download_id}")));
+        }
+        Ok(Some(d)) if d.status == "failed" => {
+            ctx.jobs.fail(job, d.error.as_deref().unwrap_or("The download failed."));
+        }
+        // Paused or cancelled: the entry leaves the running list; Resume starts a new one.
+        _ => {
+            ctx.jobs.cancelled(job);
+        }
+    }
+}
+
+async fn run_download(
+    ctx: &Ctx,
+    row: DownloadRow,
+    cancel: CancellationToken,
+    intent: Arc<AtomicU8>,
+    job: Option<nexus_core::ids::JobId>,
+) {
     let spec = DownloadSpec {
         url: ctx.hf.resolve_url(&row.repo, &row.revision, &row.file),
         token: ctx.hf.token().map(str::to_owned),
@@ -510,6 +549,10 @@ async fn run_download(ctx: &Ctx, row: DownloadRow, cancel: CancellationToken, in
             {
                 let _ = ctx.store.set_download_progress(&id, p.bytes);
                 *t = Instant::now();
+            }
+            if let Some(job) = &job {
+                let fraction = (p.total > 0).then(|| p.bytes as f32 / p.total as f32);
+                ctx.jobs.progress(job, fraction, Some(format!("{:.1} MB/s", p.bytes_per_sec / 1_048_576.0)));
             }
             let _ = ctx.bus.send(AppEvent::DownloadProgress(DownloadView {
                 id: id.clone(),

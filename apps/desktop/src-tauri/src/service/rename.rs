@@ -201,10 +201,39 @@ fn view_of(index: &CodeIndex, r: RenameItemRow, error: Option<String>) -> Rename
     }
 }
 
+/// Also report `progress` to the Jobs panel (fraction when the total is known).
+fn mirror_progress(
+    ctx: &Arc<AppCtx>,
+    job: &nexus_core::ids::JobId,
+    progress: Arc<dyn Fn(RenameProgress) + Send + Sync>,
+) -> Arc<dyn Fn(RenameProgress) + Send + Sync> {
+    let (ctx, id) = (Arc::clone(ctx), job.clone());
+    Arc::new(move |p| {
+        let fraction = (p.total > 0).then(|| p.done as f32 / p.total as f32);
+        ctx.jobs.progress(&id, fraction, Some(p.phase.clone()));
+        progress(p);
+    })
+}
+
 /// Index `root` (Read access required; asks when missing), find naming issues, and store the session.
+/// Runs as an "index" job in the Jobs panel.
 pub async fn session_create(
     ctx: &Arc<AppCtx>,
     job_id: &str,
+    root: &str,
+    progress: Arc<dyn Fn(RenameProgress) + Send + Sync>,
+) -> Result<RenameSessionView, NexusError> {
+    let job = ctx.jobs.start("index", &format!("Index {root}"))?;
+    let progress = mirror_progress(ctx, &job.id, progress);
+    let result = session_create_job(ctx, job_id, &job.token, root, progress).await;
+    super::jobs::end(ctx, &job.id, &result, |v| Some(format!("/rename?session={}", v.id)));
+    result
+}
+
+async fn session_create_job(
+    ctx: &Arc<AppCtx>,
+    job_id: &str,
+    cancel: &CancellationToken,
     root: &str,
     progress: Arc<dyn Fn(RenameProgress) + Send + Sync>,
 ) -> Result<RenameSessionView, NexusError> {
@@ -231,7 +260,7 @@ pub async fn session_create(
         updated_at: now,
     })?;
 
-    let cancel = CancellationToken::new();
+    let cancel = cancel.clone();
     ctx.renames.add_job(job_id, cancel.clone());
     progress(RenameProgress { phase: "indexing".into(), done: 0, total: 0 });
     let (root_path, save_to, token) = (canon.clone(), index_path.clone(), cancel.clone());
@@ -340,10 +369,26 @@ pub fn items(ctx: &AppCtx, session_id: &str, status: Option<&str>) -> Result<Vec
 }
 
 /// Ask the model for names. `symbol_ids` = only those items (e.g. "Try again"); `None` = every candidate
-/// that has no decision yet. Returns how many proposals were made.
+/// that has no decision yet. Returns how many proposals were made. Runs as a "propose" job.
 pub async fn propose_names(
     ctx: &Arc<AppCtx>,
     job_id: &str,
+    session_id: &str,
+    symbol_ids: Option<Vec<String>>,
+    try_again: bool,
+    progress: Arc<dyn Fn(RenameProgress) + Send + Sync>,
+) -> Result<u32, NexusError> {
+    let job = ctx.jobs.start("propose", "Propose new names")?;
+    let progress = mirror_progress(ctx, &job.id, progress);
+    let result = propose_names_job(ctx, job_id, &job.token, session_id, symbol_ids, try_again, progress).await;
+    super::jobs::end(ctx, &job.id, &result, |_| Some(format!("/rename?session={session_id}")));
+    result
+}
+
+async fn propose_names_job(
+    ctx: &Arc<AppCtx>,
+    job_id: &str,
+    cancel: &CancellationToken,
     session_id: &str,
     symbol_ids: Option<Vec<String>>,
     try_again: bool,
@@ -375,7 +420,7 @@ pub async fn propose_names(
         }
     }
     ctx.store.set_rename_session_status(session_id, "proposing", None)?;
-    let cancel = CancellationToken::new();
+    let cancel = cancel.clone();
     ctx.renames.add_job(job_id, cancel.clone());
     let gate = gatekeeper(ctx, "rename");
     let llm = SchedulerJson(Arc::new(ctx.scheduler.clone()));
