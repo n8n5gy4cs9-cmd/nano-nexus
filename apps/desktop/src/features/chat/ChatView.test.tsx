@@ -118,3 +118,40 @@ test("stored thoughts are collapsed and stats are shown on hover row", async () 
   expect(screen.getByText("deep thoughts")).toBeTruthy();
   expect(screen.getByText("55 tok/s · 0.4 s")).toBeTruthy();
 });
+
+const twoMessages = () => ({
+  conversation: { id: "c1", title: "T", assistant_id: "nexus" },
+  messages: [msg({ id: "u0", content: "my question" }), msg({ id: "a0", role: "assistant", content: "the answer", tokens_prompt: 50, tokens_out: 4 })],
+});
+
+test("Ctrl+Up with an empty composer edits the last message and Ctrl+Shift+C copies the last answer", async () => {
+  const writeText = vi.fn(() => Promise.resolve());
+  Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+  mount({ conversation_get: twoMessages }, "/c/c1");
+  await screen.findByText("the answer");
+  fireEvent.keyDown(window, { key: "c", ctrlKey: true, shiftKey: true });
+  expect(writeText).toHaveBeenCalledWith("the answer");
+  fireEvent.keyDown(window, { key: "ArrowUp", ctrlKey: true });
+  expect(await screen.findByLabelText("Edit message")).toBeTruthy();
+});
+
+test("Escape stops a streaming answer", async () => {
+  const t = mount(
+    {
+      conversation_get: twoMessages,
+      chat_send: (_a, emit) => {
+        emit({ type: "started", assistant_message_id: "a-live" });
+        emit({ type: "content", delta: "working" });
+        return { conversation_id: "c1", user_message_id: "u1", assistant_message_id: "a-live" };
+      },
+      chat_stop: () => true,
+    },
+    "/c/c1",
+  );
+  const box = await screen.findByLabelText("Message");
+  fireEvent.change(box, { target: { value: "go" } });
+  fireEvent.keyDown(box, { key: "Enter" });
+  await screen.findByLabelText("Stop generating");
+  fireEvent.keyDown(window, { key: "Escape" });
+  await waitFor(() => expect(t.calls.some((c) => c.command === "chat_stop" && (c.args as { assistantMessageId: string }).assistantMessageId === "a-live")).toBe(true));
+});

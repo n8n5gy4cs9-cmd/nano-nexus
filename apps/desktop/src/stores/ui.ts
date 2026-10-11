@@ -32,7 +32,7 @@ function initialAccent(): Accent {
 export const useUi = create<UiState>((set) => ({
   theme: initialTheme(),
   accent: initialAccent(),
-  sidebarOpen: true,
+  sidebarOpen: typeof window === "undefined" || window.innerWidth >= 768,
   inspectorOpen: false,
   paletteOpen: false,
   setTheme: (theme) => {

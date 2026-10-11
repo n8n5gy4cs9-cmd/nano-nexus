@@ -22,6 +22,8 @@ export interface ComposerProps {
   ctxSize: number;
   disabledReason?: string | undefined;
   initialText?: string;
+  /** Reports whether the draft is empty (for the edit-last shortcut). */
+  onEmptyChange?: (empty: boolean) => void;
 }
 
 const MAX_ATTACHMENTS = 5;
@@ -36,7 +38,7 @@ export function isTruncated(a: AttachmentInput): boolean {
 }
 
 /** Message box: Enter sends, Shift+Enter adds a line; becomes Stop while an answer streams. */
-export function Composer({ placeholder, streaming, think, onThinkChange, onSend, onStop, usedTokens, ctxSize, disabledReason, initialText = "" }: ComposerProps) {
+export function Composer({ placeholder, streaming, think, onThinkChange, onSend, onStop, usedTokens, ctxSize, disabledReason, initialText = "", onEmptyChange }: ComposerProps) {
   const [text, setText] = useState(initialText);
   const [files, setFiles] = useState<AttachmentInput[]>([]);
   const [dragging, setDragging] = useState(false);
@@ -74,6 +76,9 @@ export function Composer({ placeholder, streaming, think, onThinkChange, onSend,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- handlers only use stable setters
   }, []);
+  useEffect(() => {
+    onEmptyChange?.(text.length === 0 && files.length === 0);
+  }, [text, files.length, onEmptyChange]);
   const draftTokens = Math.ceil(text.length / 3.2) + files.reduce((n, f) => n + estimateAttachmentTokens(f), 0);
   const used = usedTokens + draftTokens;
   const fraction = ctxSize > 0 ? Math.min(1, used / ctxSize) : 0;
@@ -115,10 +120,12 @@ export function Composer({ placeholder, streaming, think, onThinkChange, onSend,
         ) : null}
         <Textarea
           aria-label="Message"
+          data-composer=""
+          autoFocus
           placeholder={disabledReason ?? placeholder}
           value={text}
           maxHeight={280}
-          className="border-0 bg-transparent px-1 focus-visible:ring-0"
+          className="border-0 bg-transparent px-1 focus-visible:border-transparent focus-visible:ring-0"
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {

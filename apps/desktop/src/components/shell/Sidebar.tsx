@@ -36,7 +36,10 @@ function NavItem({ section, platform }: { section: NavSection; platform: Platfor
 export function Sidebar({ platform }: { platform: Platform }) {
   const navigate = useNavigate();
   return (
-    <aside className="flex w-[248px] shrink-0 flex-col border-r border-border bg-sidebar" aria-label="Sidebar">
+    <aside
+      className="flex w-[248px] shrink-0 flex-col border-r border-border bg-sidebar max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-40 max-md:bg-surface max-md:shadow-2"
+      aria-label="Sidebar"
+    >
       {/* On macOS the traffic lights sit here, so this strip is also a window drag region. */}
       <div data-tauri-drag-region className={cn("flex h-11 shrink-0 items-center gap-2 px-3", platform === "macos" && "pl-[78px]")}>
         <span aria-hidden className="size-4 rounded-[5px] bg-[image:var(--nexus-gradient)]" />

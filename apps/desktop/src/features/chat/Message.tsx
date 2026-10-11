@@ -32,8 +32,19 @@ export function formatStats(s: NonNullable<AssistantView["stats"]>): string {
   return parts.join(" · ");
 }
 
-export function UserMessage({ m, canEdit, onEdit }: { m: Pick<StoredMessage, "id" | "content" | "attachments">; canEdit: boolean; onEdit: (text: string) => void }) {
-  const [editing, setEditing] = useState(false);
+export function UserMessage({
+  m,
+  canEdit,
+  onEdit,
+  startEditing = false,
+}: {
+  m: Pick<StoredMessage, "id" | "content" | "attachments">;
+  canEdit: boolean;
+  onEdit: (text: string) => void;
+  /** Open the editor (the edit-last shortcut). */
+  startEditing?: boolean;
+}) {
+  const [editing, setEditing] = useState(startEditing);
   const [text, setText] = useState(m.content);
   return (
     <div className="group flex flex-col items-end gap-1" data-role="user">

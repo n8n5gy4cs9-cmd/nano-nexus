@@ -1,8 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import type { Message } from "@/bindings";
+import { usePlatform } from "@/hooks/usePlatform";
+import { useChatShortcuts } from "@/hooks/useChatShortcuts";
 import { api } from "@/lib/api";
 import type { LiveTurn } from "@/stores/chat";
 
@@ -53,6 +55,9 @@ export function ChatView() {
   const { conversationId } = useParams();
   const { turn, streaming, send, regenerate, editResend, stop } = useChatStream(conversationId);
   const [think, setThink] = useState(false);
+  const [composerEmpty, setComposerEmpty] = useState(true);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const platform = usePlatform();
   const restart = () => void api.runtime.restart().catch(() => undefined);
 
   const conv = useQuery({
@@ -74,7 +79,18 @@ export function ChatView() {
       if (m.role === "user") {
         out.push({
           key: m.id,
-          node: <UserMessage m={m} canEdit={!streaming && lastUser?.id === m.id} onEdit={(text) => void editResend(m.id, text, think)} />,
+          node: (
+            <UserMessage
+              key={`${m.id}:${editingId === m.id}`}
+              m={m}
+              canEdit={!streaming && lastUser?.id === m.id}
+              startEditing={editingId === m.id}
+              onEdit={(text) => {
+                setEditingId(null);
+                void editResend(m.id, text, think);
+              }}
+            />
+          ),
         });
       } else if (m.role === "assistant") {
         if (liveSlot?.assistantId === m.id) continue; // rendered live below
@@ -94,7 +110,22 @@ export function ChatView() {
       });
     }
     return out;
-  }, [messages, liveSlot, streaming, think, editResend, regenerate]);
+  }, [messages, liveSlot, streaming, think, editResend, regenerate, editingId]);
+
+  const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
+  const lastAnswer = [...messages].reverse().find((m) => m.role === "assistant" && m.content);
+  const shortcutActions = useMemo(
+    () => ({
+      streaming,
+      stop: () => void stop(),
+      composerEmpty,
+      editLast: !streaming && lastUserMsg ? () => setEditingId(lastUserMsg.id) : undefined,
+      copyLastAnswer: lastAnswer ? () => void navigator.clipboard.writeText(lastAnswer.content).catch(() => undefined) : undefined,
+    }),
+    [streaming, stop, composerEmpty, lastUserMsg, lastAnswer],
+  );
+  useChatShortcuts(platform, shortcutActions);
+  const onEmptyChange = useCallback((v: boolean) => setComposerEmpty(v), []);
 
   const last = [...messages].reverse().find((m) => m.role === "assistant" && m.tokens_prompt !== null);
   const usedTokens = (last?.tokens_prompt ?? 0) + (last?.tokens_out ?? 0);
@@ -122,6 +153,7 @@ export function ChatView() {
         onThinkChange={setThink}
         onSend={(text, attachments) => void send(text, attachments, think)}
         onStop={() => void stop()}
+        onEmptyChange={onEmptyChange}
         usedTokens={usedTokens}
         ctxSize={ctxSize}
       />
