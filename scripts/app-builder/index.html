@@ -56,7 +56,10 @@ const gb = b => b >= 1073741824 ? (b / 1073741824).toFixed(2) + ' GB' : (b / 104
 const state = { ggufs: [], catalog: new Set(), books: [] };
 const KEY = 'nanonexus.appBuilder.v1';
 let saveTimer = null;
-const save = () => { try { const snap = JSON.stringify({ name: $('name').value, ggufs: state.ggufs, catalog: [...state.catalog], books: state.books, def: $('def').value, target: document.querySelector('input[name=t]:checked')?.value, fmt: $('fmt').value }); localStorage.setItem(KEY, snap); clearTimeout(saveTimer); saveTimer = setTimeout(() => api('/api/state', { method: 'PUT', body: snap }).catch(() => {}), 300); } catch {} };
+// Nothing is saved until the previous choices have been restored; otherwise the empty startup state
+// would overwrite them.
+let ready = false;
+const save = () => { if (!ready) return; try { const snap = JSON.stringify({ name: $('name').value, ggufs: state.ggufs, catalog: [...state.catalog], books: state.books, def: $('def').value, target: document.querySelector('input[name=t]:checked')?.value, fmt: $('fmt').value }); localStorage.setItem(KEY, snap); clearTimeout(saveTimer); saveTimer = setTimeout(() => api('/api/state', { method: 'PUT', body: snap }).catch(() => {}), 300); } catch {} };
 let saved = (() => { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch { return null; } })();
 
 function renderChosen() {
@@ -101,7 +104,7 @@ api('/api/state').catch(() => null).then(s => { if (s) saved = s; return api('/a
   $('dl').innerHTML = info.downloadsGguf.length ? '' : '<div class="mut">No .gguf files found in ' + info.downloads + '</div>';
   info.downloadsGguf.forEach(e => { const b = document.createElement('label'); b.innerHTML = `<input type="checkbox"> ${e.name} <span class="mut">${gb(e.size)}</span>`; b.querySelector('input').onchange = ev => { if (ev.target.checked) addGguf(e); else { state.ggufs = state.ggufs.filter(g => g.path !== e.path); renderChosen(); } }; $('dl').append(b); });
   info.catalog.forEach(m => { const b = document.createElement('label'); b.innerHTML = `<input type="checkbox"> ${m.name} <span class="mut">${m.quant ?? ''}</span>`; b.querySelector('input').onchange = ev => { ev.target.checked ? state.catalog.add(m.id) : state.catalog.delete(m.id); renderDefault(); }; $('cat').append(b); });
-  if (saved) {
+  try { if (saved) {
     $('name').value = saved.name || $('name').value;
     state.ggufs = (saved.ggufs || []).filter(g => g.path);
     state.books = saved.books || [];
@@ -110,13 +113,15 @@ api('/api/state').catch(() => null).then(s => { if (s) saved = s; return api('/a
     document.querySelectorAll('#cat input').forEach((i, n) => { i.checked = state.catalog.has(info.catalog[n].id); });
     document.querySelectorAll('#dl input').forEach((i, n) => { i.checked = state.ggufs.some(g => g.path === info.downloadsGguf[n].path); });
     renderChosen(); renderBooks(); if (saved.def) $('def').value = saved.def;
-  }
+  } } catch (e) { $('msg').textContent = 'Could not restore the previous choices: ' + e.message; }
   const mac = info.platform === 'darwin';
   document.querySelector(`input[name=t][value=${saved?.target && (mac || saved.target !== 'mac') ? saved.target : (mac ? 'mac' : 'windows')}]`).checked = true;
   if (!mac) document.querySelector('input[name=t][value=mac]').disabled = true;
+  ready = true; // everything is restored: from now on every change is saved
   $('browseG').onclick = () => browser($('browserG'), info.downloads, true, addGguf);
   $('browseK').onclick = () => browser($('browserK'), info.home, false, p => { if ((p === info.downloads || p === info.home) && !confirm(p + ' is a very large folder and all of it would be copied into the app. Use it anyway?')) return; if (!state.books.includes(p)) state.books.push(p); renderBooks(); });
-}).catch(e => $('msg').textContent = e.message);
+  save();
+}).catch(e => { ready = true; $('msg').textContent = e.message; });
 
 function renderBooks() {
   save();

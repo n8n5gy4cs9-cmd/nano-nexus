@@ -166,6 +166,21 @@ export function startServer({ port = DEFAULT_PORT, open = true } = {}) {
           } catch (e) {
             return json(res, 400, { error: e.message });
           }
+          try {
+            const b = JSON.parse(body || '{}');
+            // Remember what was built even if the page never got to save (same shape the page reads back).
+            writeState({
+              name: b.name,
+              ggufs: (b.ggufs ?? []).map((g) => ({ path: g.path, file: path.basename(g.path), name: g.name })),
+              catalog: b.catalog ?? [],
+              books: b.knowledge ?? [],
+              def: b.default,
+              target: b.target,
+              fmt: b.format,
+            });
+          } catch {
+            /* remembering is best effort */
+          }
           const child = spawn(process.execPath, args, { cwd: ROOT, env: { ...process.env, FORCE_COLOR: '0' } });
           job = { child, log: [], done: false, code: null };
           push(`$ node scripts/bundle.mjs ${args.slice(1).join(' ')}`);
