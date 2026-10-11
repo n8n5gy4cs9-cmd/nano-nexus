@@ -73,7 +73,7 @@ export function SharingSettings() {
   const failure = [setSetting, enable].find((m) => m.isError)?.error;
 
   if (!s) return <div className="p-6 text-muted">Loading…</div>;
-  const portText = port ?? String(s.share_port);
+  const portText = port ?? String(s["share.port"]);
   const portValid = /^\d+$/.test(portText) && Number(portText) >= 1024 && Number(portText) <= 65535;
 
   return (
@@ -91,7 +91,7 @@ export function SharingSettings() {
         <Switch checked={status?.running ?? false} onCheckedChange={(on) => enable.mutate(on)} aria-label="Sharing enabled" />
       </Row>
       <Row label="Start sharing when NanoNexus launches">
-        <Switch checked={s.share_autostart} onCheckedChange={(v) => set("share.autostart", v)} aria-label="Autostart" />
+        <Switch checked={s["share.autostart"]} onCheckedChange={(v) => set("share.autostart", v)} aria-label="Autostart" />
       </Row>
       <Row label="Port" hint="1024-65535. Restarts sharing if it is on.">
         <div className="flex items-center gap-2">
@@ -104,7 +104,7 @@ export function SharingSettings() {
           />
           <Button
             size="sm"
-            disabled={!portValid || Number(portText) === s.share_port}
+            disabled={!portValid || Number(portText) === s["share.port"]}
             onClick={() => {
               set("share.port", Number(portText));
               setPort(null);
@@ -115,7 +115,7 @@ export function SharingSettings() {
         </div>
       </Row>
       <Row label="Listen on" hint="Pick “This computer only” to test without exposing anything.">
-        <Select value={s.share_bind === "127.0.0.1" ? "local" : "all"} onValueChange={(v) => set("share.bind", v === "local" ? "127.0.0.1" : "0.0.0.0")}>
+        <Select value={s["share.bind"] === "127.0.0.1" ? "local" : "all"} onValueChange={(v) => set("share.bind", v === "local" ? "127.0.0.1" : "0.0.0.0")}>
           <SelectTrigger className="w-52" aria-label="Listen on">
             <SelectValue />
           </SelectTrigger>
@@ -125,8 +125,21 @@ export function SharingSettings() {
           </SelectContent>
         </Select>
       </Row>
+      <Row label="Advertise as nanonexus.local (Bonjour)" hint="Lets a phone use a name instead of an IP address.">
+        <Switch checked={s["share.mdns"]} onCheckedChange={(v) => set("share.mdns", v)} aria-label="Bonjour name" />
+      </Row>
+      <Row
+        label="HTTPS (self-signed)"
+        hint={
+          status?.https_fingerprint
+            ? `Browsers warn once. Fingerprint: ${status.https_fingerprint}`
+            : "Browsers show a one-time warning. Plain HTTP is fine on a trusted home network."
+        }
+      >
+        <Switch checked={s["share.https"]} onCheckedChange={(v) => set("share.https", v)} aria-label="HTTPS" />
+      </Row>
       <Row label="New devices can…">
-        <Select value={s.share_default_policy} onValueChange={(v) => set("share.default_policy", v)}>
+        <Select value={s["share.default_policy"]} onValueChange={(v) => set("share.default_policy", v)}>
           <SelectTrigger className="w-64" aria-label="Default permissions">
             <SelectValue />
           </SelectTrigger>
@@ -146,10 +159,10 @@ export function SharingSettings() {
           max={365}
           className="w-24"
           aria-label="Session lifetime in days"
-          defaultValue={s.share_session_days}
+          defaultValue={s["share.session_days"]}
           onBlur={(e) => {
             const n = Number(e.target.value);
-            if (n >= 1 && n <= 365 && n !== s.share_session_days) set("share.session_days", n);
+            if (n >= 1 && n <= 365 && n !== s["share.session_days"]) set("share.session_days", n);
           }}
         />
       </Row>
@@ -160,15 +173,15 @@ export function SharingSettings() {
           max={20}
           className="w-24"
           aria-label="Maximum devices"
-          defaultValue={s.share_max_devices}
+          defaultValue={s["share.max_devices"]}
           onBlur={(e) => {
             const n = Number(e.target.value);
-            if (n >= 1 && n <= 20 && n !== s.share_max_devices) set("share.max_devices", n);
+            if (n >= 1 && n <= 20 && n !== s["share.max_devices"]) set("share.max_devices", n);
           }}
         />
       </Row>
       <Row label="Notify me when a new device pairs">
-        <Switch checked={s.share_notify_pairing} onCheckedChange={(v) => set("share.notify_pairing", v)} aria-label="Notify on pairing" />
+        <Switch checked={s["share.notify_pairing"]} onCheckedChange={(v) => set("share.notify_pairing", v)} aria-label="Notify on pairing" />
       </Row>
 
       <h2 className="mt-6 text-body font-semibold">Paired devices</h2>

@@ -39,6 +39,10 @@ pub struct ServerConfig {
     pub secure_cookie: bool,
     /// Cookie lifetime.
     pub session_days: u32,
+    /// Serve HTTPS with this certificate (plain HTTP when `None`).
+    pub tls: Option<crate::tls::TlsMaterial>,
+    /// Advertise `<name>.local` over Bonjour when set.
+    pub mdns_name: Option<String>,
 }
 
 struct Shared {
@@ -54,6 +58,7 @@ pub struct ShareServer {
     addr: SocketAddr,
     shutdown: CancellationToken,
     task: JoinHandle<()>,
+    advertiser: Option<crate::mdns::Advertiser>,
 }
 
 fn status_of(code: ErrorCode) -> StatusCode {
@@ -283,14 +288,10 @@ fn router(shared: Arc<Shared>) -> Router {
 impl ShareServer {
     /// Bind and serve. `port_in_use` if the port is taken.
     pub async fn start(config: ServerConfig, auth: Arc<Auth>, api: Arc<dyn ShareApi>) -> Result<Self, NexusError> {
-        let listener = TcpListener::bind(SocketAddr::new(config.bind, config.port))
-            .await
-            .map_err(|e| match e.kind() {
-                std::io::ErrorKind::AddrInUse => NexusError::PortInUse(config.port),
-                _ => NexusError::Io(e),
-            })?;
-        let addr = listener.local_addr()?;
+        let addr = SocketAddr::new(config.bind, config.port);
         let shutdown = CancellationToken::new();
+        let tls = config.tls.clone();
+        let mdns_name = config.mdns_name.clone();
         let shared = Arc::new(Shared {
             auth,
             api,
@@ -300,16 +301,57 @@ impl ShareServer {
         });
         let app = router(shared).into_make_service_with_connect_info::<SocketAddr>();
         let stop = shutdown.clone();
-        let task = tokio::spawn(async move {
-            let served = axum::serve(listener, app)
-                .with_graceful_shutdown(async move { stop.cancelled().await })
-                .await;
-            if let Err(e) = served {
-                tracing::warn!("share server ended with an error: {e}");
+        let (bound, task) = match tls {
+            None => {
+                let listener = TcpListener::bind(addr).await.map_err(|e| bind_error(e, addr.port()))?;
+                let bound = listener.local_addr()?;
+                let task = tokio::spawn(async move {
+                    let served = axum::serve(listener, app)
+                        .with_graceful_shutdown(async move { stop.cancelled().await })
+                        .await;
+                    if let Err(e) = served {
+                        tracing::warn!("share server ended with an error: {e}");
+                    }
+                });
+                (bound, task)
+            }
+            Some(material) => {
+                // Probe the port first so a conflict is reported as `port_in_use`, not as a late serve error.
+                let probe = std::net::TcpListener::bind(addr).map_err(|e| bind_error(e, addr.port()))?;
+                let bound = probe.local_addr()?;
+                drop(probe);
+                // The `ring` provider is installed once per process; a second install is harmless.
+                let _ = rustls::crypto::ring::default_provider().install_default();
+                let rustls_config = axum_server::tls_rustls::RustlsConfig::from_pem(
+                    material.cert_pem.into_bytes(),
+                    material.key_pem.into_bytes(),
+                )
+                .await
+                .map_err(|e| NexusError::Internal(format!("invalid HTTPS certificate: {e}")))?;
+                let handle = axum_server::Handle::new();
+                let watcher = handle.clone();
+                tokio::spawn(async move {
+                    stop.cancelled().await;
+                    watcher.graceful_shutdown(Some(std::time::Duration::from_secs(3)));
+                });
+                let task = tokio::spawn(async move {
+                    let served = axum_server::bind_rustls(bound, rustls_config).handle(handle).serve(app).await;
+                    if let Err(e) = served {
+                        tracing::warn!("share server ended with an error: {e}");
+                    }
+                });
+                (bound, task)
+            }
+        };
+        let advertiser = mdns_name.and_then(|name| match crate::mdns::Advertiser::start(&name, bound.port()) {
+            Ok(a) => Some(a),
+            Err(e) => {
+                tracing::warn!("could not advertise over Bonjour: {e}");
+                None
             }
         });
-        tracing::info!(%addr, "LAN share started");
-        Ok(Self { addr, shutdown, task })
+        tracing::info!(%bound, "LAN share started");
+        Ok(Self { addr: bound, shutdown, task, advertiser })
     }
 
     /// The bound address (useful when the port was 0 in tests).
@@ -319,11 +361,21 @@ impl ShareServer {
 
     /// Close every socket and release the port.
     pub async fn stop(self) {
+        if let Some(a) = self.advertiser {
+            a.stop();
+        }
         self.shutdown.cancel();
         if tokio::time::timeout(std::time::Duration::from_secs(5), self.task).await.is_err() {
             tracing::warn!("share server did not stop in time");
         }
         tracing::info!("LAN share stopped");
+    }
+}
+
+fn bind_error(e: std::io::Error, port: u16) -> NexusError {
+    match e.kind() {
+        std::io::ErrorKind::AddrInUse => NexusError::PortInUse(port),
+        _ => NexusError::Io(e),
     }
 }
 

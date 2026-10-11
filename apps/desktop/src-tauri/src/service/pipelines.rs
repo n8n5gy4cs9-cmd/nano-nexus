@@ -51,7 +51,12 @@ pub fn pipeline_err(e: PipelineError) -> NexusError {
 
 /// A gatekeeper that asks the user (through the permission modal) when a grant is missing.
 pub fn gatekeeper(ctx: &Arc<AppCtx>, actor: &str) -> EngineGatekeeper {
-    EngineGatekeeper::new(ctx.perms.clone(), actor, Some(Arc::new(super::permissions::BrokerAsker { ctx: ctx.clone() })))
+    gatekeeper_for(ctx, actor, None)
+}
+
+/// Like [`gatekeeper`], labelling prompts with the paired device that started the chat.
+pub fn gatekeeper_for(ctx: &Arc<AppCtx>, actor: &str, requested_by: Option<String>) -> EngineGatekeeper {
+    EngineGatekeeper::new(ctx.perms.clone(), actor, Some(Arc::new(super::permissions::BrokerAsker { ctx: ctx.clone(), requested_by })))
 }
 
 /// Save a report: the JSON body in the data folder plus the index row. Returns the report id.
@@ -144,9 +149,10 @@ pub async fn run_pipeline(
     attachments: &[Attachment],
     sink: &dyn Sink<ChatEvent>,
     cancel: &CancellationToken,
+    requested_by: Option<String>,
 ) -> Result<Option<(PipelineOutput, String)>, PipelineError> {
     let Some(name) = spec.workflow.pipeline.as_deref() else { return Ok(None) };
-    let gate = gatekeeper(ctx, &spec.id);
+    let gate = gatekeeper_for(ctx, &spec.id, requested_by);
     let llm = SchedulerJson(Arc::new(ctx.scheduler.clone()));
     let status = |t: String| {
         sink.send(ChatEvent::Status { text: t });

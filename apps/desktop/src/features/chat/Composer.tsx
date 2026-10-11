@@ -1,3 +1,4 @@
+import { IS_WEB } from "@/lib/target";
 import { ArrowUp, Paperclip, Square, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -135,9 +136,11 @@ export function Composer({ placeholder, streaming, think, onThinkChange, onSend,
           }}
         />
         <div className="mt-2 flex items-center gap-3">
-          <IconButton aria-label="Attach files" size="sm" onClick={pick}>
-            <Paperclip />
-          </IconButton>
+          {IS_WEB ? null : (
+            <IconButton aria-label="Attach files" size="sm" onClick={pick}>
+              <Paperclip />
+            </IconButton>
+          )}
           <label className="flex items-center gap-2 text-small text-muted">
             <Switch checked={think} onCheckedChange={onThinkChange} aria-label="Think harder" />
             Think harder

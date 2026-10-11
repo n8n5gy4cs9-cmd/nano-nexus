@@ -295,15 +295,16 @@ node scripts/fetch-model.mjs --list</code></pre>
 </ol>
 <p>You can also add a whole folder of GGUFs as a watched <b>extra model folder</b>: Settings → Models → Extra folders (for example, a NAS share).</p>
 
-<h2 id="share">7 · Use it from your phone (LAN Share) <span class="badge b-plan">Planned · M14</span></h2>
+<h2 id="share">7 · Use it from your phone (LAN Share) <span class="badge b-now">Available now</span></h2>
 <ol class="steps">
   <li>In the NanoNexus title bar, click <b>📡 Share</b> and flip the switch <b>ON</b>. It listens on port <b>9889</b> by default.</li>
   <li>The popover shows the address (for example <code>http://192.168.1.20:9889</code> or <code>http://nanonexus.local:9889</code>) and a QR code:
     <div style="display:flex;gap:16px;align-items:center;margin:10px 0"><div class="qr" aria-hidden="true"></div><div style="font-size:13px;color:var(--muted)">Scan with the phone camera<br>or open the address and type the 6-digit PIN.<br>Codes expire after 5 minutes.</div></div></li>
   <li>On the phone, name the device (for example "My iPhone") and tap <b>Pair</b>. Chat, switch assistants, browse history, and read reports. The mobile layout has a bottom tab bar, and desktop browsers get the full layout.</li>
-  <li>Optional: <b>Add to Home Screen</b> for an app-like icon.</li>
+  <li>Optional: <b>Add to Home Screen</b> for an app-like icon. (Over plain HTTP the phone still works; the offline shell needs HTTPS.)</li>
   <li><b>Settings → Sharing</b> holds everything else: the port, which network to listen on, the Bonjour name, optional HTTPS, what remote devices may do (default: chat + read granted folders; file changes stay on the computer), allowed assistants, session length, and paired devices (rename or revoke).</li>
 </ol>
+<div class="note"><strong>Good to know</strong>The phone can chat, switch assistants, browse history, and read reports. Scanning folders, the editor, Rename Forge, and applying changes stay on the computer. If an assistant on the phone needs a folder you have not allowed, the permission prompt appears on the computer, labelled with the phone's name. Revoking a device in Settings → Sharing ends its session immediately.</div>
 <div class="note warn"><strong>First start prompts</strong>macOS may ask <i>"Allow incoming network connections?"</i>. Click <b>Allow</b>. Windows Firewall asks which networks to allow: tick <b>Private networks</b> only. Sharing is off by default and every device must pair. The AI engine itself is never exposed, only NanoNexus's own protected API.</div>
 
 <h2 id="verify">8 · Verify integrity <span class="badge b-now">Available now</span> for models</h2>
@@ -320,6 +321,10 @@ node scripts/verify-payload.mjs path/to/NanoNexus.app  <span class="c"># re-hash
 <details><summary>Slow on the studio PC / "CPU" shown in the runtime panel</summary><p>The Vulkan GPU backend couldn't load, usually because the GPU drivers are old. Update the graphics drivers. NanoNexus falls back to CPU automatically. Smaller models (1B Q4) are much faster on CPU.</p></details>
 <details><summary>Port 9889 already in use</summary><p>NanoNexus offers the next free port. You can also change it in Settings → Sharing. To see what uses it: <code>lsof -iTCP:9889 -sTCP:LISTEN</code> (Mac) or <code>netstat -ano | findstr 9889</code> (Windows).</p></details>
 <details><summary>The phone can't open the address</summary><p>Make sure both devices are on the <b>same</b> Wi-Fi (not a guest network), that sharing is ON, and that you allowed the firewall prompt. Some routers block device-to-device traffic ("AP/client isolation"). Turn that off or use another network. Try the IP address instead of <code>nanonexus.local</code>.</p></details>
+<details><summary>iPhone: "Local Network" access or the .local name does not work</summary><p>On iOS and macOS 15+, apps that use the local network need permission. If <code>nanonexus.local</code> does not open, use the IP address shown in the Share popover. On the Mac, check System Settings → Privacy &amp; Security → Local Network → NanoNexus.</p></details>
+<details><summary>The browser warns about the certificate (HTTPS)</summary><p>HTTPS uses a certificate NanoNexus made for itself, so browsers warn once. Compare the fingerprint in Settings → Sharing with the one the browser shows, then continue. If you do not need HTTPS, leave it off.</p></details>
+<details><summary>The phone says "Session ended"</summary><p>The device was revoked on the computer, its session expired (30 days by default), or sharing was turned off and on with a new data folder. Pair again with a new QR code or PIN.</p></details>
+<details><summary>Too many wrong codes</summary><p>After 5 wrong PINs in a minute an address is blocked for 10 minutes and NanoNexus shows a notification. Use the QR code instead, or wait.</p></details>
 <details><summary>Model download fails with 401/403</summary><p>The repo is gated or private. Accept its license on Hugging Face, create a read token, and run <code>export HF_TOKEN=hf_…</code> before fetching.</p></details>
 <details><summary>"Not enough disk space"</summary><p>Building copies models into the app, so you need about 2× the total model size free plus 5 GB. <code>scripts/doctor.sh</code> shows free space.</p></details>
 <details><summary>A model repeats itself or rambles</summary><p>The MiniCPM5 models need <code>min_p = 0</code> (catalog presets set this). For other models, use the catalog's sampling preset or lower the temperature in the assistant settings.</p></details>

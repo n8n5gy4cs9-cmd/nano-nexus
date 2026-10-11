@@ -9,6 +9,7 @@ import { Badge, Button, EmptyState, Progress, Skeleton } from "@/components/ui";
 import { api } from "@/lib/api";
 import { formatBytes, relativeTime } from "@/lib/format";
 import { toIpcException } from "@/lib/ipc";
+import { IS_WEB } from "@/lib/target";
 
 export const REPORTS_KEY = ["analyzer", "reports"] as const;
 
@@ -77,9 +78,10 @@ export function AnalyzerPage() {
     <div className="mx-auto flex h-full w-full max-w-4xl flex-col gap-6 overflow-y-auto p-6">
       <header>
         <h1 className="text-title font-semibold">Analyzer</h1>
-        <p className="text-muted">Scan a folder or a file. The numbers are computed on your computer; the AI only explains them.</p>
+        <p className="text-muted">{IS_WEB ? "Reports made on your computer." : "Scan a folder or a file. The numbers are computed on your computer; the AI only explains them."}</p>
       </header>
 
+      {IS_WEB ? null : (
       <section className="rounded-card border border-border bg-surface p-5 shadow-1">
         {progress ? (
           <div className="flex flex-col gap-3" role="status">
@@ -112,6 +114,7 @@ export function AnalyzerPage() {
           </div>
         )}
       </section>
+      )}
 
       <section className="flex flex-col gap-2">
         <h2 className="text-lead font-semibold">Saved reports</h2>
@@ -133,9 +136,11 @@ export function AnalyzerPage() {
                     {relativeTime(r.created_at)}
                   </div>
                 </button>
-                <Button variant="ghost" aria-label={`Delete ${r.title}`} onClick={() => remove.mutate(r.id)}>
-                  <Trash2 />
-                </Button>
+                {IS_WEB ? null : (
+                  <Button variant="ghost" aria-label={`Delete ${r.title}`} onClick={() => remove.mutate(r.id)}>
+                    <Trash2 />
+                  </Button>
+                )}
               </li>
             ))}
           </ul>

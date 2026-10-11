@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 135/229 tasks done (58%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 138/229 tasks done (60%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -244,18 +244,18 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T14.02** `nexus-share` auth: pairing secrets (single-use, 5 min), PIN + rate limit/lockout, device sessions (hash-only), CSRF + tests (2026-10-11) — written; not compiled or tested (session was code-only)
 - [x] **T14.03** WebSocket RPC (protocol, allow-list, streaming, cancel, push events) + policy guard + tests (2026-10-11) — written; not compiled or tested (session was code-only)
 - [x] **T14.04** Static web UI embedding (`dist-web` via include_dir!, SPA fallback, security headers, cache rules) (2026-10-11) — written; not compiled or tested (session was code-only)
-- [x] **T14.05** Server lifecycle: ShareController start/stop/restart, port 9889 default, `port_in_use` + next-free suggestion, graceful stop + tests (2026-10-11) — written; not compiled or tested (session was code-only) — unit tests for auth/policy/assets/urls written; integration tests for server lifecycle still to do
+- [x] **T14.05** Server lifecycle: ShareController start/stop/restart, port 9889 default, `port_in_use` + next-free suggestion, graceful stop + tests (2026-10-11) — written; not compiled or tested (session was code-only) — unit tests for auth/policy/assets/urls written; integration tests in `crates/nexus-share/tests/server.rs`
 - [x] **T14.06** Store migration 0006 (`share_devices`, `conversations.origin`) + commands `share_*` + `share:status` (2026-10-11) — written; not compiled or tested (session was code-only) — migration is `0005_share.sql` (list was gapless); `conversations.origin` written on remote chat
-- [x] **T14.07** `ShareApi` impl → `service::*` with `Caller::Remote`; remote grant requests → desktop modal "from <device>" (2026-10-11) — written; not compiled or tested (session was code-only) — remote grant requests still use the normal desktop modal without the “from <device>” label
-- [ ] **T14.08** mDNS (`nanonexus.local`) + Info.plist `NSLocalNetworkUsageDescription` / `NSBonjourServices`
-- [ ] **T14.09** Optional HTTPS (rcgen self-signed, SAN = LAN IPs + .local, fingerprint)
+- [x] **T14.07** `ShareApi` impl → `service::*` with `Caller::Remote`; remote grant requests → desktop modal "from <device>" (2026-10-11) — prompts now carry the device name
+- [x] **T14.08** mDNS (`nanonexus.local`) + Info.plist `NSLocalNetworkUsageDescription` / `NSBonjourServices` (2026-10-11) — written; not compiled or tested — Bonjour via `mdns-sd`; the Info.plist keys were added earlier
+- [x] **T14.09** Optional HTTPS (rcgen self-signed, SAN = LAN IPs + .local, fingerprint) (2026-10-11) — written; not compiled or tested — rcgen certificate kept in the data folder, ring TLS provider, fingerprint in Settings → Sharing
 - [x] **T14.10** Frontend `wsTransport` (reconnect, resubscribe, visibilitychange refetch) + `pnpm build:web` (`dist-web`) (2026-10-11) — written; not compiled or tested (session was code-only)
 - [x] **T14.11** Mobile layout (< 768 px): bottom tabs, drawer, safe areas, 44 px targets, 16 px inputs, long-press menus (2026-10-11) — written; not compiled or tested (session was code-only)
 - [x] **T14.12** Pairing screen (QR fragment + PIN pad) + PWA manifest/icons + minimal service worker + desktop-only route guards (2026-10-11) — written; not compiled or tested (session was code-only) — pairing screen is a PIN/code field (QR scan opens `/pair#secret`); no icon PNGs, SVG icon only
 - [x] **T14.13** Desktop 📡 Share pill + popover (switch, URLs, QR SVG, PIN, devices) (2026-10-11) — written; not compiled or tested (session was code-only)
 - [ ] **T14.14** Settings → Sharing page (all LAN-SHARE §2 settings + devices table) + pairing notifications + tray item
 - [ ] **T14.15** Playwright e2e (390×844 + 1280×800): pair → chat → stream → stop → history → revoke
-- [ ] **T14.16** Update `guide.html` Sharing section (firewall prompts, troubleshooting) + WINDOWS-TESTING firewall step
+- [x] **T14.16** Update `guide.html` Sharing section (firewall prompts, troubleshooting) + WINDOWS-TESTING firewall step (2026-10-11) — written; not compiled or tested — `docs/WINDOWS-TESTING.md` created for the firewall step
 - [ ] ⭐ **T14.17** Exit check: real phone demo; security tests; `lsof` shows only :9889 exposed; works on the Windows build
 
 ## M15: Polish · [spec](docs/milestones/M15-polish.md)

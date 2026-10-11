@@ -191,7 +191,7 @@ fn check_text(text: &str, has_attachments: bool) -> Result<(), NexusError> {
 /// `sink` from a background task.
 pub fn send(
     ctx: &Ctx,
-    _caller: &Caller,
+    caller: &Caller,
     args: ChatSendArgs,
     sink: Arc<dyn Sink<ChatEvent>>,
 ) -> Result<ChatSendResult, NexusError> {
@@ -203,7 +203,7 @@ pub fn send(
     let user = ctx
         .store
         .insert_user_message(&conv.id, args.text.trim_end(), &args.attachments)?;
-    let assistant = start_turn(ctx, &conv, &user, spec, args.think, sink)?;
+    let assistant = start_turn(ctx, &conv, &user, spec, args.think, sink, requester(ctx, caller))?;
     Ok(ChatSendResult {
         conversation_id: conv.id,
         user_message_id: user.id,
@@ -219,7 +219,7 @@ pub fn stop(ctx: &Ctx, assistant_message_id: &MessageId) -> bool {
 /// Redo an assistant answer: the old answer (and anything after it) is deleted and a new one streams.
 pub fn regenerate(
     ctx: &Ctx,
-    _caller: &Caller,
+    caller: &Caller,
     assistant_message_id: &MessageId,
     think: bool,
     sink: Arc<dyn Sink<ChatEvent>>,
@@ -253,7 +253,7 @@ pub fn regenerate(
         .ok_or_else(|| NexusError::InvalidInput("there is no question to answer again".into()))?;
     let spec = resolve_assistant(ctx, &conv.assistant_id, None)?;
     ctx.store.delete_messages_after(&user.id)?;
-    let assistant = start_turn(ctx, &conv, &user, spec, think, sink)?;
+    let assistant = start_turn(ctx, &conv, &user, spec, think, sink, requester(ctx, caller))?;
     Ok(ChatSendResult {
         conversation_id: conv.id,
         user_message_id: user.id,
@@ -264,7 +264,7 @@ pub fn regenerate(
 /// Replace a user message's text, drop everything after it, and answer again.
 pub fn edit_resend(
     ctx: &Ctx,
-    _caller: &Caller,
+    caller: &Caller,
     user_message_id: &MessageId,
     text: &str,
     think: bool,
@@ -296,12 +296,26 @@ pub fn edit_resend(
         .store
         .get_message(&user.id)?
         .ok_or_else(|| NexusError::NotFound("message".into()))?;
-    let assistant = start_turn(ctx, &conv, &user, spec, think, sink)?;
+    let assistant = start_turn(ctx, &conv, &user, spec, think, sink, requester(ctx, caller))?;
     Ok(ChatSendResult {
         conversation_id: conv.id,
         user_message_id: user.id,
         assistant_message_id: assistant,
     })
+}
+
+/// The paired device's name when a remote started this chat (so permission prompts say who is asking).
+fn requester(ctx: &Ctx, caller: &Caller) -> Option<String> {
+    match caller {
+        Caller::Desktop => None,
+        Caller::Remote { device_id, .. } => ctx
+            .store
+            .share_device(device_id)
+            .ok()
+            .flatten()
+            .map(|d| d.name)
+            .or_else(|| Some("a paired device".into())),
+    }
 }
 
 /// Insert the assistant placeholder and spawn the turn. `user` must be the last message.
@@ -312,6 +326,7 @@ fn start_turn(
     spec: nexus_agent::AssistantSpec,
     think: bool,
     sink: Arc<dyn Sink<ChatEvent>>,
+    requested_by: Option<String>,
 ) -> Result<MessageId, NexusError> {
     let model_id = match ctx.supervisor.state() {
         RuntimeState::Ready { model_id, .. } => Some(model_id),
@@ -410,7 +425,7 @@ fn start_turn(
         let mut early_text: Option<String> = None;
         let mut check_facts: Option<String> = None;
         if is_pipeline {
-            match super::pipelines::run_pipeline(&ctx, &input.assistant, &input.user_text, &pipeline_attachments, &persisting, &cancel).await {
+            match super::pipelines::run_pipeline(&ctx, &input.assistant, &input.user_text, &pipeline_attachments, &persisting, &cancel, requested_by.clone()).await {
                 Ok(Some((out, target))) => {
                     super::pipelines::store_artifact(&ctx, &out.artifact, &target, &persisting);
                     for n in &out.notes {
@@ -432,7 +447,7 @@ fn start_turn(
             let gate = EngineGatekeeper::new(
                 ctx.perms.clone(),
                 assistant_slug.clone(),
-                Some(Arc::new(super::permissions::BrokerAsker { ctx: ctx.clone() })),
+                Some(Arc::new(super::permissions::BrokerAsker { ctx: ctx.clone(), requested_by: requested_by.clone() })),
             );
             let mut cx = ToolCx::new(Arc::new(gate));
             cx.docs = docs;

@@ -79,3 +79,7 @@ kamadak-exif = "0.6" # image EXIF facts (date, camera, GPS flag)
 whatlang = "0.16" # language guess for text reports
 qrcode = { version = "0.14", default-features = false, features = ["svg"] } # pairing QR as an SVG string (LAN-SHARE §2)
 if-addrs = "0.13" # LAN IPv4 discovery for the share URLs
+mdns-sd = "0.13" # Bonjour advertising as nanonexus.local (LAN Share)
+rcgen = "0.13" # self-signed certificate for optional HTTPS (LAN Share)
+axum-server = { version = "0.7", default-features = false, features = ["tls-rustls-no-provider"] } # TLS listener for axum
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] } # ring provider: no C toolchain needed, cross-compiles to Windows

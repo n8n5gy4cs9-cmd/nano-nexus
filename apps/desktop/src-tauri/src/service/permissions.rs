@@ -19,6 +19,8 @@ use crate::state::{AppCtx, AppEvent};
 /// Lets tools raise permission prompts through the broker (the user's answer already created any grant).
 pub struct BrokerAsker {
     pub ctx: std::sync::Arc<AppCtx>,
+    /// Name of the paired device whose chat caused the request (shown as "from <device>").
+    pub requested_by: Option<String>,
 }
 
 #[async_trait::async_trait]
@@ -37,7 +39,7 @@ impl nexus_agent::tools::PermissionAsker for BrokerAsker {
             path: path.display().to_string(),
             needed,
             reason: (!reason.is_empty()).then(|| reason.to_owned()),
-            requested_by: None,
+            requested_by: self.requested_by.clone(),
         };
         match ask(&self.ctx, req).await {
             Decision::Deny => AskOutcome::Denied,

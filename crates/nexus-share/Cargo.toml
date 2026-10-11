@@ -26,6 +26,11 @@ uuid.workspace = true
 include_dir.workspace = true
 qrcode.workspace = true
 if-addrs.workspace = true
+mdns-sd.workspace = true
+rcgen.workspace = true
+axum-server.workspace = true
+rustls.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
+reqwest.workspace = true

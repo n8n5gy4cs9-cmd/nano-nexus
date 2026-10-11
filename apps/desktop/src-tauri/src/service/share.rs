@@ -103,11 +103,31 @@ pub async fn start(ctx: &Ctx) -> Result<ShareStatus, NexusError> {
         return Ok(ctx.share.status());
     }
     ctx.share.auth.set_config(auth_config(&settings));
+    let mdns_name = settings.share_mdns.then(|| nexus_share::mdns::sanitize_name(&settings.share_mdns_name));
+    // HTTPS: a self-signed certificate covering this computer's addresses and its .local name.
+    let tls = if settings.share_https {
+        let mut names: Vec<String> = nexus_share::urls::lan_addresses().iter().map(|ip| ip.to_string()).collect();
+        names.push("localhost".into());
+        names.push("127.0.0.1".into());
+        if let Some(n) = &mdns_name {
+            names.push(format!("{n}.local"));
+        }
+        let dir = ctx.paths.data.clone();
+        let made = tokio::task::spawn_blocking(move || nexus_share::tls::load_or_create(&dir, &names))
+            .await
+            .map_err(|e| NexusError::Internal(e.to_string()))?;
+        Some(made?)
+    } else {
+        None
+    };
+    let fingerprint = tls.as_ref().map(|t| t.fingerprint.clone());
     let config = ServerConfig {
         bind,
         port: settings.share_port,
         secure_cookie: settings.share_https,
         session_days: settings.share_session_days,
+        tls,
+        mdns_name: mdns_name.clone(),
     };
     let api: Arc<dyn ShareApi> = Arc::new(AppShareApi { ctx: ctx.clone() });
     match ShareServer::start(config, ctx.share.auth.clone(), api).await {
@@ -115,11 +135,12 @@ pub async fn start(ctx: &Ctx) -> Result<ShareStatus, NexusError> {
             *guard = Some(server);
             drop(guard);
             ctx.share.auth.new_pairing_code()?;
-            let urls = share_urls(bind, settings.share_port, settings.share_https, None);
+            let urls = share_urls(bind, settings.share_port, settings.share_https, mdns_name.as_deref());
             let st = ctx.share.set_status(|s| {
                 s.running = true;
                 s.port = settings.share_port;
                 s.urls = urls;
+                s.https_fingerprint = fingerprint;
                 s.error = None;
                 s.suggested_port = None;
             });
@@ -154,6 +175,7 @@ pub async fn stop(ctx: &Ctx) -> ShareStatus {
     let st = ctx.share.set_status(|s| {
         s.running = false;
         s.urls.clear();
+        s.https_fingerprint = None;
         s.error = None;
         s.suggested_port = None;
     });
@@ -195,7 +217,10 @@ pub async fn settings_set(ctx: &Ctx, key: &str, value: Value) -> Result<ShareSta
     }
     let next = persist(ctx, key, value)?;
     ctx.share.auth.set_config(auth_config(&next));
-    let needs_restart = matches!(key, "share.port" | "share.bind" | "share.https" | "share.session_days");
+    let needs_restart = matches!(
+        key,
+        "share.port" | "share.bind" | "share.https" | "share.session_days" | "share.mdns" | "share.mdns_name"
+    );
     if needs_restart && ctx.share.status().running {
         return restart(ctx).await;
     }

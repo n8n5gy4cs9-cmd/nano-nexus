@@ -71,7 +71,7 @@ export function AppShell() {
         <MobileTabBar />
       </div>
       {inspectorOpen ? <Inspector /> : null}
-      <PermissionModal />
+      {IS_WEB ? null : <PermissionModal />}
       <AssistantSwitcher />
     </div>
   );
