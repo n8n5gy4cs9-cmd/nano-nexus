@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 61/229 tasks done (26%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 62/229 tasks done (27%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -97,7 +97,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T04.11** UI ChatView + MessageList (stick-to-bottom, "new messages" pill, virtualization > 200) (2026-10-11)
 - [x] **T04.12** UI Markdown + CodeBlock (Shiki lazy singleton, copy) + ThoughtsBlock (2026-10-11)
 - [x] **T04.13** UI Composer (auto-grow, Enter/Shift+Enter, Think toggle, ctx meter, Send/Stop) + `useChatStream` (rAF flush) (2026-10-11)
-- [ ] **T04.14** Empty state with assistant starters; error cards with actions; perf stats line
+- [x] **T04.14** Empty state with assistant starters; error cards with actions; perf stats line (2026-10-11)
 - [ ] **T04.15** Text-file attachments (drop/pick, ≤ 256 KB, token cost chip)
 - [ ] **T04.16** Shortcuts ⌘N ⌘. ⌘↑ ⌘⇧C (Ctrl on Windows) + focus management; responsive check at 390 px
 - [ ] ⭐ **T04.17** 🍎 Exit check: TTFT < 1 s, 60 fps stream, stop < 200 ms, 50-turn context OK, restart persists, FTS works
