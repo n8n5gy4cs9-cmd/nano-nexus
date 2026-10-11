@@ -15,7 +15,7 @@ use crate::categories::{self, Category};
 use crate::dups::{self, DupMode};
 use crate::junk::{self, JunkHit};
 use crate::naming::{self, NamingHit};
-use crate::report::{self, FileEntry, FolderReport, ScanWarning, Totals};
+use crate::report::{self, FileEntry, FolderReport, ScanWarning, FolderTotals};
 
 const MAX_WARNINGS: usize = 200;
 /// At most this many files are opened to compare their bytes with their extension.
@@ -254,7 +254,7 @@ pub fn scan_folder(
     });
 
     // ---- classify ------------------------------------------------------------------------------
-    let mut totals = Totals::default();
+    let mut totals = FolderTotals::default();
     let mut files: Vec<FileEntry> = Vec::with_capacity(raws.len());
     let mut dir_rels: Vec<String> = Vec::new();
     let mut max_depth = 0u32;

@@ -57,7 +57,6 @@ struct Pairing {
     secret: String,
     pin: String,
     expires: Instant,
-    expires_ms: i64,
 }
 
 #[derive(Default)]
@@ -175,7 +174,7 @@ impl Auth {
             secret: secret.clone(),
             pin: pin.clone(),
             expires: Instant::now() + PAIRING_TTL,
-            expires_ms,
+
         });
         Ok(PairingCode {
             secret,

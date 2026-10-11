@@ -25,7 +25,7 @@ pub struct FileEntry {
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
-pub struct Totals {
+pub struct FolderTotals {
     pub files: u64,
     pub dirs: u64,
     pub bytes: u64,
@@ -120,7 +120,7 @@ pub struct FolderReport {
     /// Unix milliseconds.
     pub scanned_at: i64,
     pub duration_ms: u64,
-    pub totals: Totals,
+    pub totals: FolderTotals,
     pub by_category: Vec<CategoryStat>,
     pub by_extension: Vec<ExtStat>,
     pub largest_files: Vec<FileRef>,
