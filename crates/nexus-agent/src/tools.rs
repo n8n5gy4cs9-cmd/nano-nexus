@@ -162,6 +162,14 @@ pub struct ToolCx {
     pub docs: Vec<Arc<DocIndex>>,
     /// Offline knowledge libraries behind `kb_search` (M17). `None` when no library is enabled.
     pub kb: Option<Arc<dyn KnowledgeSource>>,
+    /// The indexed code project behind `find_symbol` (M09). `None` until a project is indexed.
+    pub code: Option<Arc<dyn CodeSource>>,
+}
+
+/// Implemented by the app over the Rename Forge index (keeps this crate free of the project store).
+pub trait CodeSource: Send + Sync {
+    /// Symbols, files and folders matching `query` with their usages, as text of at most `max_chars`.
+    fn find(&self, query: &str, max_chars: usize) -> Result<String, String>;
 }
 
 /// Result of a library search: the numbered `<doc>` context block and how many passages it holds.
@@ -186,6 +194,7 @@ impl ToolCx {
             budget_tokens: DEFAULT_TOOL_BUDGET,
             docs: Vec::new(),
             kb: None,
+            code: None,
         }
     }
 }
@@ -1085,6 +1094,44 @@ impl Tool for KbSearch {
     }
 }
 
+/// `find_symbol(query)`: where a function, class, file or folder is defined and used in the indexed project.
+pub struct FindSymbol;
+
+#[async_trait]
+impl Tool for FindSymbol {
+    fn name(&self) -> &'static str {
+        "find_symbol"
+    }
+    fn description(&self) -> &'static str {
+        "Find where a function, class, variable, file or folder is defined and used in the user's indexed code project."
+    }
+    fn signature(&self) -> &'static str {
+        "find_symbol(query)"
+    }
+    fn required_access(&self, _args: &ToolArgs) -> Vec<(PathBuf, Access)> {
+        Vec::new()
+    }
+    async fn run(&self, args: ToolArgs, cx: &ToolCx) -> Result<ToolOutput, ToolError> {
+        let query = arg_str(&args, "query")?.to_owned();
+        let Some(code) = cx.code.clone() else {
+            return Err(ToolError::Invalid(
+                "No code project is indexed. Ask the user to open the Rename Forge page and index a project folder."
+                    .into(),
+            ));
+        };
+        let max_chars = (cx.budget_tokens as usize).saturating_mul(3);
+        let body = code.find(&query, max_chars).map_err(ToolError::Invalid)?;
+        Ok(ToolOutput {
+            llm_text: format!(
+                "<tool_result name=\"find_symbol\" query=\"{}\">\n{body}</tool_result>",
+                query.replace('"', "'")
+            ),
+            ui: Some(serde_json::json!({"query": query})),
+            summary: format!("Looked up “{query}” in the code project"),
+        })
+    }
+}
+
 /// The built-in tool set.
 pub fn builtin_tools() -> Vec<Arc<dyn Tool>> {
     vec![
@@ -1096,6 +1143,7 @@ pub fn builtin_tools() -> Vec<Arc<dyn Tool>> {
         Arc::new(ScanFolder),
         Arc::new(DocSearch),
         Arc::new(KbSearch),
+        Arc::new(FindSymbol),
         Arc::new(Calculate),
         Arc::new(Now),
     ]
@@ -1542,5 +1590,23 @@ mod tests {
             .unwrap_err();
         assert!(matches!(err, ToolError::Protected(_)));
         assert!(asker.asked.lock().unwrap().is_empty());
+    }
+
+    struct FakeCode;
+    impl CodeSource for FakeCode {
+        fn find(&self, query: &str, _max: usize) -> Result<String, String> {
+            Ok(format!("function {query} (a.py:1)\n"))
+        }
+    }
+
+    #[tokio::test]
+    async fn find_symbol_needs_an_indexed_project() {
+        let mut c = cx(engine());
+        let err = FindSymbol.run(args(&[("query", "calc")]), &c).await.unwrap_err();
+        assert!(matches!(err, ToolError::Invalid(m) if m.contains("indexed")));
+        c.code = Some(Arc::new(FakeCode));
+        let out = FindSymbol.run(args(&[("query", "calc")]), &c).await.unwrap();
+        assert!(out.llm_text.contains("function calc (a.py:1)"));
+        assert!(out.llm_text.starts_with("<tool_result name=\"find_symbol\""));
     }
 }

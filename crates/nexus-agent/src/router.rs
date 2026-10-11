@@ -295,7 +295,7 @@ pub fn resolve_action(
             let q = clean(&a.query).ok_or("a query is required")?;
             args.insert("query".into(), Value::String(q.to_owned()));
         }
-        "doc_search" | "kb_search" => {
+        "doc_search" | "kb_search" | "find_symbol" => {
             let q = clean(&a.query).ok_or("a query is required")?;
             args.insert("query".into(), Value::String(q.to_owned()));
         }
@@ -472,6 +472,7 @@ pub async fn run_router(
             budget_tokens: cx.budget_tokens,
             docs: cx.docs.clone(),
             kb: cx.kb.clone(),
+            code: cx.code.clone(),
         };
         cx_run.reason = format!("to run {}", call.tool);
         let run = match tool.run(call.args, &cx_run).await {
