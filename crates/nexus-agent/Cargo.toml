@@ -10,7 +10,9 @@ workspace = true
 
 [dependencies]
 nexus-core = { path = "../nexus-core" }
+nexus-llm = { path = "../nexus-llm" }
 minijinja.workspace = true
+tokio.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
