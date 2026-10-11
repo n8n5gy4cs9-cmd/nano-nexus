@@ -10,7 +10,7 @@ import {
   Sparkles,
   type LucideIcon,
 } from "lucide-react";
-import { createHashRouter, type RouteObject } from "react-router-dom";
+import { Navigate, createHashRouter, type RouteObject } from "react-router-dom";
 
 import { AppShell } from "@/components/shell/AppShell";
 import { ChatView } from "@/features/chat/ChatView";
@@ -78,5 +78,8 @@ export const routes: RouteObject[] = [
     }))],
   },
 ];
+
+// Unknown addresses go home instead of showing the router's raw error page.
+routes.push({ path: "*", element: <Navigate to="/" replace /> });
 
 export const createAppRouter = () => createHashRouter(routes);

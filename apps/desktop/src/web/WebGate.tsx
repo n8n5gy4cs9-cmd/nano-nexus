@@ -120,6 +120,8 @@ export function WebGate({ children }: { children: ReactNode }) {
 
   const start = useCallback(
     (session: Session) => {
+      // The QR link is /pair#<secret>. The app uses hash routes, so a leftover secret would look like a page.
+      if (location.pathname !== "/" || !location.hash.startsWith("#/")) history.replaceState(null, "", "/");
       const ws: WsTransport = createWsTransport({
         csrf: session.csrf,
         onSessionEnded: () => setPhase("pair"),
