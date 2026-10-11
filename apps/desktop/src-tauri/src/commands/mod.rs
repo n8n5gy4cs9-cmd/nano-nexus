@@ -2,6 +2,7 @@
 
 pub mod app;
 pub mod chat;
+pub mod conversations;
 pub mod notifications;
 pub mod runtime;
 pub mod settings;

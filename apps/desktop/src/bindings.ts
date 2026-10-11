@@ -20,6 +20,13 @@ export const commands = {
 	chatRegenerate: (assistantMessageId: MessageId, think: boolean, onEvent: Channel<ChatEvent>) => typedError<ChatSendResult, IpcError>(__TAURI_INVOKE("chat_regenerate", { assistantMessageId, think, onEvent })),
 	/**  Edit one of your messages and get a new answer (later messages are dropped). */
 	chatEditResend: (userMessageId: MessageId, text: string, think: boolean, onEvent: Channel<ChatEvent>) => typedError<ChatSendResult, IpcError>(__TAURI_INVOKE("chat_edit_resend", { userMessageId, text, think, onEvent })),
+	/**  Pinned first, then newest; `query` searches titles and message text. */
+	conversationsList: (query: string | null, limit: number, before: number | null) => typedError<ConversationSummary[], IpcError>(__TAURI_INVOKE("conversations_list", { query, limit, before })),
+	conversationGet: (id: ConversationId) => typedError<ConversationWithMessages, IpcError>(__TAURI_INVOKE("conversation_get", { id })),
+	conversationUpdate: (id: ConversationId, update: ConversationUpdate) => typedError<null, IpcError>(__TAURI_INVOKE("conversation_update", { id, update })),
+	conversationDelete: (id: ConversationId) => typedError<null, IpcError>(__TAURI_INVOKE("conversation_delete", { id })),
+	/**  The conversation as Markdown text (the UI copies or saves it). */
+	conversationExportMd: (id: ConversationId) => typedError<string, IpcError>(__TAURI_INVOKE("conversation_export_md", { id })),
 	/**  Newest first. */
 	notificationsList: (limit: number) => typedError<NotificationPayload[], IpcError>(__TAURI_INVOKE("notifications_list", { limit })),
 	notificationsUnreadCount: () => typedError<number, IpcError>(__TAURI_INVOKE("notifications_unread_count")),
@@ -48,6 +55,16 @@ export type AppInfo = {
 
 /**  An assistant's kebab-case id (user-chosen, not a UUID); `new()` still yields a UUID. */
 export type AssistantId = string;
+
+/**  A stored attachment. `snapshot` is the text that was actually sent (truncated). */
+export type Attachment = {
+	id: string,
+	kind: AttachmentKind,
+	path: string | null,
+	label: string,
+	tokens: number | null,
+	snapshot: string | null,
+};
 
 /**  An attachment as sent from the UI. */
 export type AttachmentInput = {
@@ -83,8 +100,44 @@ export type ChatSendResult = {
 	assistant_message_id: MessageId,
 };
 
+export type Conversation = {
+	id: ConversationId,
+	title: string,
+	assistant_id: AssistantId,
+	pinned: boolean,
+	summary: string | null,
+	/**  Last message id covered by `summary`. */
+	summary_upto: MessageId | null,
+	created_at: number,
+	updated_at: number,
+	archived: boolean,
+};
+
 /**  A chat conversation. */
 export type ConversationId = string;
+
+/**  One row of the conversation list. */
+export type ConversationSummary = {
+	id: ConversationId,
+	title: string,
+	assistant_id: AssistantId,
+	pinned: boolean,
+	updated_at: number,
+	/**  For search results: the matching text around the hit. */
+	snippet: string | null,
+};
+
+export type ConversationUpdate = {
+	title: string | null,
+	pinned: boolean | null,
+	assistant_id: AssistantId | null,
+	archived: boolean | null,
+};
+
+export type ConversationWithMessages = {
+	conversation: Conversation,
+	messages: Message[],
+};
 
 /**  Stable machine-readable error code (see DATA-AND-IPC §4). Serialized as snake_case. */
 export type ErrorCode = "runtime_unavailable" | "model_missing" | "permission_denied" | "os_permission_denied" | "path_denied" | "not_found" | "invalid_input" | "llm_invalid_output" | "context_overflow" | "cancelled" | "conflict" | "checksum_mismatch" | "insufficient_disk" | "network" | "busy" | "port_in_use" | "unauthorized" | "forbidden_remote" | "internal";
@@ -96,8 +149,33 @@ export type IpcError = {
 	detail: string | null,
 };
 
+export type Message = {
+	id: MessageId,
+	conversation_id: ConversationId,
+	role: MessageRole,
+	content: string,
+	/**  Thoughts (never re-sent to the model). */
+	reasoning: string | null,
+	assistant_id: AssistantId | null,
+	model_id: string | null,
+	/**  JSON array of `{tool, args, summary, ok}`. */
+	tool_trace: string | null,
+	status: MessageStatus,
+	error: string | null,
+	tokens_prompt: number | null,
+	tokens_out: number | null,
+	tps: number | null,
+	ttft_ms: number | null,
+	created_at: number,
+	attachments: Attachment[],
+};
+
 /**  A chat message. */
 export type MessageId = string;
+
+export type MessageRole = "system" | "user" | "assistant" | "tool" | "event";
+
+export type MessageStatus = "streaming" | "done" | "stopped" | "error";
 
 /**  A click action attached to a notification. */
 export type NotificationAction = {

@@ -29,3 +29,12 @@ S7 Windows run. B) Set `transparent: true` + `windowEffects: ["mica"]` and add a
 (Win11 = build >= 22000) that sets `data-mica` on `<html>` so the CSS paints solid colors otherwise.
 Recommendation: A for now, then B once S7 (T03.16) shows how the WebView2 transparency behaves on a real Windows 11 and 10.
 Answer (owner): _pending_
+
+## Q-3: Saving an exported conversation to a user-chosen file (2026-10-11, task T04.09)
+Context: M04 step 6 says "Export conversation to Markdown (save dialog)". AGENTS §3 forbids writing files
+outside `nexus-fs::Journal::apply` (plus app data/caches), and the webview has no `fs` plugin.
+Options: A) `conversation_export_md` returns the text and the UI copies it to the clipboard / offers it
+in a dialog now; the file save goes through a Journal "create file" op once M05 exists.
+B) Allow a narrow exception: a command that writes one file to a path the user just chose in a native save dialog.
+Recommendation: A now, then B-via-Journal in M05 (the save dialog path becomes a granted single-file create).
+Answer (owner): _pending_
