@@ -14,6 +14,8 @@ import { createHashRouter, type RouteObject } from "react-router-dom";
 
 import { AppShell } from "@/components/shell/AppShell";
 import { ChatView } from "@/features/chat/ChatView";
+import { ChangesPage } from "@/features/changes/ChangesPage";
+import { PermissionsPage } from "@/features/permissions/PermissionsPage";
 import { PlaceholderPage } from "@/features/placeholders/PlaceholderPage";
 
 export interface NavSection {
@@ -44,13 +46,20 @@ export const SETTINGS_SECTION: NavSection = {
   tagline: "Appearance, runtime, models, and privacy.",
 };
 
+function pageFor(s: NavSection) {
+  if (s.path === "/") return <ChatView />;
+  if (s.path === "/changes") return <ChangesPage />;
+  if (s.path === "/permissions") return <PermissionsPage />;
+  return <PlaceholderPage section={s} />;
+}
+
 export const routes: RouteObject[] = [
   {
     path: "/",
     element: <AppShell />,
     children: [{ path: "c/:conversationId", element: <ChatView /> }, ...[...NAV, SETTINGS_SECTION].map((s) => ({
       ...(s.path === "/" ? { index: true as const } : { path: s.path.slice(1) }),
-      element: s.path === "/" ? <ChatView /> : <PlaceholderPage section={s} />,
+      element: pageFor(s),
     }))],
   },
 ];

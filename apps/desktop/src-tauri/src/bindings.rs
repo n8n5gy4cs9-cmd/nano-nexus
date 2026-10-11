@@ -52,6 +52,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             fs::changeset_apply,
             fs::changeset_undo,
             fs::changeset_discard,
+            fs::debug_make_test_changeset,
             permissions::permission_respond,
             permissions::permission_requests,
         ])

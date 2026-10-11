@@ -478,3 +478,32 @@ mod tests {
         assert!(changeset_plan(&ctx, "Empty", "editor", vec![]).is_err());
     }
 }
+
+// ---- debug ----------------------------------------------------------------------------------
+
+/// Dev only: plan a small change set over fixture files in the OS temp folder, so the Changes page
+/// can be exercised without an assistant. Returns the new change set id.
+pub fn debug_make_test_changeset(ctx: &AppCtx) -> Result<ChangeSetId, NexusError> {
+    if !cfg!(debug_assertions) {
+        return Err(NexusError::InvalidInput("debug commands are not available in release builds".into()));
+    }
+    let dir = std::env::temp_dir().join("nanonexus-debug-playground");
+    std::fs::create_dir_all(&dir)?;
+    let notes = dir.join("notes.txt");
+    let draft = dir.join("draft.txt");
+    std::fs::write(&notes, "Shopping list\nmilk\neggs\nbread\n")?;
+    std::fs::write(&draft, "scratch\n")?;
+    let created = dir.join(format!("created-{}.txt", now_ms()));
+    let moved = dir.join(format!("draft-renamed-{}.txt", now_ms()));
+    let canon = |p: &Path| -> Result<String, NexusError> { Ok(std::fs::canonicalize(p)?.display().to_string()) };
+    let ops = vec![
+        FileOp::Write {
+            path: canon(&notes)?,
+            base_hash: None,
+            contents: "Shopping list\nmilk\noat milk\neggs\nbread\nbutter\n".into(),
+        },
+        FileOp::Create { path: canon(&dir)? + &format!("/{}", created.file_name().and_then(|n| n.to_str()).unwrap_or("created.txt")), contents: "Hello from a test change set.\n".into() },
+        FileOp::Move { from: canon(&draft)?, to: canon(&dir)? + &format!("/{}", moved.file_name().and_then(|n| n.to_str()).unwrap_or("moved.txt")) },
+    ];
+    changeset_plan(ctx, "Test change set", "user", ops)
+}

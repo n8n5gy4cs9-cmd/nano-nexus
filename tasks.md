@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 74/229 tasks done (32%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 78/229 tasks done (34%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -113,11 +113,11 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T05.08** OS probes: macOS TCC EPERM detection + deep links; Windows Controlled Folder Access detection (2026-10-11)
 - [x] **T05.09** Permission broker (oneshot map, 5-min timeout, `permission:request`, OS notify when unfocused) + `permission_respond` (2026-10-11)
 - [x] **T05.10** Commands `fs_*`, `os_permissions_*`, `audit_list`, `changesets_*` (2026-10-11)
-- [ ] **T05.11** UI Permissions page (grants table, macOS privacy cards, protected locations, activity log)
-- [ ] **T05.12** UI Permission modal (Deny / Allow once / Allow folder ▾)
-- [ ] **T05.13** UI Changes page (list, file list + stats, diff viewer unified/split, apply/undo/discard, conflict dialog)
-- [ ] **T05.14** Debug command `debug_make_test_changeset` (dev only)
-- [ ] ⭐ **T05.15** Exit check: PERMISSIONS §8 tests + proptest pass; TCC manual test; grep shows no writes outside Journal
+- [x] **T05.11** UI Permissions page (grants table, macOS privacy cards, protected locations, activity log) (2026-10-11)
+- [x] **T05.12** UI Permission modal (Deny / Allow once / Allow folder ▾) (2026-10-11)
+- [x] **T05.13** UI Changes page (list, file list + stats, diff viewer unified/split, apply/undo/discard, conflict dialog) (2026-10-11)
+- [x] **T05.14** Debug command `debug_make_test_changeset` (dev only) (2026-10-11) — returns an error in release builds; fixtures in the OS temp folder
+- [ ] ⭐ **T05.15** Exit check: PERMISSIONS §8 tests + proptest pass; TCC manual test; grep shows no writes outside Journal — ⏳ grep done (only the dev-only T05.14 fixtures write, in the OS temp dir); `cargo test` + TCC manual test need the Mac; owner to run. `bindings.ts` also needs a debug launch to regenerate (UI uses `features/permissions/types.ts` until then)
 
 ## M06: Assistants, prompts, tools · [spec](docs/milestones/M06-assistants.md) · [contract](docs/architecture/ASSISTANTS.md)
 - [ ] **T06.01** `AssistantSpec` (deny_unknown_fields) + schema validation + Registry (include_dir! built-ins + user from store)

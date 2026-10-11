@@ -248,3 +248,10 @@ pub async fn changeset_undo(ctx: Ctx<'_>, id: String, decisions: Vec<UndoDecisio
 pub async fn changeset_discard(ctx: Ctx<'_>, id: String) -> CmdResult<()> {
     service::fs::changeset_discard(&ctx, &Caller::Desktop, &id).map_err(ipc)
 }
+
+/// Dev only (T05.14): plan a fixture change set to try the Changes page.
+#[tauri::command]
+#[specta::specta]
+pub async fn debug_make_test_changeset(ctx: Ctx<'_>) -> CmdResult<ChangeSetId> {
+    service::fs::debug_make_test_changeset(&ctx).map_err(ipc)
+}

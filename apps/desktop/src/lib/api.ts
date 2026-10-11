@@ -17,6 +17,20 @@ import type {
   Settings,
 } from "@/bindings";
 
+import type {
+  AuditRecord,
+  ChangePreview,
+  ChangeSetSummary,
+  Decision,
+  DenyRuleView,
+  Grant,
+  GrantLevel,
+  OsPermissionsStatus,
+  PermissionRequest,
+  UndoDecision,
+  UndoOutcome,
+} from "@/features/permissions/types";
+
 import { getTransport } from "./transport";
 import type { Unsubscribe } from "./transport";
 
@@ -83,6 +97,49 @@ export const api = {
     /** Subscribe to `notification:new`. */
     onNew: (handler: (n: NotificationPayload) => void): Promise<Unsubscribe> =>
       getTransport().on<NotificationPayload>("notification:new", handler),
+  },
+  fs: {
+    grants: () => getTransport().call<Grant[]>("fs_grants_list"),
+    grantAdd: (root: string, level: GrantLevel, recursive: boolean, label: string | null = null, expiresAt: number | null = null) =>
+      getTransport().call<Grant>("fs_grant_add", { root, level, recursive, label, expiresAt }),
+    grantUpdate: (id: string, patch: { level?: GrantLevel; recursive?: boolean; label?: string; expiresAt?: number }) =>
+      getTransport().call<Grant>("fs_grant_update", {
+        id,
+        level: patch.level ?? null,
+        recursive: patch.recursive ?? null,
+        label: patch.label ?? null,
+        expiresAt: patch.expiresAt ?? null,
+      }),
+    grantRevoke: (id: string) => getTransport().call<boolean>("fs_grant_revoke", { id }),
+    denyList: () => getTransport().call<DenyRuleView[]>("fs_deny_list"),
+    denyAdd: (root: string) => getTransport().call<null>("fs_deny_add", { root }),
+    denyRemove: (root: string) => getTransport().call<boolean>("fs_deny_remove", { root }),
+    /** Native folder picker; `null` when cancelled. */
+    pickFolder: () => getTransport().call<string | null>("fs_pick_folder"),
+    audit: (limit: number, before: number | null = null) => getTransport().call<AuditRecord[]>("audit_list", { limit, before }),
+  },
+  os: {
+    permissions: () => getTransport().call<OsPermissionsStatus>("os_permissions_status"),
+    openPrivacySettings: (pane: "files_and_folders" | "full_disk") => getTransport().call<null>("os_open_privacy_settings", { pane }),
+  },
+  permissions: {
+    pending: () => getTransport().call<PermissionRequest[]>("permission_requests"),
+    respond: (requestId: string, decision: Decision) => getTransport().call<boolean>("permission_respond", { requestId, decision }),
+    /** Subscribe to `permission:request`. */
+    onRequest: (handler: (r: PermissionRequest) => void): Promise<Unsubscribe> =>
+      getTransport().on<PermissionRequest>("permission:request", handler),
+  },
+  changes: {
+    list: (limit: number) => getTransport().call<ChangeSetSummary[]>("changesets_list", { limit }),
+    preview: (id: string) => getTransport().call<ChangePreview>("changeset_preview", { id }),
+    apply: (id: string) => getTransport().call<ChangeSetSummary>("changeset_apply", { id }),
+    undo: (id: string, decisions: UndoDecision[]) => getTransport().call<UndoOutcome>("changeset_undo", { id, decisions }),
+    discard: (id: string) => getTransport().call<null>("changeset_discard", { id }),
+    /** Dev builds only. */
+    makeTest: () => getTransport().call<string>("debug_make_test_changeset"),
+    /** Subscribe to `changeset:update`. */
+    onUpdate: (handler: (u: { id: string; status: string }) => void): Promise<Unsubscribe> =>
+      getTransport().on<{ id: string; status: string }>("changeset:update", handler),
   },
   settings: {
     get: () => getTransport().call<Settings>("settings_get"),

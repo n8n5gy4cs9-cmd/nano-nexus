@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Outlet } from "react-router-dom";
 
+import { PermissionModal } from "@/features/permissions/PermissionModal";
 import { useShortcuts } from "@/hooks/useShortcuts";
 import { usePlatform } from "@/hooks/usePlatform";
 import { useUi } from "@/stores/ui";
@@ -52,6 +53,7 @@ export function AppShell() {
         </main>
       </div>
       {inspectorOpen ? <Inspector /> : null}
+      <PermissionModal />
     </div>
   );
 }
