@@ -359,7 +359,9 @@ fn start_turn(
     let docs = attached_docs(&user.attachments);
     let is_pipeline = spec.workflow.kind == "pipeline";
     let pipeline_attachments = user.attachments.clone();
-    let routed = spec.workflow.kind == "router" && !tool_names.is_empty();
+    // `/nano-nexus` help questions are answered from the attached report; the model must not go looking for files.
+    let help_question = user.attachments.iter().any(|a| a.label == "NanoNexus diagnostics");
+    let routed = spec.workflow.kind == "router" && !tool_names.is_empty() && !help_question;
     let (max_hops, always_route) = (
         spec.workflow.max_hops.unwrap_or(3),
         spec.workflow.always_route.unwrap_or(false),
