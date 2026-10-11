@@ -146,6 +146,7 @@ struct Out {
 }
 
 impl Out {
+    #[allow(clippy::too_many_arguments)]
     fn add(
         &mut self,
         id: SymbolId,
