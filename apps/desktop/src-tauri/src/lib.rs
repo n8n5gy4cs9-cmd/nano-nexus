@@ -5,6 +5,7 @@ pub mod commands;
 pub mod notify;
 pub mod runtime;
 pub mod runtime_paths;
+pub mod service;
 pub mod state;
 
 use std::sync::{Arc, RwLock};
@@ -15,7 +16,7 @@ use nexus_store::Store;
 use tauri::{Manager, RunEvent};
 use tauri_specta::Event as _;
 
-use crate::state::AppState;
+use crate::state::{AppState, Ctx};
 
 /// Resolve the data and log folders: portable mode (`portable.flag` next to the exe) or the OS defaults.
 fn resolve_paths(app: &tauri::App) -> Result<AppPaths, Box<dyn std::error::Error>> {
@@ -34,7 +35,7 @@ fn resolve_paths(app: &tauri::App) -> Result<AppPaths, Box<dyn std::error::Error
 /// Forward every supervisor state change to the webview as `runtime:status`.
 fn bridge_runtime_status(app: &tauri::AppHandle) {
     let app = app.clone();
-    let mut rx = app.state::<AppState>().supervisor.subscribe();
+    let mut rx = app.state::<Ctx>().supervisor.subscribe();
     tauri::async_runtime::spawn(async move {
         while rx.changed().await.is_ok() {
             let state = rx.borrow_and_update().clone();
@@ -56,13 +57,24 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     );
     // The scheduler spawns its worker task, so it needs the async runtime.
     let scheduler = tauri::async_runtime::block_on(async { Scheduler::new(supervisor.clone()) });
-    app.manage(AppState {
+    let resource_dir = app.path().resource_dir()?;
+    let exe_dir = std::env::current_exe()?
+        .parent()
+        .map(|d| d.to_owned())
+        .ok_or("the executable has no parent directory")?;
+    let interrupted = store.recover_interrupted_messages()?;
+    if interrupted > 0 {
+        tracing::info!(interrupted, "marked interrupted messages as stopped");
+    }
+    app.manage(Ctx::new(AppState {
         paths,
         store,
         supervisor,
         scheduler,
         settings: RwLock::new(settings),
-    });
+        resource_dir,
+        exe_dir,
+    }));
     bridge_runtime_status(app.handle());
     runtime::start_in_background(app.handle());
     Ok(())
@@ -97,7 +109,7 @@ pub fn run() {
         // `kill_on_drop` is not enough: process::exit skips destructors, so stop the server explicitly.
         if let (true, Some(state)) = (
             matches!(event, RunEvent::ExitRequested { .. } | RunEvent::Exit),
-            handle.try_state::<AppState>(),
+            handle.try_state::<Ctx>(),
         ) {
             tauri::async_runtime::block_on(state.supervisor.shutdown());
         }

@@ -4,6 +4,8 @@
 //! macOS shows notifications reliably only from the bundled, signed app; `tauri dev` may show them
 //! as the terminal or not at all.
 
+use std::sync::Arc;
+
 use nexus_core::error::NexusError;
 use nexus_core::events::NotificationPayload;
 use nexus_core::settings::Settings;
@@ -29,7 +31,7 @@ pub fn wants_os_notification(settings: &Settings, kind: &str, window_focused: bo
 
 /// Store, emit, and maybe show an OS notification.
 pub fn notify(app: &AppHandle, input: NewNotification) -> Result<NotificationPayload, NexusError> {
-    let state = app.state::<AppState>();
+    let state = app.state::<Arc<AppState>>();
     let payload = state.store.insert_notification(input)?;
 
     if let Err(e) = NotificationNew(payload.clone()).emit(app) {

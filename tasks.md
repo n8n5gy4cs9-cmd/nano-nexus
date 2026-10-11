@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 49/217 tasks done (22%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 50/217 tasks done (23%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -85,7 +85,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 
 ## M04: Chat MVP ★ · [spec](docs/milestones/M04-chat.md)
 - [x] **T04.01** Store migration 0001 (settings, assistants, conversations, messages + FTS5 + triggers, attachments) + repos + tests (2026-10-11)
-- [ ] **T04.02** Service layer skeleton (`service/*`, `AppCtx`, `Caller`, `Sink` trait) + ChannelSink
+- [x] **T04.02** Service layer skeleton (`service/*`, `AppCtx`, `Caller`, `Sink` trait) + ChannelSink (2026-10-11)
 - [ ] **T04.03** `nexus-agent` minimal: preamble + `nexus.toml` rendering (minijinja) + insta snapshot
 - [ ] **T04.04** ContextBudget (tokenize + LRU cache, history window, reserve) + tests
 - [ ] **T04.05** TurnEngine chat workflow (stream → ChatEvent, think toggle, reasoning not re-sent) + mock-LLM tests

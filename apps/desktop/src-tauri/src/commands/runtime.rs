@@ -1,10 +1,13 @@
-use nexus_core::error::{IpcError, NexusError};
+use std::sync::Arc;
+
+use nexus_core::error::IpcError;
 use nexus_core::events::RuntimeState;
 use serde::{Deserialize, Serialize};
 use specta::Type;
-use tauri::{AppHandle, State};
+use tauri::State;
 
 use super::CmdResult;
+use crate::service::{self, Caller};
 use crate::state::AppState;
 
 /// Global event `runtime:status`: sent on every supervisor state change.
@@ -14,23 +17,20 @@ pub struct RuntimeStatus(pub RuntimeState);
 
 #[tauri::command]
 #[specta::specta]
-pub async fn runtime_status(state: State<'_, AppState>) -> CmdResult<RuntimeState> {
-    Ok(state.supervisor.state())
+pub async fn runtime_status(ctx: State<'_, Arc<AppState>>) -> CmdResult<RuntimeState> {
+    Ok(service::runtime::status(&ctx))
 }
 
 #[tauri::command]
 #[specta::specta]
-pub async fn runtime_restart(app: AppHandle, state: State<'_, AppState>) -> CmdResult<()> {
-    let cfg = crate::runtime::build_config(&app).ok_or_else(|| IpcError::from(NexusError::ModelMissing))?;
-    state
-        .supervisor
-        .restart(cfg)
+pub async fn runtime_restart(ctx: State<'_, Arc<AppState>>) -> CmdResult<()> {
+    service::runtime::restart(&ctx, &Caller::Desktop)
         .await
-        .map_err(|e| IpcError::from(NexusError::from(e)))
+        .map_err(IpcError::from)
 }
 
 #[tauri::command]
 #[specta::specta]
-pub async fn runtime_logs(state: State<'_, AppState>, lines: u32) -> CmdResult<Vec<String>> {
-    Ok(state.supervisor.log_tail(lines.min(500) as usize).await)
+pub async fn runtime_logs(ctx: State<'_, Arc<AppState>>, lines: u32) -> CmdResult<Vec<String>> {
+    Ok(service::runtime::logs(&ctx, lines).await)
 }
