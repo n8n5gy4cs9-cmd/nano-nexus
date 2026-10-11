@@ -299,12 +299,11 @@ pub fn numbers_in(text: &str) -> Vec<String> {
         while i < chars.len() {
             let c = chars[i];
             let part_of_word = i > 0 && (chars[i - 1].is_alphabetic() || chars[i - 1] == '_');
-            if c.is_ascii_digit() && cur.is_empty() && !part_of_word {
-                cur.push(c);
-            } else if !cur.is_empty()
+            let starts = c.is_ascii_digit() && cur.is_empty() && !part_of_word;
+            let continues = !cur.is_empty()
                 && (c.is_ascii_digit()
-                    || ((c == ',' || c == '.') && chars.get(i + 1).is_some_and(char::is_ascii_digit)))
-            {
+                    || ((c == ',' || c == '.') && chars.get(i + 1).is_some_and(char::is_ascii_digit)));
+            if starts || continues {
                 cur.push(c);
             } else if !cur.is_empty() {
                 out.push(normalize_number(&cur));
