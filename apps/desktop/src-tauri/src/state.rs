@@ -40,6 +40,15 @@ impl ChatJobs {
         }
     }
 
+    /// Cancel every running turn (app exit).
+    pub fn cancel_all(&self) {
+        if let Ok(m) = self.0.lock() {
+            for t in m.values() {
+                t.cancel();
+            }
+        }
+    }
+
     /// Forget a finished turn.
     pub fn finish(&self, id: &MessageId) {
         if let Ok(mut m) = self.0.lock() {

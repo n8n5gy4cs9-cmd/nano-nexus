@@ -179,7 +179,49 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let share_ctx: Ctx = (*app.state::<Ctx>()).clone();
     tauri::async_runtime::spawn(service::share::init(share_ctx));
     runtime::start_in_background(app.handle());
+    exit_on_signals(app.handle());
     Ok(())
+}
+
+/// Stop everything this app started: running answers, the LAN share server, `llama-server` (its whole
+/// process group), and the audit queue. Safe to call more than once.
+async fn shutdown_all(ctx: &Ctx) {
+    ctx.chats.cancel_all();
+    service::share::stop(ctx).await;
+    ctx.supervisor.shutdown().await;
+    ctx.audit.flush().await;
+}
+
+/// Ctrl-C (`tauri dev`) and `kill` end the app through the normal exit path, so the model server is
+/// stopped too instead of being left behind as an orphan.
+fn exit_on_signals(app: &tauri::AppHandle) {
+    let handle = app.clone();
+    tauri::async_runtime::spawn(async move {
+        #[cfg(unix)]
+        {
+            use tokio::signal::unix::{SignalKind, signal};
+            let (Ok(mut term), Ok(mut int), Ok(mut hup)) = (
+                signal(SignalKind::terminate()),
+                signal(SignalKind::interrupt()),
+                signal(SignalKind::hangup()),
+            ) else {
+                return;
+            };
+            tokio::select! {
+                _ = term.recv() => {}
+                _ = int.recv() => {}
+                _ = hup.recv() => {}
+            }
+        }
+        #[cfg(not(unix))]
+        {
+            if tokio::signal::ctrl_c().await.is_err() {
+                return;
+            }
+        }
+        tracing::info!("termination signal received; shutting down");
+        handle.exit(0);
+    });
 }
 
 /// Build and run the Tauri application.
@@ -215,10 +257,8 @@ pub fn run() {
             matches!(event, RunEvent::ExitRequested { .. } | RunEvent::Exit),
             handle.try_state::<Ctx>(),
         ) {
-            tauri::async_runtime::block_on(async {
-                state.supervisor.shutdown().await;
-                state.audit.flush().await;
-            });
+            let ctx: Ctx = (*state).clone();
+            tauri::async_runtime::block_on(shutdown_all(&ctx));
         }
     });
 }
