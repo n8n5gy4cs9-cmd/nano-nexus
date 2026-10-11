@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { focusComposer } from "@/lib/focus";
 import { hasMod, type Platform } from "@/lib/platform";
 import { NAV, SETTINGS_SECTION } from "@/routes";
+import { useActivity } from "@/stores/activity";
 import { useAssistantChoice } from "@/stores/assistant";
 import { useUi } from "@/stores/ui";
 
@@ -33,6 +34,9 @@ export function useShortcuts(platform: Platform) {
       } else if (e.key === "\\") {
         e.preventDefault();
         ui.toggleSidebar();
+      } else if (e.key.toLowerCase() === "j") {
+        e.preventDefault();
+        useActivity.getState().toggle();
       } else if (e.key.toLowerCase() === "i") {
         e.preventDefault();
         ui.toggleInspector();

@@ -55,7 +55,7 @@ function Row({ c, onRename, onDelete }: { c: ConversationSummary; onRename: () =
           <button
             type="button"
             aria-label={`Actions for ${c.title}`}
-            className="absolute top-1/2 right-1 hidden -translate-y-1/2 rounded-chip p-1 text-muted hover:bg-surface-3 group-focus-within:block group-hover:block"
+            className="absolute top-1/2 right-1 -translate-y-1/2 rounded-chip p-1 text-muted opacity-0 hover:bg-surface-3 focus-visible:opacity-100 group-focus-within:opacity-100 group-hover:opacity-100 data-[state=open]:opacity-100"
           >
             <MoreHorizontal className="size-4" />
           </button>
