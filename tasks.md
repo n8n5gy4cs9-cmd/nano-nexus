@@ -100,7 +100,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T04.14** Empty state with assistant starters; error cards with actions; perf stats line (2026-10-11)
 - [x] **T04.15** Text-file attachments (drop/pick, ≤ 256 KB, token cost chip) (2026-10-11)
 - [x] **T04.16** Shortcuts ⌘N ⌘. ⌘↑ ⌘⇧C (Ctrl on Windows) + focus management; responsive check at 390 px (2026-10-11)
-- [ ] ⭐ **T04.17** 🍎 Exit check: TTFT < 1 s, 60 fps stream, stop < 200 ms, 50-turn context OK, restart persists, FTS works
+- [ ] ⭐ **T04.17** 🍎 Exit check: TTFT < 1 s, 60 fps stream, stop < 200 ms, 50-turn context OK, restart persists, FTS works — ⏳ Mac-only; owner to run
 
 ## M05: Permissions and change sets · [spec](docs/milestones/M05-permissions.md) · [contract](docs/architecture/PERMISSIONS.md)
 - [ ] **T05.01** Grants model + canonicalization (existing + non-existing paths, dunce on Windows) + tests
