@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used)]
 //! End-to-end: files -> index -> search -> context -> verified citations, plus an `#[ignore]`d
 //! 500 MB-class performance fixture (run with `cargo test -p nexus-knowledge -- --ignored`).
 

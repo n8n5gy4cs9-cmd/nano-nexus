@@ -96,8 +96,8 @@ pub fn extract_file(path: &Path) -> Result<KbDoc, KbError> {
             let x = m08::extract_docx(path).map_err(err)?;
             Ok(KbDoc {
                 kind: "docx".into(),
-                title: x.title,
                 pages: plain_page(x.full_text()),
+                title: x.title,
                 notes: Vec::new(),
             })
         }
@@ -105,8 +105,8 @@ pub fn extract_file(path: &Path) -> Result<KbDoc, KbError> {
             let x = m08::extract_html(path).map_err(err)?;
             Ok(KbDoc {
                 kind: "html".into(),
-                title: x.title,
                 pages: plain_page(x.full_text()),
+                title: x.title,
                 notes: Vec::new(),
             })
         }

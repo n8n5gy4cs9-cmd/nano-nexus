@@ -114,6 +114,7 @@
   </div>
   <ol>
     <li><a href="#overview">Overview</a></li>
+    <li><a href="#quick">★ Quick start: bundle my model + books</a></li>
     <li><a href="#setup">1 · One-time setup (Mac)</a></li>
     <li><a href="#basic-mac">2 · Basic build: macOS</a></li>
     <li><a href="#windows">3 · Windows, built on the Mac</a></li>
@@ -158,6 +159,53 @@
   <tr><td>More models on an installed app</td><td>Model pack → Models → Import model pack…</td><td><a href="#packs">6</a></td></tr>
   <tr><td>Chat from the phone</td><td>📡 Share → ON → scan the QR</td><td><a href="#share">7</a></td></tr>
 </table>
+
+<h2 id="quick">★ Quick start: bundle my own model + books (macOS and Windows) <span class="badge b-now">Available now</span></h2>
+<p>One script does everything: <code>scripts/bundle.mjs</code>. You give it your downloaded <code>.gguf</code> file(s) and your reference folders; it checks and imports the model, copies the books, stages the files, and builds the app. You do not need to edit any config.</p>
+<ol class="steps">
+  <li><b>Do the one-time setup</b> in <a href="#setup">step 1</a> (Mac). For Windows builds also do the <a href="#windows">Windows toolchain</a> once. If you only need Mac, skip that.</li>
+  <li><b>Put your files somewhere easy</b>, for example:
+<pre><code>~/Models/my-model-Q4_K_M.gguf          <span class="c"># the GGUF you downloaded</span>
+~/Books/reaper-manual/                  <span class="c"># a folder with PDFs, EPUBs, Markdown, text, HTML, DOCX…</span></code></pre></li>
+  <li><b>Build for this Mac</b> (the model is hashed, checked as a real GGUF, and bundled; the first model is the default):
+<pre><code>node scripts/bundle.mjs --name mine \
+  --gguf ~/Models/my-model-Q4_K_M.gguf \
+  --knowledge ~/Books/reaper-manual</code></pre>
+  Result: <code>dist-bundles/mine/NanoNexus.app</code>. Drag it to Applications.</li>
+  <li><b>Build for Windows from the same Mac</b> (add <code>--target windows</code>, or <code>--target all</code> for both):
+<pre><code>node scripts/bundle.mjs --name mine --target all \
+  --gguf ~/Models/my-model-Q4_K_M.gguf \
+  --knowledge ~/Books/reaper-manual</code></pre>
+  Result: <code>dist-bundles/mine/NanoNexus_…_x64-setup.exe</code>. Payloads over ~1.8 GB automatically become a <b>portable folder</b> (<code>NanoNexus-windows-x64/</code>, zip it and unzip anywhere; data stays in its <code>data\</code> folder). Force one with <code>--format installer</code> or <code>--format portable</code>.</li>
+  <li><b>First launch on the target PC/Mac:</b> your model is already installed and selected; your books show up in <b>Library</b> as <i>Built in</i> and index in the background. No internet needed.</li>
+</ol>
+<h3>Several models, name and ID</h3>
+<pre><code>node scripts/bundle.mjs --name studio --target all \
+  --gguf "~/Models/fast-q4.gguf=fast=Fast (small)" \
+  --gguf "~/Models/smart-q6.gguf=smart=Smart (slower)" \
+  --catalog minicpm5-1b-fable5-v2-q8 \
+  --default fast \
+  --knowledge ~/Books/reaper-manual --knowledge ~/Books/js-book</code></pre>
+<ul>
+  <li><code>--gguf file</code> or <code>file=id=Display name</code>: your own file. The id is lowercase letters, digits, dots, dashes.</li>
+  <li><code>--catalog id</code>: a model from <code>catalog/models.json</code> (downloaded and verified for you).</li>
+  <li><code>--hf owner/repo:Q4_K_M</code>: a Hugging Face GGUF repo.</li>
+  <li><code>--default id</code>: which one is active on first launch (otherwise the first listed).</li>
+</ul>
+<h3>Repeat or tweak a build</h3>
+<p>Every run saves your choices to <code>bundles/local/&lt;name&gt;.json</code>. Rebuild later with <code>node scripts/bundle.mjs --profile mine --target all</code>. Add <code>--stage-only</code> to prepare the payload without building, and <code>--help</code> to see every option.</p>
+<div class="note"><strong>Custom GGUF checklist</strong>
+<ul>
+  <li>The file must be a real <code>.gguf</code> (the script checks the header and refuses anything else). Split files (<code>-00001-of-00003</code>) are not supported yet; use a single-file quant.</li>
+  <li>Make sure you may redistribute the model. Its license is recorded as <i>unknown</i> for local files, so add the license text to <code>vendor/bundle/&lt;name&gt;/&lt;target&gt;/licenses/</code> if you ship it to others (use <code>--stage-only</code>, add it, then build).</li>
+  <li>The llama.cpp runtime must support the model architecture. Very new architectures may need a newer pinned runtime.</li>
+  <li>Same disk volume = hard link, no extra space while building. The final app still contains the full file.</li>
+  <li>Want to add a model <i>later</i> without rebuilding? Use a <a href="#packs">model pack</a>, or in the app: Models → import a local <code>.gguf</code>.</li>
+</ul></div>
+<h3>Check the result</h3>
+<pre><code>node scripts/knowledge-manifest.mjs verify dist-bundles/mine/NanoNexus.app/Contents/Resources/knowledge
+node scripts/fetch-model.mjs --verify                    <span class="c"># re-hashes every model in vendor/models</span></code></pre>
+<p>More on libraries: <a href="#libraries">section 10</a>.</p>
 
 <h2 id="setup">1 · One-time setup on the Mac <span class="badge b-now">Available now</span></h2>
 <ol class="steps">
