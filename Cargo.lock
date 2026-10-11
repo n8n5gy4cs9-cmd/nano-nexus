@@ -150,6 +150,12 @@ version = "0.1.0"
 [[package]]
 name = "nexus-llm"
 version = "0.1.0"
+dependencies = [
+ "nexus-core",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
 
 [[package]]
 name = "nexus-models"
