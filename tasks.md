@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 155/234 tasks done (66%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 156/234 tasks done (66%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -173,7 +173,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 ## M09: Rename Forge · [spec](docs/milestones/M09-rename-forge.md) · [contract](docs/architecture/ANALYZER.md#5-rename-forge)
 - [x] **T09.01** 🔬 **S4** tree-sitter 0.27 + grammar pins (python, javascript, typescript/tsx, rust, c-sharp, go, java) parse your own projects → SPIKES.md (2026-10-11) — pins load and parse samples in the container; parsing your own projects happens in T09.17
 - [x] **T09.02** Fixture projects `tests/fixtures/{py_app,ts_app,rust_app,cs_app,go_app,java_app}` (hand-written: cross-file refs, imports, string lookups, config files, nested folders) (2026-10-11) — six fixtures under `tests/fixtures/` (go, java, rust, python verified to compile/compile-all in the container; ts/cs not checked: no tsc project deps / dotnet)
-- [ ] **T09.03** Tags queries per language (`queries/<lang>/tags.scm`) + S-expression snapshot tests
+- [x] **T09.03** Tags queries per language (`queries/<lang>/tags.scm`) + S-expression snapshot tests (2026-10-11) — queries in `crates/nexus-analyze/queries/<lang>/tags.scm` (typescript shared with tsx); runner `code::tags`; 13 insta snapshots in `crates/nexus-analyze/tests/snapshots`. Kind refinement (method vs function, constant vs variable, TS parameter properties) is done by the index (T09.04)
 - [ ] **T09.04** Symbol index (defs, refs, scopes, imports, file/folder symbols, ambiguity) + serialization + incremental re-index
 - [ ] **T09.05** Import/module resolution per language (py, ts/js incl. tsconfig paths, rust mod/use, c# using, go packages, java packages) + tests
 - [ ] **T09.06** Non-code refs: config/manifest scanner (package.json, tsconfig, Cargo.toml, pyproject, *.csproj, go.mod, YAML/JSON/TOML), string-lookup detection, opt-in docs/comments + tests

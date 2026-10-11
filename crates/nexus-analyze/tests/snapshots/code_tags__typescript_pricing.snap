@@ -1,0 +1,40 @@
+---
+source: crates/nexus-analyze/tests/code_tags.rs
+expression: "dump(\"ts_app/src/lib/pricing.ts\")"
+---
+(program (export_statement declaration: (lexical_declaration (variable_declarator name: (identifier) value: (number)))) (export_statement declaration: (class_declaration name: (type_identifier) body: (class_body (method_definition name: (property_identifier) parameters: (formal_parameters (required_parameter (accessibility_modifier) pattern: (identifier) type: (type_annotation (predefined_type))) (required_parameter (accessibility_modifier) pattern: (identifier) type: (type_annotation (predefined_type)))) body: (statement_block)) (method_definition name: (property_identifier) parameters: (formal_parameters (required_parameter pattern: (identifier) type: (type_annotation (predefined_type)))) return_type: (type_annotation (predefined_type)) body: (statement_block (lexical_declaration (variable_declarator name: (identifier) value: (binary_expression left: (member_expression object: (this) property: (property_identifier)) right: (identifier)))) (return_statement (identifier))))))) (export_statement declaration: (function_declaration name: (identifier) parameters: (formal_parameters (required_parameter pattern: (identifier) type: (type_annotation (array_type (type_identifier))))) return_type: (type_annotation (predefined_type)) body: (statement_block (lexical_declaration (variable_declarator name: (identifier) value: (number))) (for_in_statement left: (identifier) right: (identifier) body: (expression_statement (augmented_assignment_expression left: (identifier) right: (member_expression object: (identifier) property: (property_identifier))))) (return_statement (identifier))))))
+
+L1 def.variable TAX_RATE
+L1 ref TAX_RATE
+L3 def.class cart_item
+L3 ref cart_item
+L4 def.method constructor
+L4 ref constructor
+L4 def.parameter name
+L4 ref name
+L4 def.parameter price
+L4 ref price
+L5 def.method doStuff2
+L5 ref doStuff2
+L5 def.parameter p
+L5 ref p
+L6 def.variable tmp
+L6 ref tmp
+L6 member price
+L6 ref price
+L6 ref p
+L7 ref tmp
+L11 def.function calcTotal
+L11 ref calcTotal
+L11 def.parameter items
+L11 ref items
+L11 ref cart_item
+L12 def.variable total
+L12 ref total
+L13 ref it
+L13 ref items
+L13 ref total
+L13 ref it
+L13 member price
+L13 ref price
+L14 ref total

@@ -1,0 +1,56 @@
+---
+source: crates/nexus-analyze/tests/code_tags.rs
+expression: "dump(\"py_app/util/pricing.py\")"
+---
+(module (expression_statement (assignment left: (identifier) right: (float))) (class_definition name: (identifier) body: (block (function_definition name: (identifier) parameters: (parameters (identifier) (identifier) (identifier)) body: (block (expression_statement (assignment left: (attribute object: (identifier) attribute: (identifier)) right: (identifier))) (expression_statement (assignment left: (attribute object: (identifier) attribute: (identifier)) right: (identifier))))) (function_definition name: (identifier) parameters: (parameters (identifier) (identifier)) body: (block (expression_statement (assignment left: (identifier) right: (binary_operator left: (attribute object: (identifier) attribute: (identifier)) right: (identifier)))) (return_statement (identifier)))))) (function_definition name: (identifier) parameters: (parameters (identifier)) body: (block (expression_statement (assignment left: (identifier) right: (integer))) (for_statement left: (identifier) right: (identifier) body: (block (expression_statement (augmented_assignment left: (identifier) right: (attribute object: (identifier) attribute: (identifier)))))) (return_statement (identifier)))))
+
+L1 def.variable TAX_RATE
+L1 ref TAX_RATE
+L4 def.class cart_item
+L4 ref cart_item
+L5 def.function __init__
+L5 ref __init__
+L5 def.parameter self
+L5 ref self
+L5 def.parameter name
+L5 ref name
+L5 def.parameter price
+L5 ref price
+L6 def.field name
+L6 ref self
+L6 member name
+L6 ref name
+L6 ref name
+L7 def.field price
+L7 ref self
+L7 member price
+L7 ref price
+L7 ref price
+L9 def.function doStuff2
+L9 ref doStuff2
+L9 def.parameter self
+L9 ref self
+L9 def.parameter p
+L9 ref p
+L10 def.variable tmp
+L10 ref tmp
+L10 ref self
+L10 member price
+L10 ref price
+L10 ref p
+L11 ref tmp
+L14 def.function calc_total
+L14 ref calc_total
+L14 def.parameter items
+L14 ref items
+L15 def.variable total
+L15 ref total
+L16 def.variable it
+L16 ref it
+L16 ref items
+L17 def.variable total
+L17 ref total
+L17 ref it
+L17 member price
+L17 ref price
+L18 ref total

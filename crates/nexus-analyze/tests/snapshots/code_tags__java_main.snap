@@ -1,0 +1,52 @@
+---
+source: crates/nexus-analyze/tests/code_tags.rs
+expression: "dump(\"java_app/src/main/java/shop/Main.java\")"
+---
+(program (package_declaration (identifier)) (import_declaration (scoped_identifier scope: (scoped_identifier scope: (identifier) name: (identifier)) name: (identifier))) (import_declaration (scoped_identifier scope: (scoped_identifier scope: (identifier) name: (identifier)) name: (identifier))) (class_declaration (modifiers) name: (identifier) body: (class_body (method_declaration (modifiers) type: (void_type) name: (identifier) parameters: (formal_parameters (formal_parameter type: (array_type element: (type_identifier) dimensions: (dimensions)) name: (identifier))) (throws (type_identifier)) body: (block (local_variable_declaration type: (array_type element: (type_identifier) dimensions: (dimensions)) declarator: (variable_declarator name: (identifier) value: (array_initializer (object_creation_expression type: (type_identifier) arguments: (argument_list (string_literal (string_fragment)) (decimal_floating_point_literal)))))) (local_variable_declaration type: (floating_point_type) declarator: (variable_declarator name: (identifier) value: (method_invocation object: (identifier) name: (identifier) arguments: (argument_list (identifier))))) (local_variable_declaration type: (type_identifier) declarator: (variable_declarator name: (identifier) value: (method_invocation object: (class_literal (type_identifier)) name: (identifier) arguments: (argument_list (string_literal (string_fragment)) (class_literal (array_type element: (type_identifier) dimensions: (dimensions))))))) (expression_statement (method_invocation object: (field_access object: (identifier) field: (identifier)) name: (identifier) arguments: (argument_list (binary_expression left: (binary_expression left: (identifier) right: (string_literal (string_fragment))) right: (method_invocation object: (identifier) name: (identifier) arguments: (argument_list)))))))))))
+
+L1 ref shop
+L3 import.module shop.pricing.Calc
+L3 ref shop
+L3 ref pricing
+L3 ref Calc
+L4 import.module shop.pricing.cart_item
+L4 ref shop
+L4 ref pricing
+L4 ref cart_item
+L6 def.class Main
+L6 ref Main
+L7 def.method main
+L7 ref main
+L7 def.parameter args
+L7 ref String
+L7 ref args
+L7 ref Exception
+L8 def.variable items
+L8 ref cart_item
+L8 ref items
+L8 ref cart_item
+L8 string "pen"
+L9 def.variable total
+L9 ref total
+L9 ref Calc
+L9 member calcTotal
+L9 ref calcTotal
+L9 ref items
+L10 def.variable m
+L10 ref var
+L10 ref m
+L10 ref Calc
+L10 member getMethod
+L10 ref getMethod
+L10 string "calcTotal"
+L10 ref cart_item
+L11 ref System
+L11 member out
+L11 ref out
+L11 member println
+L11 ref println
+L11 ref total
+L11 string " "
+L11 ref m
+L11 member getName
+L11 ref getName

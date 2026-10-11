@@ -1,0 +1,50 @@
+---
+source: crates/nexus-analyze/tests/code_tags.rs
+expression: "dump(\"cs_app/Pricing/calc_helpers.cs\")"
+---
+(compilation_unit (namespace_declaration name: (qualified_name qualifier: (identifier) name: (identifier)) body: (declaration_list (class_declaration (modifier) name: (identifier) body: (declaration_list (field_declaration (modifier) (variable_declaration type: (predefined_type) (variable_declarator name: (identifier)))) (field_declaration (modifier) (variable_declaration type: (predefined_type) (variable_declarator name: (identifier)))) (constructor_declaration (modifier) name: (identifier) parameters: (parameter_list (parameter type: (predefined_type) name: (identifier)) (parameter type: (predefined_type) name: (identifier))) body: (block (expression_statement (assignment_expression left: (identifier) right: (identifier))) (expression_statement (assignment_expression left: (identifier) right: (identifier))))) (method_declaration (modifier) returns: (predefined_type) name: (identifier) parameters: (parameter_list (parameter type: (predefined_type) name: (identifier))) body: (block (local_declaration_statement (variable_declaration type: (implicit_type) (variable_declarator name: (identifier) (binary_expression left: (identifier) right: (identifier))))) (return_statement (identifier)))))) (class_declaration (modifier) (modifier) name: (identifier) body: (declaration_list (field_declaration (modifier) (modifier) (variable_declaration type: (predefined_type) (variable_declarator name: (identifier) (real_literal)))) (method_declaration (modifier) (modifier) returns: (predefined_type) name: (identifier) parameters: (parameter_list (parameter type: (array_type type: (identifier) rank: (array_rank_specifier)) name: (identifier))) body: (block (local_declaration_statement (variable_declaration type: (predefined_type) (variable_declarator name: (identifier) (integer_literal)))) (foreach_statement type: (implicit_type) left: (identifier) right: (identifier) body: (expression_statement (assignment_expression left: (identifier) right: (member_access_expression expression: (identifier) name: (identifier))))) (return_statement (identifier)))))))))
+
+L1 ref Shop
+L1 ref Pricing
+L3 def.class cart_item
+L3 ref cart_item
+L5 def.variable Name
+L5 ref Name
+L6 def.variable Price
+L6 ref Price
+L7 ref cart_item
+L7 def.parameter name
+L7 ref name
+L7 def.parameter price
+L7 ref price
+L7 ref Name
+L7 ref name
+L7 ref Price
+L7 ref price
+L8 def.method doStuff2
+L8 ref doStuff2
+L8 def.parameter p
+L8 ref p
+L8 def.variable tmp
+L8 ref tmp
+L8 ref Price
+L8 ref p
+L8 ref tmp
+L11 def.class Calc
+L11 ref Calc
+L13 def.variable TaxRate
+L13 ref TaxRate
+L15 def.method CalcTotal
+L15 ref CalcTotal
+L15 def.parameter items
+L15 ref cart_item
+L15 ref items
+L17 def.variable total
+L17 ref total
+L18 ref it
+L18 ref items
+L18 ref total
+L18 ref it
+L18 member Price
+L18 ref Price
+L19 ref total

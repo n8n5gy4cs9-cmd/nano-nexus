@@ -1,0 +1,43 @@
+---
+source: crates/nexus-analyze/tests/code_tags.rs
+expression: "dump(\"rust_app/src/pricing.rs\")"
+---
+(source_file (const_item (visibility_modifier) name: (identifier) type: (primitive_type) value: (float_literal)) (struct_item (visibility_modifier) name: (type_identifier) body: (field_declaration_list (field_declaration (visibility_modifier) name: (field_identifier) type: (type_identifier)) (field_declaration (visibility_modifier) name: (field_identifier) type: (primitive_type)))) (impl_item type: (type_identifier) body: (declaration_list (function_item (visibility_modifier) name: (identifier) parameters: (parameters (self_parameter (self)) (parameter pattern: (identifier) type: (primitive_type))) return_type: (primitive_type) body: (block (let_declaration pattern: (identifier) value: (binary_expression left: (field_expression value: (self) field: (field_identifier)) right: (identifier))) (identifier))))) (function_item (visibility_modifier) name: (identifier) parameters: (parameters (parameter pattern: (identifier) type: (reference_type type: (array_type element: (type_identifier))))) return_type: (primitive_type) body: (block (call_expression function: (field_expression value: (call_expression function: (field_expression value: (call_expression function: (field_expression value: (identifier) field: (field_identifier)) arguments: (arguments)) field: (field_identifier)) arguments: (arguments (closure_expression parameters: (closure_parameters (identifier)) body: (field_expression value: (identifier) field: (field_identifier))))) field: (field_identifier)) arguments: (arguments)))))
+
+L1 def.constant TAX_RATE
+L1 ref TAX_RATE
+L3 def.class CartItem
+L3 ref CartItem
+L4 def.field name
+L4 ref name
+L4 ref String
+L5 def.field price
+L5 ref price
+L8 ref CartItem
+L9 def.function doStuff2
+L9 ref doStuff2
+L9 def.parameter p
+L9 ref p
+L10 def.variable tmp
+L10 ref tmp
+L10 member price
+L10 ref price
+L10 ref p
+L11 ref tmp
+L15 def.function calc_total
+L15 ref calc_total
+L15 def.parameter items
+L15 ref items
+L15 ref CartItem
+L16 ref items
+L16 member iter
+L16 ref iter
+L16 member map
+L16 ref map
+L16 def.parameter i
+L16 ref i
+L16 ref i
+L16 member price
+L16 ref price
+L16 member sum
+L16 ref sum

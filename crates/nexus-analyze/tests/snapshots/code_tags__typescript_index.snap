@@ -1,0 +1,44 @@
+---
+source: crates/nexus-analyze/tests/code_tags.rs
+expression: "dump(\"ts_app/src/index.ts\")"
+---
+(program (import_statement (import_clause (named_imports (import_specifier name: (identifier)) (import_specifier name: (identifier)) (import_specifier name: (identifier)))) source: (string (string_fragment))) (import_statement (import_clause (named_imports (import_specifier name: (identifier)))) source: (string (string_fragment))) (import_statement (import_clause (named_imports (import_specifier name: (identifier)))) source: (string (string_fragment))) (lexical_declaration (variable_declarator name: (identifier) type: (type_annotation (generic_type name: (type_identifier) type_arguments: (type_arguments (predefined_type) (predefined_type)))) value: (object (shorthand_property_identifier)))) (export_statement declaration: (function_declaration name: (identifier) parameters: (formal_parameters) return_type: (type_annotation (predefined_type)) body: (statement_block (lexical_declaration (variable_declarator name: (identifier) value: (array (new_expression constructor: (identifier) arguments: (arguments (string (string_fragment)) (number)))))) (lexical_declaration (variable_declarator name: (identifier) value: (as_expression (subscript_expression object: (identifier) index: (string (string_fragment))) (type_query (identifier))))) (return_statement (binary_expression left: (call_expression function: (identifier) arguments: (arguments (binary_expression left: (call_expression function: (identifier) arguments: (arguments (identifier))) right: (parenthesized_expression (binary_expression left: (number) right: (identifier)))))) right: (call_expression function: (identifier) arguments: (arguments (object (pair key: (property_identifier) value: (string (string_fragment))))))))))))
+
+L1 import.name calcTotal
+L1 ref calcTotal
+L1 import.name cart_item
+L1 ref cart_item
+L1 import.name TAX_RATE
+L1 ref TAX_RATE
+L1 import.module "@lib/pricing"
+L1 string "@lib/pricing"
+L2 import.name fmtMoney
+L2 ref fmtMoney
+L2 import.module "./lib/Helper_Funcs"
+L2 string "./lib/Helper_Funcs"
+L3 import.name Button
+L3 ref Button
+L3 import.module "./ui/Button"
+L3 string "./ui/Button"
+L5 def.variable registry
+L5 ref registry
+L5 ref Record
+L5 ref calcTotal
+L7 def.function main
+L7 ref main
+L8 def.variable items
+L8 ref items
+L8 ref cart_item
+L8 string "pen"
+L9 def.variable fn
+L9 ref fn
+L9 ref registry
+L9 string "calcTotal"
+L9 ref calcTotal
+L10 ref fmtMoney
+L10 ref fn
+L10 ref items
+L10 ref TAX_RATE
+L10 ref Button
+L10 ref label
+L10 string "ok"

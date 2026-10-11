@@ -1,0 +1,51 @@
+---
+source: crates/nexus-analyze/tests/code_tags.rs
+expression: "dump(\"go_app/pricing/pricing.go\")"
+---
+(source_file (package_clause (package_identifier)) (const_declaration (const_spec name: (identifier) value: (expression_list (float_literal)))) (type_declaration (type_spec name: (type_identifier) type: (struct_type (field_declaration_list (field_declaration name: (field_identifier) type: (type_identifier)) (field_declaration name: (field_identifier) type: (type_identifier)))))) (method_declaration receiver: (parameter_list (parameter_declaration name: (identifier) type: (type_identifier))) name: (field_identifier) parameters: (parameter_list (parameter_declaration name: (identifier) type: (type_identifier))) result: (type_identifier) body: (block (statement_list (short_var_declaration left: (expression_list (identifier)) right: (expression_list (binary_expression left: (selector_expression operand: (identifier) field: (field_identifier)) right: (identifier)))) (return_statement (expression_list (identifier)))))) (function_declaration name: (identifier) parameters: (parameter_list (parameter_declaration name: (identifier) type: (slice_type element: (type_identifier)))) result: (type_identifier) body: (block (statement_list (short_var_declaration left: (expression_list (identifier)) right: (expression_list (float_literal))) (for_statement (range_clause left: (expression_list (identifier) (identifier)) right: (identifier)) body: (block (statement_list (assignment_statement left: (expression_list (identifier)) right: (expression_list (selector_expression operand: (identifier) field: (field_identifier))))))) (return_statement (expression_list (identifier)))))))
+
+L1 ref pricing
+L3 def.constant TaxRate
+L3 ref TaxRate
+L5 def.class CartItem
+L5 ref CartItem
+L6 def.field Name
+L6 ref Name
+L6 ref string
+L7 def.field Price
+L7 ref Price
+L7 ref float64
+L10 def.method doStuff2
+L10 def.parameter c
+L10 ref c
+L10 ref CartItem
+L10 ref doStuff2
+L10 def.parameter p
+L10 ref p
+L10 ref float64
+L10 ref float64
+L11 def.variable tmp
+L11 ref tmp
+L11 ref c
+L11 member Price
+L11 ref Price
+L11 ref p
+L12 ref tmp
+L15 def.function CalcTotal
+L15 ref CalcTotal
+L15 def.parameter items
+L15 ref items
+L15 ref CartItem
+L15 ref float64
+L16 def.variable total
+L16 ref total
+L17 def.variable _
+L17 ref _
+L17 def.variable it
+L17 ref it
+L17 ref items
+L18 ref total
+L18 ref it
+L18 member Price
+L18 ref Price
+L20 ref total

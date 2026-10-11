@@ -1,0 +1,49 @@
+---
+source: crates/nexus-analyze/tests/code_tags.rs
+expression: "dump(\"rust_app/src/main.rs\")"
+---
+(source_file (mod_item name: (identifier)) (mod_item name: (identifier)) (use_declaration argument: (scoped_use_list path: (scoped_identifier path: (crate) name: (identifier)) list: (use_list (identifier) (identifier) (identifier)))) (use_declaration argument: (scoped_identifier path: (identifier) name: (identifier))) (function_item name: (identifier) parameters: (parameters) body: (block (let_declaration pattern: (identifier) value: (macro_invocation macro: (identifier) (token_tree (identifier) (token_tree (identifier) (string_literal (string_content)) (identifier) (token_tree) (identifier) (float_literal))))) (let_declaration pattern: (identifier) value: (call_expression function: (identifier) arguments: (arguments (reference_expression value: (identifier))))) (expression_statement (macro_invocation macro: (identifier) (token_tree (string_literal (string_content)) (identifier) (token_tree (identifier) (token_tree (float_literal) (identifier)))))))) (attribute_item (attribute (identifier) arguments: (token_tree (identifier)))) (mod_item name: (identifier) body: (declaration_list (use_declaration argument: (use_wildcard (super))) (attribute_item (attribute (identifier))) (function_item name: (identifier) parameters: (parameters) body: (block (expression_statement (macro_invocation macro: (identifier) (token_tree (identifier) (token_tree (token_tree)) (float_literal)))))))))
+
+L1 def.module Helpers
+L1 import.module Helpers
+L1 ref Helpers
+L2 def.module pricing
+L2 import.module pricing
+L2 ref pricing
+L4 import.module crate::pricing::{calc_total, CartItem, T
+L4 ref pricing
+L4 ref calc_total
+L4 ref CartItem
+L4 ref TAX_RATE
+L5 import.module Helpers::fmt_money
+L5 ref Helpers
+L5 ref fmt_money
+L7 def.function main
+L7 ref main
+L8 def.variable items
+L8 ref items
+L8 ref vec
+L8 ref CartItem
+L8 ref name
+L8 string "pen"
+L8 ref into
+L8 ref price
+L9 def.variable total
+L9 ref total
+L9 ref calc_total
+L9 ref items
+L10 ref println
+L10 string "{}"
+L10 ref fmt_money
+L10 ref total
+L10 ref TAX_RATE
+L13 ref cfg
+L13 ref test
+L14 def.module tests
+L14 ref tests
+L15 import.module super::*
+L17 ref test
+L18 def.function total_works
+L18 ref total_works
+L19 ref assert_eq
+L19 ref calc_total

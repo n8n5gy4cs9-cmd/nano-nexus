@@ -1,0 +1,20 @@
+---
+source: crates/nexus-analyze/tests/code_tags.rs
+expression: "dump(\"ts_app/src/ui/Button.tsx\")"
+---
+(program (import_statement (import_clause (named_imports (import_specifier name: (identifier)))) source: (string (string_fragment))) (export_statement declaration: (function_declaration name: (identifier) parameters: (formal_parameters (required_parameter pattern: (identifier) type: (type_annotation (object_type (property_signature name: (property_identifier) type: (type_annotation (predefined_type))))))) body: (statement_block (return_statement (template_string (string_fragment) (template_substitution (member_expression object: (identifier) property: (property_identifier))) (string_fragment) (template_substitution (call_expression function: (identifier) arguments: (arguments (number)))) (string_fragment)))))))
+
+L1 import.name fmtMoney
+L1 ref fmtMoney
+L1 import.module "../lib/Helper_Funcs"
+L1 string "../lib/Helper_Funcs"
+L3 def.function Button
+L3 ref Button
+L3 def.parameter props
+L3 ref props
+L3 def.field label
+L3 ref label
+L4 ref props
+L4 member label
+L4 ref label
+L4 ref fmtMoney

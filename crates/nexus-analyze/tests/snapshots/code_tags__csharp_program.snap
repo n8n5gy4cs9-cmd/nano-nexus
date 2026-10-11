@@ -1,0 +1,39 @@
+---
+source: crates/nexus-analyze/tests/code_tags.rs
+expression: "dump(\"cs_app/Program.cs\")"
+---
+(compilation_unit (using_directive (identifier)) (using_directive (qualified_name qualifier: (identifier) name: (identifier))) (namespace_declaration name: (identifier) body: (declaration_list (class_declaration (modifier) name: (identifier) body: (declaration_list (method_declaration (modifier) (modifier) returns: (predefined_type) name: (identifier) parameters: (parameter_list (parameter type: (array_type type: (predefined_type) rank: (array_rank_specifier)) name: (identifier))) body: (block (local_declaration_statement (variable_declaration type: (implicit_type) (variable_declarator name: (identifier) (implicit_array_creation_expression (initializer_expression (object_creation_expression type: (identifier) arguments: (argument_list (argument (string_literal (string_literal_content))) (argument (real_literal))))))))) (local_declaration_statement (variable_declaration type: (implicit_type) (variable_declarator name: (identifier) (invocation_expression function: (member_access_expression expression: (identifier) name: (identifier)) arguments: (argument_list (argument (identifier))))))) (local_declaration_statement (variable_declaration type: (implicit_type) (variable_declarator name: (identifier) (invocation_expression function: (identifier) arguments: (argument_list (argument (member_access_expression expression: (identifier) name: (identifier)))))))) (expression_statement (invocation_expression function: (member_access_expression expression: (identifier) name: (identifier)) arguments: (argument_list (argument (binary_expression left: (identifier) right: (identifier)))))))))))))
+
+L1 import.module System
+L1 ref System
+L2 import.module Shop.Pricing
+L2 ref Shop
+L2 ref Pricing
+L4 ref Shop
+L6 def.class Program
+L6 ref Program
+L8 def.method Main
+L8 ref Main
+L8 def.parameter args
+L8 ref args
+L10 def.variable items
+L10 ref items
+L10 ref cart_item
+L10 string "pen"
+L11 def.variable total
+L11 ref total
+L11 ref Calc
+L11 member CalcTotal
+L11 ref CalcTotal
+L11 ref items
+L12 def.variable name
+L12 ref name
+L12 ref nameof
+L12 ref Calc
+L12 member CalcTotal
+L12 ref CalcTotal
+L13 ref Console
+L13 member WriteLine
+L13 ref WriteLine
+L13 ref total
+L13 ref name

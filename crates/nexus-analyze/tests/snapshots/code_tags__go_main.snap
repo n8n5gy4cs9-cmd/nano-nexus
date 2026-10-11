@@ -1,0 +1,38 @@
+---
+source: crates/nexus-analyze/tests/code_tags.rs
+expression: "dump(\"go_app/main.go\")"
+---
+(source_file (package_clause (package_identifier)) (import_declaration (import_spec_list (import_spec path: (interpreted_string_literal (interpreted_string_literal_content))) (import_spec path: (interpreted_string_literal (interpreted_string_literal_content))) (import_spec path: (interpreted_string_literal (interpreted_string_literal_content))))) (function_declaration name: (identifier) parameters: (parameter_list) body: (block (statement_list (short_var_declaration left: (expression_list (identifier)) right: (expression_list (composite_literal type: (slice_type element: (qualified_type package: (package_identifier) name: (type_identifier))) body: (literal_value (literal_element (literal_value (keyed_element key: (literal_element (identifier)) value: (literal_element (interpreted_string_literal (interpreted_string_literal_content)))) (keyed_element key: (literal_element (identifier)) value: (literal_element (float_literal))))))))) (short_var_declaration left: (expression_list (identifier)) right: (expression_list (call_expression function: (selector_expression operand: (identifier) field: (field_identifier)) arguments: (argument_list (identifier))))) (expression_statement (call_expression function: (selector_expression operand: (identifier) field: (field_identifier)) arguments: (argument_list (call_expression function: (selector_expression operand: (identifier) field: (field_identifier)) arguments: (argument_list (binary_expression left: (identifier) right: (parenthesized_expression (binary_expression left: (int_literal) right: (selector_expression operand: (identifier) field: (field_identifier))))))))))))))
+
+L1 ref main
+L4 import.module "fmt"
+L4 string "fmt"
+L6 import.module "example.com/shop/pricing"
+L6 string "example.com/shop/pricing"
+L7 import.module "example.com/shop/util_funcs"
+L7 string "example.com/shop/util_funcs"
+L10 def.function main
+L10 ref main
+L11 def.variable items
+L11 ref items
+L11 ref pricing
+L11 ref CartItem
+L11 ref Name
+L11 string "pen"
+L11 ref Price
+L12 def.variable total
+L12 ref total
+L12 ref pricing
+L12 member CalcTotal
+L12 ref CalcTotal
+L12 ref items
+L13 ref fmt
+L13 member Println
+L13 ref Println
+L13 ref util_funcs
+L13 member FmtMoney
+L13 ref FmtMoney
+L13 ref total
+L13 ref pricing
+L13 member TaxRate
+L13 ref TaxRate

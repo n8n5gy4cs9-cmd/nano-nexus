@@ -1,0 +1,50 @@
+---
+source: crates/nexus-analyze/tests/code_tags.rs
+expression: "dump(\"py_app/main.py\")"
+---
+(module (expression_statement (string (string_start) (string_content) (string_end))) (import_from_statement module_name: (dotted_name (identifier) (identifier)) name: (dotted_name (identifier)) name: (dotted_name (identifier)) name: (dotted_name (identifier))) (import_from_statement module_name: (dotted_name (identifier)) name: (dotted_name (identifier))) (import_from_statement module_name: (dotted_name (identifier)) name: (dotted_name (identifier))) (function_definition name: (identifier) parameters: (parameters) body: (block (expression_statement (assignment left: (identifier) right: (list (call function: (identifier) arguments: (argument_list (string (string_start) (string_content) (string_end)) (float))) (call function: (identifier) arguments: (argument_list (string (string_start) (string_content) (string_end)) (integer)))))) (expression_statement (assignment left: (identifier) right: (call function: (identifier) arguments: (argument_list (identifier))))) (expression_statement (assignment left: (identifier) right: (call function: (identifier) arguments: (argument_list (identifier) (string (string_start) (string_content) (string_end)))))) (expression_statement (call function: (identifier) arguments: (argument_list (call function: (identifier) arguments: (argument_list (binary_operator left: (call function: (identifier) arguments: (argument_list (identifier))) right: (parenthesized_expression (binary_operator left: (integer) right: (identifier)))))) (identifier)))))) (if_statement condition: (comparison_operator (identifier) (string (string_start) (string_content) (string_end))) consequence: (block (expression_statement (call function: (identifier) arguments: (argument_list))))))
+
+L1 string """Entry point of the shop demo."""
+L2 import.module util.pricing
+L2 ref util
+L2 ref pricing
+L2 import.name calc_total
+L2 ref calc_total
+L2 import.name cart_item
+L2 ref cart_item
+L2 import.name TAX_RATE
+L2 ref TAX_RATE
+L3 import.module util
+L3 ref util
+L3 import.name pricing
+L3 ref pricing
+L4 import.module Helper_Funcs
+L4 ref Helper_Funcs
+L4 import.name fmt_money
+L4 ref fmt_money
+L7 def.function main
+L7 ref main
+L8 def.variable items
+L8 ref items
+L8 ref cart_item
+L8 string "pen"
+L8 ref cart_item
+L8 string "book"
+L9 def.variable total
+L9 ref total
+L9 ref calc_total
+L9 ref items
+L10 def.variable fn
+L10 ref fn
+L10 ref getattr
+L10 ref pricing
+L10 string "calc_total"
+L11 ref print
+L11 ref fmt_money
+L11 ref fn
+L11 ref items
+L11 ref TAX_RATE
+L11 ref total
+L14 ref __name__
+L14 string "__main__"
+L15 ref main
