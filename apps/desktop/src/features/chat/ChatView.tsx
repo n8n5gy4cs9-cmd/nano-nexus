@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { ChevronsUpDown } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import type { Message } from "@/bindings";
@@ -101,6 +101,15 @@ export function ChatView() {
   const runtime = useRuntime();
 
   /** `/nano-nexus [question]`: attach a health report and ask the model; without a model, show it in the console. */
+  const pendingQuestion = useAssistantChoice((s) => s.pendingQuestion);
+  const setPendingQuestion = useAssistantChoice((s) => s.setPendingQuestion);
+  useEffect(() => {
+    if (!conversationId && pendingQuestion) {
+      setPendingQuestion(null);
+      void send(pendingQuestion, [], false);
+    }
+  }, [conversationId, pendingQuestion, setPendingQuestion, send]);
+
   const sendOrCommand = async (text: string, attachments: AttachmentInput[]) => {
     const m = /^\/nano-nexus\b\s*([\s\S]*)$/i.exec(text.trim());
     if (!m) return send(text, attachments, think);

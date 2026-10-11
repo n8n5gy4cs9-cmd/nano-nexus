@@ -12,6 +12,9 @@ interface AssistantChoice {
   /** TOML (for example from Prompt Architect) waiting to be opened in the builder. */
   builderDraft: string | null;
   setBuilderDraft: (toml: string | null) => void;
+  /** A question to send as soon as the new-chat screen opens (for example from the Library page). */
+  pendingQuestion: string | null;
+  setPendingQuestion: (q: string | null) => void;
   switcherOpen: boolean;
   setSwitcherOpen: (open: boolean) => void;
 }
@@ -24,6 +27,8 @@ export const useAssistantChoice = create<AssistantChoice>((set) => ({
   },
   builderDraft: null,
   setBuilderDraft: (builderDraft) => set({ builderDraft }),
+  pendingQuestion: null,
+  setPendingQuestion: (pendingQuestion) => set({ pendingQuestion }),
   switcherOpen: false,
   setSwitcherOpen: (switcherOpen) => set({ switcherOpen }),
 }));

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FilePlus2, FolderPlus, Library, RefreshCw, Search, Trash2, X } from "lucide-react";
+import { FilePlus2, FolderPlus, Library, MessageCircle, RefreshCw, Search, Trash2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import { Badge, Button, EmptyState, Input, Progress, Skeleton, Switch } from "@/components/ui";
@@ -8,6 +9,7 @@ import { api } from "@/lib/api";
 import { formatBytes, relativeTime } from "@/lib/format";
 import { toIpcException } from "@/lib/ipc";
 import { IS_WEB } from "@/lib/target";
+import { useAssistantChoice } from "@/stores/assistant";
 
 import { PassageDialog } from "./PassageDialog";
 import type { KbLibrary, KbPassage, KbProgress } from "./types";
@@ -23,6 +25,17 @@ export function LibraryPage() {
   const [hits, setHits] = useState<KbPassage[] | null>(null);
   const [open, setOpen] = useState<number | null>(null);
   const [dropping, setDropping] = useState(false);
+  const navigate = useNavigate();
+  const selectAssistant = useAssistantChoice((s) => s.select);
+  const setPendingQuestion = useAssistantChoice((s) => s.setPendingQuestion);
+  /** Open a new chat with the Librarian and send the question (answers cite the passages). */
+  const ask = () => {
+    const q = query.trim();
+    if (!q) return;
+    selectAssistant("librarian");
+    setPendingQuestion(q);
+    void navigate("/");
+  };
 
   const libraries = useQuery({ queryKey: LIBRARIES_KEY, queryFn: () => api.knowledge.list() });
   const refresh = () => void qc.invalidateQueries({ queryKey: LIBRARIES_KEY });
@@ -175,7 +188,8 @@ export function LibraryPage() {
       )}
 
       <section className="flex flex-col gap-2" aria-label="Search passages">
-        <h2 className="text-body font-semibold">What would the model see?</h2>
+        <h2 className="text-body font-semibold">Ask your libraries</h2>
+        <p className="text-small text-muted">Type a question and press “Ask in chat” for a cited answer from the Librarian, or “Search” to see the raw passages the model would get. You can also turn on the “Libraries” chip in any chat.</p>
         <form
           className="flex gap-2"
           onSubmit={(e) => {
@@ -186,6 +200,9 @@ export function LibraryPage() {
           <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Ask a question or type keywords…" aria-label="Search the libraries" />
           <Button type="submit" variant="secondary">
             <Search /> Search
+          </Button>
+          <Button type="button" onClick={ask} disabled={query.trim() === ""}>
+            <MessageCircle /> Ask in chat
           </Button>
         </form>
         {hits !== null && hits.length === 0 ? <p className="text-small text-muted">Not in the library: nothing relevant was found.</p> : null}
