@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Outlet } from "react-router-dom";
 
 import { useShortcuts } from "@/hooks/useShortcuts";
@@ -15,10 +16,14 @@ export function AppShell() {
   const sidebarOpen = useUi((s) => s.sidebarOpen);
   const inspectorOpen = useUi((s) => s.inspectorOpen);
   useShortcuts(platform);
+  // CSS keys off this (macOS: transparent window so the native vibrancy shows through the sidebar).
+  useEffect(() => {
+    document.documentElement.dataset.platform = platform;
+  }, [platform]);
   return (
-    <div className="flex h-full bg-bg text-text">
+    <div className="flex h-full text-text">
       {sidebarOpen ? <Sidebar platform={platform} /> : null}
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col bg-bg">
         <TitleBar platform={platform} right={<RuntimePill />} />
         <main className="min-h-0 flex-1 overflow-auto">
           <Outlet />

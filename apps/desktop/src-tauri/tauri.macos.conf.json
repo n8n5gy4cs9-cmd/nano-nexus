@@ -10,14 +10,24 @@
         "minHeight": 600,
         "titleBarStyle": "Overlay",
         "hiddenTitle": true,
-        "transparent": true
+        "transparent": true,
+        "windowEffects": {
+          "effects": [
+            "sidebar"
+          ],
+          "state": "followsWindowActiveState"
+        }
       }
     ],
     "macOSPrivateApi": true
   },
   "bundle": {
-    "targets": ["app"],
-    "externalBin": ["../../../vendor/runtime/macos-arm64/llama-server"],
+    "targets": [
+      "app"
+    ],
+    "externalBin": [
+      "../../../vendor/runtime/macos-arm64/llama-server"
+    ],
     "macOS": {
       "minimumSystemVersion": "13.0",
       "infoPlist": "Info.plist",

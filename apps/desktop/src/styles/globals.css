@@ -61,6 +61,12 @@ body {
   overflow: hidden;
 }
 
+/* macOS: the window is transparent with a native sidebar vibrancy (tauri.macos.conf.json). The body
+   must not paint, the sidebar stays translucent (--bg-sidebar), and the content column paints --bg. */
+:root[data-platform="macos"] body {
+  background: transparent;
+}
+
 code,
 pre,
 kbd,
