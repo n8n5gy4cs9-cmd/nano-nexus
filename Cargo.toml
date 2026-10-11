@@ -68,3 +68,6 @@ async-trait = "0.1" # object-safe async Tool trait (ASSISTANTS §5)
 sha2 = "0.10" # streaming SHA-256 of downloaded model files (MODEL-MANAGER §4)
 regex = "1" # catalog `file_pattern` matching against a repo's file list
 wiremock = "0.6" # fake Hugging Face server in tests (dev)
+ignore = "0.4" # parallel, gitignore-aware directory walker (folder scans)
+rayon = "1" # parallel hashing of duplicate candidates
+infer = "0.19" # magic-byte file type detection

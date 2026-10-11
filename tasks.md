@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 100/229 tasks done (43%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 105/229 tasks done (45%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -148,11 +148,11 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [ ] ⭐ **T07.11** 🍎 Exit check: pause → quit → resume → verify → use → chat; corrupted part → checksum error; offline states
 
 ## M08: Analyzer and reports · [spec](docs/milestones/M08-analyzer.md) · [contract](docs/architecture/ANALYZER.md)
-- [ ] **T08.01** Scanner (ignore WalkBuilder, progress 10 Hz, cancel, warnings) + 100k-file benchmark
-- [ ] **T08.02** Categories table (≥ 250 ext) + magic-byte fallback + junk rules + file naming checks + tests
-- [ ] **T08.03** Duplicates (size → 64 KiB head → full BLAKE3, rayon) + tests
-- [ ] **T08.04** Aggregates, age buckets, largest dirs, treemap pruning + facts builder (≤ 1 200 tokens) + tests
-- [ ] **T08.05** Renderers: Markdown, JSON, CSV + tests
+- [x] **T08.01** Scanner (ignore WalkBuilder, progress 10 Hz, cancel, warnings) + 100k-file benchmark (2026-10-11) — benchmark is `#[ignore]`: 100k files scan well under 10 s on this Linux box (release)
+- [x] **T08.02** Categories table (≥ 250 ext) + magic-byte fallback + junk rules + file naming checks + tests (2026-10-11)
+- [x] **T08.03** Duplicates (size → 64 KiB head → full BLAKE3, rayon) + tests (2026-10-11)
+- [x] **T08.04** Aggregates, age buckets, largest dirs, treemap pruning + facts builder (≤ 1 200 tokens) + tests (2026-10-11)
+- [x] **T08.05** Renderers: Markdown, JSON, CSV + tests (2026-10-11)
 - [ ] **T08.06** 🔬 **S5** PDF extractors on your PDFs → SPIKES.md
 - [ ] **T08.07** Extractors: plain/markdown/code, PDF (catch_unwind), DOCX, HTML + fixtures
 - [ ] **T08.08** Chunker (700 tok, overlap, pages) + BM25 + tests
