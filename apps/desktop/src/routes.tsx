@@ -13,6 +13,7 @@ import {
 import { createHashRouter, type RouteObject } from "react-router-dom";
 
 import { AppShell } from "@/components/shell/AppShell";
+import { ChatView } from "@/features/chat/ChatView";
 import { PlaceholderPage } from "@/features/placeholders/PlaceholderPage";
 
 export interface NavSection {
@@ -47,9 +48,9 @@ export const routes: RouteObject[] = [
   {
     path: "/",
     element: <AppShell />,
-    children: [{ path: "c/:conversationId", element: <PlaceholderPage section={NAV[0] as NavSection} /> }, ...[...NAV, SETTINGS_SECTION].map((s) => ({
+    children: [{ path: "c/:conversationId", element: <ChatView /> }, ...[...NAV, SETTINGS_SECTION].map((s) => ({
       ...(s.path === "/" ? { index: true as const } : { path: s.path.slice(1) }),
-      element: <PlaceholderPage section={s} />,
+      element: s.path === "/" ? <ChatView /> : <PlaceholderPage section={s} />,
     }))],
   },
 ];
