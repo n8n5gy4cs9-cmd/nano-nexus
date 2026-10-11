@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 78/229 tasks done (34%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 81/229 tasks done (35%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -20,7 +20,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **TP.04** ADR log with 16 decisions (`docs/DECISIONS.md`) (2026-10-11)
 - [x] **TP.05** Master plan + 17 milestone specs (`docs/PLAN.md`, `docs/milestones/`) (2026-10-11)
 - [x] **TP.06** This task list (2026-10-11)
-- [x] **TP.07** 18 built-in assistants with researched system prompts (`assistants/`) (2026-10-11)
+- [x] **TP.07** 17 built-in assistants with researched system prompts (`assistants/`) (2026-10-11)
 - [x] **TP.08** Internal pipeline prompts (`prompts/internal/`) and JSON Schemas (`schemas/`) (2026-10-11)
 - [x] **TP.09** Model catalog (`catalog/models.json`) + bundle profiles (`bundles/`) (2026-10-11)
 - [x] **TP.10** AI agent handbook (`AGENTS.md`, `CLAUDE.md`, `docs/agent-playbook/`, `.claude/skills/`) (2026-10-11)
@@ -120,9 +120,9 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [ ] ⭐ **T05.15** Exit check: PERMISSIONS §8 tests + proptest pass; TCC manual test; grep shows no writes outside Journal — ⏳ grep done (only the dev-only T05.14 fixtures write, in the OS temp dir); `cargo test` + TCC manual test need the Mac; owner to run. `bindings.ts` also needs a debug launch to regenerate (UI uses `features/permissions/types.ts` until then)
 
 ## M06: Assistants, prompts, tools · [spec](docs/milestones/M06-assistants.md) · [contract](docs/architecture/ASSISTANTS.md)
-- [ ] **T06.01** `AssistantSpec` (deny_unknown_fields) + schema validation + Registry (include_dir! built-ins + user from store)
-- [ ] **T06.02** `prompt_lint` test for all 18 built-ins (tokens ≤ 450, schema, ids, starters, icons) and fix any failures
-- [ ] **T06.03** Internal prompt loader (`prompts/internal/*.md`) + variable checks + snapshot tests
+- [x] **T06.01** `AssistantSpec` (deny_unknown_fields) + schema validation + Registry (include_dir! built-ins + user from store) (2026-10-11)
+- [x] **T06.02** `prompt_lint` test for all 17 built-ins (tokens ≤ 450, schema, ids, starters, icons) and fix any failures (2026-10-11) — Godot Sidekick dropped (owner: no Godot anywhere; Rename Forge is language-agnostic, see M09)
+- [x] **T06.03** Internal prompt loader (`prompts/internal/*.md`) + variable checks + snapshot tests (2026-10-11)
 - [ ] **T06.04** Tool trait + `read_file`, `list_dir`, `search_files`, `grep_text`, `file_info`, `calculate`, `now` (budgeted outputs) + temp-dir tests
 - [ ] **T06.05** Router workflow (heuristic gate, dynamic action schema, arg resolution, loop guard, max hops) + scripted mock tests
 - [ ] **T06.06** Permission integration in tools (broker, denied → model told) + tests
@@ -171,29 +171,29 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [ ] ⭐ **T08.21** 🍎 Exit check: 100k files < 10 s; narrative numbers validated; DocLens cites correct pages 5/5; no raw secrets anywhere
 
 ## M09: Rename Forge · [spec](docs/milestones/M09-rename-forge.md) · [contract](docs/architecture/ANALYZER.md#5-rename-forge)
-- [ ] **T09.01** 🔬 **S4** tree-sitter-gdscript 6.1 + tree-sitter 0.27 on your game (Godot 3 + 4 syntax) → SPIKES.md
-- [ ] **T09.02** Fixture projects `tests/fixtures/godot3_game` + `godot4_game` (hand-written, with scenes, autoloads, signals, string calls)
-- [ ] **T09.03** GDScript tags queries (`queries/gdscript/*.scm`) + S-expression snapshot tests
-- [ ] **T09.04** Symbol index (defs, refs, scopes, extends chain, ambiguity) + serialization + incremental re-index
-- [ ] **T09.05** Godot adapter: `.tscn/.tres` parser (connections, exported props, method tracks, embedded scripts), `project.godot` (autoloads, input actions)
-- [ ] **T09.06** String-call detection (call, has_method, Callable, connect, emit_signal, rpc, set/get, tween_property) + tests
-- [ ] **T09.07** ENGINE_VIRTUAL list + `scripts/gen-godot-builtins.mjs` → `builtin_methods.txt` + `globals.txt`
-- [ ] **T09.08** Naming rules engine (all rules §5.5) + conventions per kind/language + tests
-- [ ] **T09.09** Proposal pipeline (batching ≤ 20, `<sym>` blocks, pattern schema, validator, reask, needs_manual) + mock tests
-- [ ] **T09.10** Planner → ChangeSet (byte ranges, scene/string refs, overlaps, collisions) + git-dirty detection + tests
-- [ ] **T09.11** Verify with Godot (headless check-only per script + `--import`), streamed output
-- [ ] **T09.12** Strings mode (extract, propose, placeholder validation, translation CSV, optional `tr()` change set)
-- [ ] **T09.13** Godot 3→4 modernization hints panel (flag only + converter recommendation)
+- [ ] **T09.01** 🔬 **S4** tree-sitter 0.27 + grammar pins (python, javascript, typescript/tsx, rust, c-sharp, go, java) parse your own projects → SPIKES.md
+- [ ] **T09.02** Fixture projects `tests/fixtures/{py_app,ts_app,rust_app,cs_app,go_app,java_app}` (hand-written: cross-file refs, imports, string lookups, config files, nested folders)
+- [ ] **T09.03** Tags queries per language (`queries/<lang>/tags.scm`) + S-expression snapshot tests
+- [ ] **T09.04** Symbol index (defs, refs, scopes, imports, file/folder symbols, ambiguity) + serialization + incremental re-index
+- [ ] **T09.05** Import/module resolution per language (py, ts/js incl. tsconfig paths, rust mod/use, c# using, go packages, java packages) + tests
+- [ ] **T09.06** Non-code refs: config/manifest scanner (package.json, tsconfig, Cargo.toml, pyproject, *.csproj, go.mod, YAML/JSON/TOML), string-lookup detection, opt-in docs/comments + tests
+- [ ] **T09.07** Reserved-name lists per language (keywords, builtins, entry points, dunders, tests, overrides) + `PUBLIC_API`/`OVERRIDE` flags + per-project ignore list
+- [ ] **T09.08** Naming rules engine (all rules §5.5, symbols + files + folders) + conventions per kind/language + tests
+- [ ] **T09.09** Proposal pipeline (batching ≤ 20, `<sym>` blocks incl. files/folders, pattern schema, validator, reask, needs_manual) + mock tests
+- [ ] **T09.10** Planner → ChangeSet (byte ranges + file/folder moves, import/config/string refs, overlaps, collisions, case-only renames via temp name) + git-dirty detection + tests
+- [ ] **T09.11** Find: symbol + usages search, project overview, router tool `find_symbol` + tests
+- [ ] **T09.12** Verify with the project's own checker (cargo check, tsc, compileall, dotnet build, go build, mvn/gradle), fixed args, streamed output
+- [ ] **T09.13** Strings mode (extract, propose, placeholder validation, CSV/JSON export, optional `t("KEY")` change set)
 - [ ] **T09.14** Store migration 0005 + commands `rename_*` + jobs + notifications
-- [ ] **T09.15** UI stepper + issues grid (virtualized, filters, inline edit w/ live validation, bulk accept, re-propose)
-- [ ] **T09.16** UI occurrence drawer (code previews) + Plan & preview (Changes) + git banner + Verify panel + Strings tab
-- [ ] **T09.17** 🍎 Real run on a COPY of your game → fix issues → notes in SPIKES.md §rename-real-run
-- [ ] **T09.18** (P1) Adapters: Rust, TS/JS, Python, C# (Unity messages), Lua (LÖVE callbacks)
-- [ ] ⭐ **T09.19** Exit check: fixtures pass, virtuals never proposed, scene refs updated, undo byte-identical, game playable
+- [ ] **T09.15** UI stepper + issues grid (Symbols / Files & folders tabs, virtualized, filters, inline edit w/ live validation, bulk accept, re-propose)
+- [ ] **T09.16** UI occurrence drawer (code previews) + Plan & preview (Changes) + git banner + Verify panel + Strings tab + Find tab
+- [ ] **T09.17** 🍎 Real run on a COPY of your own project → fix issues → notes in SPIKES.md §rename-real-run
+- [ ] **T09.18** (P1) More languages: Kotlin, Swift, PHP, Ruby, C/C++, Lua (one tags query + reserved list + fixture each)
+- [ ] ⭐ **T09.19** Exit check: fixtures pass, reserved names never proposed, folder renames update imports, undo byte-identical, project still builds
 
 ## M10: Code editor · [spec](docs/milestones/M10-editor.md)
 - [ ] **T10.01** Editor shell: file tree (granted roots, lazy, ignore toggle, icons) + tabs + CodeMirror (EditorView per tab)
-- [ ] **T10.02** Theme from tokens + language packs + legacy modes + custom GDScript StreamLanguage (+ token snapshot test)
+- [ ] **T10.02** Theme from tokens + language packs + legacy modes (+ token snapshot test)
 - [ ] **T10.03** Save via `editor_save` → change set (confirm popover, session "always allow"), read-only mode without write grant
 - [ ] **T10.04** AI actions panel (Explain, Improve names, Add docs, Find bugs, Simplify, Ask) + `editor_rewrite.md`
 - [ ] **T10.05** Merge view with per-chunk accept/reject + suspicious-rewrite guard

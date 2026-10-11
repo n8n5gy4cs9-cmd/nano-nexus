@@ -1,15 +1,15 @@
-# Rename Forge: renames bad identifiers and strings in legacy code (Godot-aware). Pipeline rename_propose.
+# Rename Forge: renames bad identifiers, files, and folders in any code project, updating every reference. Pipeline rename_propose.
 # Proposal generation uses prompts/internal/rename_propose.md + a pattern-constrained JSON schema.
 # This chat prompt explains naming decisions and conventions.
-# Standards: Godot GDScript style guide; Rust API guidelines (naming); PEP 8; common JS/TS conventions.
+# Standards: Rust API guidelines (naming); PEP 8; Google style guides (Go, Java, TS); Microsoft C# naming guidelines.
 schema_version = 1
 id = "rename-forge"
 name = "Rename Forge"
 icon = "pencil-ruler"
 color = "amber"
 category = "Code"
-tagline = "Fix bad names in old code: functions, variables, signals, and strings. Safely."
-description = "Indexes your project with tree-sitter, finds badly named symbols, proposes clear names that follow your language's style guide, and applies everything as one change set you can undo. It understands Godot scenes, autoloads, and string-based calls."
+tagline = "Rename code, files, and folders in any project. Every reference updated, safely."
+description = "Indexes any code project with tree-sitter, finds badly named symbols, files, and folders, proposes clear names that follow your language's style guide, and updates every reference (imports, configs, string lookups). Everything is applied as one change set you can undo. Also finds where any name is used."
 version = "1.0.0"
 
 [model]
@@ -36,10 +36,10 @@ allowed = ["read_file", "list_dir", "grep_text"]
 
 [ui]
 starters = [
-  "Index my old Godot game and show the worst names",
-  "Why should signals be named in past tense?",
+  "Index my project and show the worst names",
+  "Where is this function used across the project?",
   "Suggest better names for this function and its variables",
-  "What's the GDScript naming convention for constants and enums?",
+  "What's the naming convention for constants and enums in Rust?",
 ]
 placeholder = "Open a project, or paste code to rename…"
 output = "table"
@@ -51,15 +51,15 @@ Your job: help the user give code clear, consistent names that follow the langua
 ## Naming principles
 1. A name says what a thing is or does, not how it works: apply_damage, not doStuff2.
 2. Functions are verbs (load_level). Booleans read as questions (is_dead, has_key, can_jump).
-3. Godot signals are past-tense events: door_opened, health_changed.
+3. Events and callbacks are past-tense or handler names: door_opened, on_health_changed.
 4. Expand cryptic abbreviations (plyr → player, cnt → count). Keep well-known ones (id, ui, hp, fps).
 5. Keep one word per concept across the project (health everywhere, never hp in one file and life in another).
 
 ## Conventions
-- GDScript: snake_case functions and variables, PascalCase class_name and nodes, CONSTANT_CASE constants and enum members, _leading_underscore for private.
-- Rust: snake_case functions, CamelCase types, SCREAMING_SNAKE consts. Python: PEP 8. JS/TS: camelCase, PascalCase types.
+- Rust: snake_case functions and files, CamelCase types, SCREAMING_SNAKE consts. Python: PEP 8 (snake_case modules). JS/TS: camelCase, PascalCase types and components. C#: PascalCase members and files. Go: short lowercase package names, MixedCaps. Java: camelCase members, PascalCase classes and files.
 
 ## Limits
-Never rename engine callbacks (_ready, _process, _input, …) or overrides of built-in methods.
+Never rename entry points (main), dunder methods (__init__), framework callbacks, public API, or methods that implement a trait or interface.
+File and folder renames must update every import and config reference.
 When suggesting renames in chat, use a table: old | new | why. Keep explanations short.
 '''

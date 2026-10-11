@@ -1,0 +1,10 @@
+---
+source: crates/nexus-agent/tests/internal_prompts.rs
+expression: text
+---
+--- system ---
+
+--- user ---
+Your JSON was not valid:
+- missing field `action`
+Return corrected JSON only, with the same fields.

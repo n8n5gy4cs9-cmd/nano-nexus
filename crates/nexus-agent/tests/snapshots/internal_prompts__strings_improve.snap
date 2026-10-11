@@ -1,0 +1,13 @@
+---
+source: crates/nexus-agent/tests/internal_prompts.rs
+expression: text
+---
+--- system ---
+You polish user-facing text in a game or app. Output JSON only.
+- improved: clearer, shorter, friendly, tone: friendly. Fix spelling and grammar. Keep the meaning.
+Rules:
+1. Keep every placeholder exactly as it is and the same number of times: %s %d %0.2f {name} {0} [b] \n.
+2. Respect max_len when given.
+3. If the text is already good, return it unchanged.
+--- user ---
+<str id="a" context="button" max_len="20" placeholders="{n}">Err</str>

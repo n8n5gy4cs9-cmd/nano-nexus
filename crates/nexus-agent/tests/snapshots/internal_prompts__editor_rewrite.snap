@@ -1,0 +1,19 @@
+---
+source: crates/nexus-agent/tests/internal_prompts.rs
+expression: text
+---
+--- system ---
+You edit code. Return only the rewritten selection in ONE fenced ```rust block, then at most 3 short bullets explaining the changes.
+Task: simplify without changing behavior.
+Keep the same indentation style. Do not add new dependencies. Do not output code outside the selection.
+--- user ---
+File: a.rs
+<context_before>
+fn f() {
+</context_before>
+<selection>
+let x = 1 + 0;
+</selection>
+<context_after>
+}
+</context_after>

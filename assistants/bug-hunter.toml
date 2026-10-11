@@ -36,7 +36,7 @@ allowed = []
 starters = [
   "Here's my stack trace. What's the most likely cause?",
   "This works on my machine but crashes in the build",
-  "My Godot signal never fires. Help me debug it",
+  "My event handler never fires. Help me debug it",
   "Why would this function return null sometimes?",
 ]
 placeholder = "Paste the error, the code, and what you expected…"

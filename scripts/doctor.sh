@@ -114,7 +114,6 @@ if [ "$OS" = "Darwin" ]; then
 fi
 
 hdr "Optional tools"
-if have godot || [ -x "/Applications/Godot.app/Contents/MacOS/Godot" ]; then ok "Godot found (Rename Forge can verify projects)"; else ok "Godot not found (optional: enables 'Verify with Godot')"; fi
 if have pdftotext; then ok "pdftotext found (PDF fallback)"; else ok "pdftotext not found (optional)"; fi
 
 if [ "$WINDOWS" = "1" ]; then

@@ -66,9 +66,6 @@ pub struct Settings {
     pub journal_retention_days: u32,
     #[serde(rename = "journal.max_bytes")]
     pub journal_max_bytes: u64,
-    /// `None` = auto-detect.
-    #[serde(rename = "tools.godot_path")]
-    pub tools_godot_path: Option<String>,
     #[serde(rename = "models.extra_dirs")]
     pub models_extra_dirs: Vec<String>,
     #[serde(rename = "share.enabled")]
@@ -116,7 +113,6 @@ impl Default for Settings {
             notifications_kinds: BTreeMap::new(),
             journal_retention_days: 30,
             journal_max_bytes: 2_147_483_648,
-            tools_godot_path: None,
             models_extra_dirs: Vec::new(),
             share_enabled: false,
             share_autostart: false,

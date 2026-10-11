@@ -48,10 +48,10 @@ test("shows groups with pinned first", async () => {
 });
 
 test("searching asks the backend", async () => {
-  const t = mount([conv("1", "Mixing vocals"), conv("2", "Godot signals")]);
-  await screen.findByText("Godot signals");
-  fireEvent.change(screen.getByLabelText("Search conversations"), { target: { value: "godot" } });
-  await waitFor(() => expect(t.calls.some((c) => c.command === "conversations_list" && c.args?.query === "godot")).toBe(true));
+  const t = mount([conv("1", "Mixing vocals"), conv("2", "Python decorators")]);
+  await screen.findByText("Python decorators");
+  fireEvent.change(screen.getByLabelText("Search conversations"), { target: { value: "python" } });
+  await waitFor(() => expect(t.calls.some((c) => c.command === "conversations_list" && c.args?.query === "python")).toBe(true));
   await waitFor(() => expect(screen.queryByText("Mixing vocals")).toBeNull());
 });
 

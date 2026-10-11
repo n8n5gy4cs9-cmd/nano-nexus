@@ -648,7 +648,7 @@ mod tests {
         let s = Store::open_in_memory().unwrap();
         let a = s.create_conversation(&AssistantId::from("nexus")).unwrap();
         let b = s.create_conversation(&AssistantId::from("nexus")).unwrap();
-        s.insert_user_message(&a.id, "How do I rotate a quaternion in Godot?", &[])
+        s.insert_user_message(&a.id, "How do I rotate a quaternion in Unity?", &[])
             .unwrap();
         s.insert_user_message(&b.id, "Plan my week", &[]).unwrap();
         s.update_conversation(

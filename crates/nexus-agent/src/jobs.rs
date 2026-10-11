@@ -153,7 +153,7 @@ mod tests {
     #[test]
     fn fallback_title_is_six_title_cased_words() {
         assert_eq!(
-            fallback_title("how do i rotate a quaternion in godot please"),
+            fallback_title("how do i rotate a quaternion in unity please"),
             "How Do I Rotate A Quaternion"
         );
         assert_eq!(fallback_title("  \"quoted\" WORDS!! "), "Quoted Words");
@@ -164,7 +164,7 @@ mod tests {
     #[test]
     fn title_validation() {
         let ok = TitleOut {
-            title: "Godot Signals".into(),
+            title: "Event Handlers".into(),
         };
         assert!(ok.validate(&ValidationCtx::default()).is_ok());
         assert!(

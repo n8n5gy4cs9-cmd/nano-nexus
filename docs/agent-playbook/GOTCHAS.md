@@ -45,9 +45,9 @@ Each entry: **symptom → cause → fix**. Add new ones when you hit them.
 - **`trash` is slow for thousands of files** → batch with `trash::delete_all` and show progress.
 
 ## Analyzer / Rename Forge
-- **Renamed functions break Godot scenes** → signal `method="…"` connections, exported property
-  keys in `.tscn`, AnimationPlayer method tracks, and string calls must all be updated (ANALYZER §5.4).
-- **Engine callbacks were renamed** → `_ready`, `_process`, etc. are in the ENGINE_VIRTUAL deny list. Never propose them.
+- **Renamed symbols break non-code references** → imports, config/manifest entries (`package.json`, `tsconfig`, `Cargo.toml`, …), and string lookups (`getattr`, reflection) must all be updated (ANALYZER §5.4).
+- **Renamed files and folders break imports** → every import path and config reference must move with them; case-only renames need a temp name on case-insensitive volumes.
+- **Entry points, dunders, tests, and overrides were renamed** → they're in the reserved lists. Never propose them.
 - **The tree-sitter grammar's ABI doesn't match** → pin grammar versions that match `tree-sitter` 0.27 (spike S4).
 - **`pdf-extract` panics** → run it under `catch_unwind` in `spawn_blocking`, and fall back to `pdftotext` if it's installed.
 

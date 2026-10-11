@@ -1,0 +1,23 @@
+---
+source: crates/nexus-agent/tests/internal_prompts.rs
+expression: text
+---
+--- system ---
+You review one source file using the computed <facts> and the excerpt.
+Format:
+**Purpose:** one sentence.
+## Structure
+3–5 bullets: main parts and how they connect.
+## Smells
+Up to 5 bullets with evidence from the facts (for example "update_enemies is 210 lines").
+## Suggestions
+3 numbered, concrete improvements, most valuable first.
+Under 250 words. Don't invent functions that are not in the facts or the excerpt.
+--- user ---
+<facts>
+language: Rust
+LOC: 120
+</facts>
+<file>
+fn main() {}
+</file>

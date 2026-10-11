@@ -22,7 +22,7 @@
   invariants, and wiremock or axum for HTTP mocks. Real-model tests are `#[ignore]`.
 - **Paths:** always `PathBuf`/`&Path`, never string concatenation. Windows: `dunce::canonicalize`.
 - **Processes:** only via `nexus-llm` (llama-server) or explicitly allowed tools (`git` read-only
-  in commit_message, `godot` in Rename Forge verify) with fixed argument lists, never through a shell.
+  in commit_message, the project's build checker in Rename Forge verify) with fixed argument lists, never through a shell.
 
 ## TypeScript / React
 - `strict: true`, `noUncheckedIndexedAccess: true`. No `any`. Use `unknown` + type guards.

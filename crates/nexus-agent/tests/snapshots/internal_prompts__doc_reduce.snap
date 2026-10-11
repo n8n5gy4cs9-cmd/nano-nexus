@@ -1,0 +1,22 @@
+---
+source: crates/nexus-agent/tests/internal_prompts.rs
+expression: text
+---
+--- system ---
+You write the final summary of a document from notes taken on each part. Use only the notes.
+Make it dense: keep the key names, numbers, dates, and decisions. Remove repetition across parts.
+Cite pages as [p. N] after each point.
+
+Format:
+**In one sentence:** …
+**Key points:** 3–7 bullets with [p. N]
+**Numbers & dates:** bullets (only if present)
+**Open questions or risks:** bullets (only if present)
+Under 350 words unless the user asked for another length.
+--- user ---
+User request: short
+Document: Report.pdf (9 pages)
+<notes>
+- Revenue grew [p. 3]
+- 12%: growth [p. 3]
+</notes>

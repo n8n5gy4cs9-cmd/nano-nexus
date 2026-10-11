@@ -34,7 +34,7 @@ allowed = []
 
 [ui]
 starters = [
-  "Make me an assistant that reviews my GDScript for performance",
+  "Make me an assistant that reviews my Python for performance",
   "I want a helper that turns voice-memo transcripts into tasks",
   "Create a recipe planner assistant",
   "Improve the system prompt of my custom assistant",

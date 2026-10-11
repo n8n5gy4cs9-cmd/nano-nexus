@@ -35,18 +35,163 @@ fn strip_meta(src: &str) -> &str {
     }
 }
 
-/// Split a prompt file into its (system, user) template text.
-pub fn split_sections(src: &str) -> Result<(&str, &str), InternalPromptError> {
+/// The `{# meta ... #}` header of a prompt file.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct PromptMeta {
+    pub purpose: String,
+    pub used_by: String,
+    pub output: String,
+    pub sampling: String,
+    /// Names of the declared template variables (the identifier before any explanation).
+    pub vars: Vec<String>,
+}
+
+/// Split `a, b (c, d), e` at top-level commas and keep each item's leading identifier.
+fn var_names(list: &str) -> Vec<String> {
+    let mut depth = 0i32;
+    let mut item = String::new();
+    let mut out = Vec::new();
+    let flush = |item: &mut String, out: &mut Vec<String>| {
+        let name: String = item.trim().chars().take_while(|c| c.is_alphanumeric() || *c == '_').collect();
+        if !name.is_empty() {
+            out.push(name);
+        }
+        item.clear();
+    };
+    for c in list.chars() {
+        match c {
+            '(' | '{' | '[' => depth += 1,
+            ')' | '}' | ']' => depth -= 1,
+            ',' if depth == 0 => {
+                flush(&mut item, &mut out);
+                continue;
+            }
+            _ => {}
+        }
+        item.push(c);
+    }
+    flush(&mut item, &mut out);
+    out
+}
+
+/// Parse the meta header (empty when absent).
+pub fn parse_meta(src: &str) -> PromptMeta {
+    let t = src.trim_start();
+    let mut meta = PromptMeta::default();
+    let Some(rest) = t.strip_prefix("{#") else { return meta };
+    let Some(end) = rest.find("#}") else { return meta };
+    for line in rest[..end].lines() {
+        let Some((k, v)) = line.split_once(':') else { continue };
+        let v = v.trim();
+        match k.trim() {
+            "purpose" => meta.purpose = v.to_owned(),
+            "used_by" => meta.used_by = v.to_owned(),
+            "output" => meta.output = v.to_owned(),
+            "sampling" => meta.sampling = v.to_owned(),
+            "vars" => meta.vars = var_names(v),
+            _ => {}
+        }
+    }
+    meta
+}
+
+/// Sections in file order: lines that are exactly `=== name ===` start one.
+fn sections(src: &str) -> Vec<(&str, &str)> {
     let body = strip_meta(src);
-    let sys_at = body
-        .find("=== system ===")
-        .ok_or(InternalPromptError::MissingSection("system"))?;
-    let user_at = body
-        .find("=== user ===")
-        .ok_or(InternalPromptError::MissingSection("user"))?;
-    let system = body[sys_at + "=== system ===".len()..user_at.max(sys_at)].trim();
-    let user = body[user_at + "=== user ===".len()..].trim();
-    Ok((system, user))
+    let mut marks: Vec<(usize, usize, &str)> = Vec::new();
+    let mut pos = 0;
+    for line in body.split_inclusive('\n') {
+        let t = line.trim();
+        if let Some(name) = t.strip_prefix("=== ").and_then(|r| r.strip_suffix(" ===")) {
+            marks.push((pos, pos + line.len(), name.trim()));
+        }
+        pos += line.len();
+    }
+    marks
+        .iter()
+        .enumerate()
+        .map(|(i, &(_, text_start, name))| {
+            let text_end = marks.get(i + 1).map_or(body.len(), |m| m.0);
+            (name, body[text_start..text_end].trim())
+        })
+        .collect()
+}
+
+/// Split a prompt file into its (system, user) template text; example sections are ignored here.
+pub fn split_sections(src: &str) -> Result<(&str, &str), InternalPromptError> {
+    let secs = sections(src);
+    let find = |n: &'static str| secs.iter().find(|(name, _)| *name == n).map(|(_, t)| *t).ok_or(InternalPromptError::MissingSection(n));
+    Ok((find("system")?, find("user")?))
+}
+
+/// A fully rendered prompt: system, few-shot example turns, and the user message.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RenderedPrompt {
+    pub system: String,
+    /// `(user, assistant)` pairs sent as real prior turns.
+    pub examples: Vec<(String, String)>,
+    pub user: String,
+}
+
+/// Every embedded internal prompt, by file stem (`router`, `doc_qa`, ...).
+static INTERNAL_DIR: include_dir::Dir<'static> = include_dir::include_dir!("$CARGO_MANIFEST_DIR/../../prompts/internal");
+
+/// The text of the embedded prompt `name` (without `.md`).
+pub fn internal_source(name: &str) -> Option<&'static str> {
+    INTERNAL_DIR.get_file(format!("{name}.md"))?.contents_utf8()
+}
+
+/// All embedded prompt names, sorted.
+pub fn internal_names() -> Vec<String> {
+    let mut v: Vec<String> = INTERNAL_DIR
+        .files()
+        .filter_map(|f| f.path().file_stem()?.to_str().map(str::to_owned))
+        .collect();
+    v.sort();
+    v
+}
+
+/// Render the full prompt (system, examples, user). Declared variables that `vars` omits render as an
+/// empty string, so optional ones (`user_question`) work with `{% if %}`; anything undeclared is an error.
+pub fn render_full<V: Serialize>(src: &str, vars: &V) -> Result<RenderedPrompt, InternalPromptError> {
+    let meta = parse_meta(src);
+    let mut value = serde_json::to_value(vars).unwrap_or(serde_json::Value::Null);
+    if let Some(obj) = value.as_object_mut() {
+        for name in &meta.vars {
+            obj.entry(name.clone()).or_insert_with(|| serde_json::Value::String(String::new()));
+        }
+    }
+    let secs = sections(src);
+    let mut env = Environment::new();
+    env.set_undefined_behavior(UndefinedBehavior::Strict);
+    for (i, (name, text)) in secs.iter().enumerate() {
+        env.add_template_owned(format!("{i}:{name}"), (*text).to_owned())?;
+    }
+    let v = Value::from(Serde(&value));
+    let mut system = None;
+    let mut user = None;
+    let mut examples = Vec::new();
+    let mut pending: Option<String> = None;
+    for (i, (name, _)) in secs.iter().enumerate() {
+        let out = env.get_template(&format!("{i}:{name}"))?.render(&v)?.trim().to_owned();
+        match *name {
+            "system" => system = Some(out),
+            "user" => user = Some(out),
+            "example_user" => pending = Some(out),
+            "example_assistant" => {
+                if let Some(u) = pending.take() {
+                    examples.push((u, out));
+                }
+            }
+            _ => {}
+        }
+    }
+    Ok(RenderedPrompt {
+        // `reask.md` is a lone user message: no system section.
+        system: system.unwrap_or_default(),
+        examples,
+        user: user.ok_or(InternalPromptError::MissingSection("user"))?,
+    })
 }
 
 /// Render both sections with `vars`. Undefined variables are errors.

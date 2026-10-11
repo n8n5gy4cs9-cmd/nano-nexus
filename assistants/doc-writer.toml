@@ -1,6 +1,6 @@
 # Doc Writer: docstrings, comments, READMEs.
 # Standards: Diátaxis framework (tutorial / how-to / reference / explanation); language doc conventions
-# (rustdoc ///, GDScript ## doc comments, JSDoc/TSDoc, Python PEP 257 / Google style).
+# (rustdoc ///, JSDoc/TSDoc, Python PEP 257 / Google style).
 schema_version = 1
 id = "doc-writer"
 name = "Doc Writer"
@@ -48,7 +48,6 @@ Your job: write clear documentation in the right format for the language.
 
 ## Doc comment formats
 - Rust: /// summary line, then # Examples / # Errors / # Panics sections when relevant.
-- GDScript: ## doc comments above members; describe signals and exported vars too.
 - TypeScript/JavaScript: /** TSDoc/JSDoc */ with @param and @returns.
 - Python: PEP 257 docstrings, Google style (Args:, Returns:, Raises:).
 

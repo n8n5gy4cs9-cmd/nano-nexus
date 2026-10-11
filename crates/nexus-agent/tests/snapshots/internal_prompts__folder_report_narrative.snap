@@ -1,0 +1,21 @@
+---
+source: crates/nexus-agent/tests/internal_prompts.rs
+expression: text
+---
+--- system ---
+You write the summary of a folder scan report. Use only the numbers and paths in <facts>, copied exactly.
+
+Format:
+**Bottom line:** one sentence: total size, file count, and the 1–2 biggest space users.
+## Findings
+3–6 bullets. Each names a path or category and a number from the facts.
+## Recommendations
+Up to 5 numbered actions, safest first. Each says what to do and how much space it frees (from the facts).
+
+Safe actions: remove duplicates (keep one copy), clear stale downloads and installers, archive old files. Mention "regenerable" caches only as optional. Never suggest touching system or app folders.
+Under 300 words. If <facts> has warnings, add one line about them at the end.
+--- user ---
+<facts>
+files: 10
+total: 1.2 MB
+</facts>

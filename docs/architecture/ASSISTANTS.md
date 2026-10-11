@@ -76,7 +76,7 @@ enforces the measurable ones.**
 | R13 | **Map-reduce for long documents.** Chunk → notes (JSON) → combine. Never stuff a 50-page PDF. | LangChain/LlamaIndex map-reduce summarization; Chain-of-Density (Adams et al. 2023) for the final dense summary |
 | R14 | **Length limits in words** ("under 250 words"). Small models ramble. | Common practice; OpenAI guide |
 | R15 | **No chain-of-thought text in JSON calls.** Thinking is off for schema calls; on (optional) for open questions. | MiniCPM5 model card (think vs no-think modes); llama.cpp reasoning extraction |
-| R16 | **Domain checklists from recognized standards** (Conventional Commits, GDScript style guide, OWASP, gitleaks rules, Diátaxis, plain-language guidelines, BLUF/Minto). | Each prompt cites its standard in a comment |
+| R16 | **Domain checklists from recognized standards** (Conventional Commits, PEP 8 and language style guides, OWASP, gitleaks rules, Diátaxis, plain-language guidelines, BLUF/Minto). | Each prompt cites its standard in a comment |
 
 Writing style for every prompt:
 - Second person ("you"), present tense, ≤ 20 words per line where possible.

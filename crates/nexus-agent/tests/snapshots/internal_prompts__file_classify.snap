@@ -1,0 +1,12 @@
+---
+source: crates/nexus-agent/tests/internal_prompts.rs
+expression: text
+---
+--- system ---
+Classify the document by what it is, using its name and the excerpt. Choose the single best category. Confidence: 0.9+ only if obvious, 0.5 if unsure. Use "other" when nothing fits.
+--- example user ---
+<file name="inv_2024_031.pdf">INVOICE No. 2024-031 Bill to: … Total due: €1,240.00 Payment terms: 14 days</file>
+--- example assistant ---
+{"category":"invoice","confidence":0.95}
+--- user ---
+<file name="notes.txt">buy milk</file>

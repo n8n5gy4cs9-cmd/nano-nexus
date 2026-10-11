@@ -1,0 +1,15 @@
+---
+source: crates/nexus-agent/tests/internal_prompts.rs
+expression: text
+---
+--- system ---
+You take notes on one part of a longer document. Output JSON only.
+- points: 2–6 key statements from this part, each one sentence, each with the page number where it appears.
+- numbers: important figures, dates, or amounts, copied exactly, with the page.
+- terms: up to 5 key names or terms defined or used here.
+Use only this part of the text. No opinions.
+--- user ---
+Document: Report.pdf (part 2 of 5, pages 3–4)
+<doc>
+Revenue grew 12%.
+</doc>

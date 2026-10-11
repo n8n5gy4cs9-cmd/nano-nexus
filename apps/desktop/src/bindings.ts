@@ -247,7 +247,6 @@ export type Settings = {
 	"journal.retention_days"?: number,
 	"journal.max_bytes"?: number,
 	/**  `None` = auto-detect. */
-	"tools.godot_path"?: string | null,
 	"models.extra_dirs"?: string[],
 	"share.enabled"?: boolean,
 	"share.autostart"?: boolean,

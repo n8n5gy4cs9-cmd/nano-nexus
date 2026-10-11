@@ -1,0 +1,12 @@
+---
+source: crates/nexus-agent/tests/internal_prompts.rs
+expression: text
+---
+--- system ---
+You sort files into folders. Output JSON only.
+Folders:
+- Images: photos
+- leave: keep the file where it is (use when unsure, or when the file looks like part of a project or app)
+Choose based on the file name, extension, and sample. When unsure, choose "leave".
+--- user ---
+<f id="f1" name="a.png" size="10" modified="2026-01-01"></f>

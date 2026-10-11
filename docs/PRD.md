@@ -26,7 +26,7 @@ reviewed and undoable.
 
 ## 2. Users and context
 
-- **One user: you.** You're a developer (Godot/GDScript, Rust), on a Mac with Apple Silicon.
+- **One user: you.** You're a developer (many languages), on a Mac with Apple Silicon.
 - No accounts, no cloud, no telemetry. Network is used only to download models when you ask.
 - The app is built on your machine. The model and runtime are compiled or downloaded locally
   and bundled into your own `.app` and Windows installer, both built on the Mac.
@@ -52,8 +52,7 @@ reviewed and undoable.
 6. **Analyzer.** Folder reports (sizes, types, categories, duplicates, junk, naming issues,
    age, treemap) and file reports (code, text, PDF, CSV/JSON, logs), with an AI narrative.
    Export to Markdown/JSON/CSV.
-7. **Rename Forge.** Index code with tree-sitter (GDScript first, plus Godot `.tscn/.tres/project.godot`
-   references), detect bad names against style guides, get AI rename proposals, review them in a
+7. **Rename Forge.** Index any code project with tree-sitter (Python, JS/TS, Rust, C#, Go, Java first), rename symbols, files, and folders with imports, config files, and string lookups updated; find where any name is used, detect bad names against style guides, get AI rename proposals, review them in a
    grid, apply them as a single change set with a diff preview, and undo with one click.
 8. **Code editor.** Small syntax-highlighted editor (CodeMirror 6) with tabs, find/replace,
    "Ask AI about selection", and accept/reject for AI diffs.
@@ -100,7 +99,7 @@ Priorities: **P0** is required for v1, **P1** is strongly wanted, **P2** is nice
 ### F2. Assistants (P0)
 | ID | Requirement | Acceptance criteria |
 |---|---|---|
-| F2.1 | 18 built-in assistants (see §6) | Each has an icon, color, tagline, starters, sampling parameters, allowed tools, and a system prompt of ≤ 450 tokens. |
+| F2.1 | 17 built-in assistants (see §6) | Each has an icon, color, tagline, starters, sampling parameters, allowed tools, and a system prompt of ≤ 450 tokens. |
 | F2.2 | Assistant gallery | Grid by category with search. A card shows name, tagline, and needed permissions. One click starts a chat. |
 | F2.3 | Assistant builder | Form fields (name, icon, color, prompt, params, tools, starters, workflow) with a live token count and a test-chat side panel. |
 | F2.4 | Import / export | `.toml` files validated against `schemas/assistant.schema.json`. Invalid files show field-level errors. |
@@ -151,17 +150,18 @@ Priorities: **P0** is required for v1, **P1** is strongly wanted, **P2** is nice
 | F6.6 | AI content categories (optional pass) | Classifies text documents into categories (invoice, contract, notes, code, …) using a constrained enum schema. |
 | F6.7 | Watches (P1) | Re-scan a folder on a schedule or on change, and notify with what changed ("Downloads +3.2 GB since last week"). |
 
-### F7. Rename Forge (P0 for GDScript, P1 for other languages)
+### F7. Rename Forge (P0 for Python, JS/TS, Rust, C#, Go, Java; P1 for more languages)
 | ID | Requirement | Acceptance criteria |
 |---|---|---|
-| F7.1 | Index a project: definitions and references via tree-sitter | GDScript, Rust, JS/TS, Python, C#, Lua. |
-| F7.2 | Godot adapter: `.tscn/.tres` signal `method=` refs, exported-property keys, AnimationPlayer method tracks, `project.godot` autoloads and input actions, string-based calls (`call`, `has_method`, `Callable(obj,"x")`, `connect("x")`, `emit_signal`) | String/dynamic refs are flagged for review. Engine virtuals (`_ready`, `_process`, …) are never proposed for renaming. |
+| F7.1 | Index a project: definitions and references via tree-sitter | Python, JS/TS, Rust, C#, Go, Java first; more languages are a query file each. |
+| F7.2 | Reference handling beyond identifiers: imports, config/manifest files, string-based lookups (`getattr`, reflection), opt-in docs and comments | String/dynamic refs are flagged for review. Reserved names (entry points, dunders, tests, overrides) are never proposed for renaming. |
 | F7.3 | Naming rules per language style guide | Issues: wrong case, too short, meaningless, Hungarian, abbreviations, inconsistent synonyms. |
 | F7.4 | AI proposals in batches with a JSON schema whose regex pattern enforces the target case | Every proposal is validated: identifier syntax, not a keyword, no scope collision, convention match. |
 | F7.5 | Review grid: accept/reject/edit, filters, bulk accept by confidence | Edits are revalidated live. |
 | F7.6 | Apply as one change set: exact tree-sitter byte ranges, no regex replace | Unified diff preview. Warns if the git tree is dirty and offers to stop. |
-| F7.7 | Strings mode: user-facing strings → improved text and/or i18n keys plus Godot translation CSV export | Opt-in per string. Placeholders (`%s`, `{name}`) are preserved and validated. |
-| F7.8 | Godot 3→4 modernization hints (P1) | Flags `yield`, `onready`, `export`, `.instance()`, … and recommends `godot --headless --convert-3to4` first. |
+| F7.7 | Strings mode: user-facing strings → improved text and/or i18n keys plus CSV/JSON export | Opt-in per string. Placeholders (`%s`, `{name}`) are preserved and validated. |
+| F7.8 | File and folder renames: naming checks per language, imports and config paths updated, case-only renames handled | Folder renames rewrite every path below them. Undo restores the original tree. |
+| F7.9 | Find: symbol and usage search, project overview | Every usage listed with kind and preview; available to chat via `find_symbol`. |
 
 ### F8. Code editor (P1)
 | ID | Requirement | Acceptance criteria |
@@ -235,21 +235,20 @@ Priorities: **P0** is required for v1, **P1** is strongly wanted, **P2** is nice
 | 1 | **Nexus** | `nexus` | General | Everyday copilot that can read files and folders you granted | router (tools) |
 | 2 | **DocLens** | `doc-lens` | Documents | PDF and document analyst: summaries, Q&A with page citations, key facts | pipeline `doc_summarize` / `doc_qa` |
 | 3 | **Folder Scout** | `folder-scout` | Files | Folder report: sizes, types, duplicates, clutter, recommendations | pipeline `folder_report` |
-| 4 | **Rename Forge** | `rename-forge` | Code | Renames bad identifiers and strings in legacy projects (Godot-aware) | pipeline `rename_propose` |
+| 4 | **Rename Forge** | `rename-forge` | Code | Renames identifiers, files, and folders in any code project, updating every reference | pipeline `rename_propose` |
 | 5 | **Code Mentor** | `code-mentor` | Code | Explains, reviews, and improves code with small focused diffs | chat |
 | 6 | **Bug Hunter** | `bug-hunter` | Code | Hypothesis-driven debugging from errors, traces, and logs | chat |
-| 7 | **Godot Sidekick** | `godot-sidekick` | Code | Godot 4 / GDScript expert, including 3→4 migration | chat |
-| 8 | **Doc Writer** | `doc-writer` | Code | Docstrings, READMEs, comments (Diátaxis-aware) | chat |
-| 9 | **Commit Crafter** | `commit-crafter` | Code | Diff → Conventional Commit message, changelog, PR text | pipeline `commit_message` |
-| 10 | **Tidy** | `tidy` | Files | Plans folder reorganization as a reviewable move plan, never deletes | pipeline `tidy_plan` |
-| 11 | **Secret Sentinel** | `secret-sentinel` | Files | Scans for leaked keys, tokens, passwords, and PII; reports with severity | pipeline `secrets_report` |
-| 12 | **Log Detective** | `log-detective` | Files | Log triage: error clusters, timeline, root-cause hypotheses | pipeline `log_triage` |
-| 13 | **Data Wrangler** | `data-wrangler` | Data | CSV/JSON profiling, cleaning recipes, SQL/formulas | pipeline `data_profile` |
-| 14 | **TL;DR** | `tldr` | Writing | Dense summaries of any text or file (Chain-of-Density style) | chat |
-| 15 | **Scribe** | `scribe` | Writing | Write, rewrite, proofread, change tone (plain-language rules) | chat |
-| 16 | **Polyglot** | `polyglot` | Writing | Translation and localization that keeps placeholders, tone, and length limits | chat |
-| 17 | **Shell Sage** | `shell-sage` | System | Explains and builds terminal commands with safety ratings, never runs them | chat |
-| 18 | **Prompt Architect** | `prompt-architect` | Meta | Interviews you and writes a new assistant (TOML) for NanoNexus | chat |
+| 7 | **Doc Writer** | `doc-writer` | Code | Docstrings, READMEs, comments (Diátaxis-aware) | chat |
+| 8 | **Commit Crafter** | `commit-crafter` | Code | Diff → Conventional Commit message, changelog, PR text | pipeline `commit_message` |
+| 9 | **Tidy** | `tidy` | Files | Plans folder reorganization as a reviewable move plan, never deletes | pipeline `tidy_plan` |
+| 10 | **Secret Sentinel** | `secret-sentinel` | Files | Scans for leaked keys, tokens, passwords, and PII; reports with severity | pipeline `secrets_report` |
+| 11 | **Log Detective** | `log-detective` | Files | Log triage: error clusters, timeline, root-cause hypotheses | pipeline `log_triage` |
+| 12 | **Data Wrangler** | `data-wrangler` | Data | CSV/JSON profiling, cleaning recipes, SQL/formulas | pipeline `data_profile` |
+| 13 | **TL;DR** | `tldr` | Writing | Dense summaries of any text or file (Chain-of-Density style) | chat |
+| 14 | **Scribe** | `scribe` | Writing | Write, rewrite, proofread, change tone (plain-language rules) | chat |
+| 15 | **Polyglot** | `polyglot` | Writing | Translation and localization that keeps placeholders, tone, and length limits | chat |
+| 16 | **Shell Sage** | `shell-sage` | System | Explains and builds terminal commands with safety ratings, never runs them | chat |
+| 17 | **Prompt Architect** | `prompt-architect` | Meta | Interviews you and writes a new assistant (TOML) for NanoNexus | chat |
 
 Users can add unlimited custom assistants (chat or router workflow, or reuse any pipeline
 with their own prompt). The tutorial example is **Regex Smith**.
@@ -257,8 +256,7 @@ with their own prompt). The tutorial example is **Regex Smith**.
 ## 7. Success metrics (personal)
 
 - You use NanoNexus daily for at least one of: PDF summary, folder report, code question.
-- Your old Godot game is fully renamed via Rename Forge with zero broken references (the game
-  runs, and Godot's headless check and import report no script errors) and the change is undoable.
+- A real project copy is fully renamed via Rename Forge (symbols, files, and folders) with zero broken references (it still builds or type-checks) and the change is undoable.
 - No orphan processes or data loss incidents across 30 days.
 - Chat feels instant: TTFT < 1 s, ≥ 40 tok/s on your Mac with the default model.
 - The studio PC (offline, Windows) runs a 3-model offline kit built on your Mac with zero internet.
@@ -272,7 +270,7 @@ with their own prompt). The tutorial example is **Regex Smith**.
 | Thinking-template quirks (`enable_thinking` ignored) | Thinking leaks into JSON or chat | `--reasoning-format deepseek` extracts thoughts. Strip `<think>` client-side. Always disable thinking for JSON calls. Spike S1 verifies. |
 | JSON-schema + reasoning interplay in llama.cpp | Invalid structured output | Spike S2. Thinking off for schema calls. Validation retry with error feedback. |
 | macOS TCC grants reset on every rebuild (ad-hoc signature) | Repeated permission prompts | Sign with a stable self-signed certificate (see `docs/architecture/BUNDLING.md`). |
-| Rename breaks the game via dynamic or string refs | Broken project | Godot adapter scans scenes/resources/strings. Dynamic refs are flagged. Git-dirty warning. Journaled undo. Post-apply check with `godot --headless`. |
+| Rename breaks the project via dynamic or string refs | Broken project | Reference scanner covers imports, config files, and string lookups. Dynamic refs are flagged. Git-dirty warning. Journaled undo. Optional post-apply check with the project's own build tool. |
 | Large-file bundling (1.1 GB) slows builds | Slow iteration | Dev mode reads the model from `vendor/` directly. Bundle only with `--bundles app`. |
 | Community model licensing ambiguity (trained on Claude outputs) | Fine for personal use | Personal use only. Documented in the catalog notes. Official `openbmb/MiniCPM5-1B-GGUF` is the fallback. |
 | tauri-specta still RC | Build breaks on upgrade | Pin exact versions. Fallback: `ts-rs` plus hand-written invoke wrappers (ADR-006). |

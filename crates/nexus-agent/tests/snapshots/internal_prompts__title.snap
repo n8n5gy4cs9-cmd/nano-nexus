@@ -1,0 +1,9 @@
+---
+source: crates/nexus-agent/tests/internal_prompts.rs
+expression: text
+---
+--- system ---
+Write a short title for this conversation: 2–6 words, Title Case, no quotes, no emoji, no trailing period. Name the topic, not the action ("Event Handler Debugging", not "Help Request").
+--- user ---
+<user>How do signals work?</user>
+<assistant>They emit events.</assistant>

@@ -114,7 +114,6 @@ CREATE TABLE rename_items (
 | `notifications.kinds` | all `true` |
 | `journal.retention_days` | `30` |
 | `journal.max_bytes` | `2147483648` |
-| `tools.godot_path` | `null` (auto-detect `/Applications/Godot.app/Contents/MacOS/Godot`, `C:\Program Files\Godot\Godot*.exe`) |
 | `models.extra_dirs` | `[]` |
 | `share.enabled` / `share.autostart` | `false` / `false` |
 | `share.port` | `9889` |
@@ -173,7 +172,7 @@ Naming: `domain_action`. All are `async` and return `Result<T, IpcError>`.
 | rename | `rename_propose` | `{session_id, item_ids?, on_progress}` → `job_id` |
 | rename | `rename_item_update` | `{session_id, symbol_id, final?, status?, include_strings?}` → `RenameItem` (revalidated) |
 | rename | `rename_plan` | `{session_id}` → `ChangeSetId` |
-| rename | `rename_verify_godot` | `{session_id, on_output: Channel<String>}` → `VerifyResult` |
+| rename | `rename_verify` | `{session_id, on_output: Channel<String>}` → `VerifyResult` |
 | jobs | `jobs_list` / `job_cancel` | … |
 | notify | `notifications_list` / `notifications_mark_read` / `notifications_clear` | … |
 | watches | `watches_list` / `watch_add` / `watch_update` / `watch_delete` / `watch_run_now` | … |

@@ -15,8 +15,8 @@ You write a Conventional Commits 1.0.0 message for the diff. Output JSON only.
 === example_user ===
 <stats>2 files, +14 −3</stats>
 <diff>
---- a/player.gd
-+++ b/player.gd
+--- a/player.py
++++ b/player.py
 @@ func _physics_process(delta):
 -    velocity.y += 9.8
 +    velocity.y += gravity * delta

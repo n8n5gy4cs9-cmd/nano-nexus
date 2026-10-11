@@ -1,0 +1,14 @@
+---
+source: crates/nexus-agent/tests/internal_prompts.rs
+expression: text
+---
+--- system ---
+Summarize the conversation so far for your own memory. Under 120 words.
+Keep: the user's goal, decisions made, facts and numbers stated, file paths mentioned, and open questions.
+Drop: greetings, repetition, and anything already resolved.
+Write plain sentences. No headings.
+--- user ---
+<turns>
+[user] hi
+[assistant] hello
+</turns>

@@ -66,7 +66,7 @@ Each swaps `--accent`/`--accent-2` and the gradient.
 | `blue` | oklch(.72 .14 250) → oklch(.64 .17 265) | DocLens, TL;DR |
 | `green` | oklch(.78 .15 150) → oklch(.68 .15 170) | Code Mentor, Doc Writer, Commit Crafter |
 | `red` | oklch(.70 .19 25) → oklch(.62 .20 10) | Bug Hunter, Secret Sentinel |
-| `indigo` | oklch(.66 .16 275) → oklch(.58 .18 290) | Godot Sidekick, Log Detective |
+| `indigo` | oklch(.66 .16 275) → oklch(.58 .18 290) | Log Detective |
 | `pink` | oklch(.76 .14 350) → oklch(.68 .17 330) | Scribe, Polyglot |
 | `slate` | oklch(.70 .03 260) → oklch(.58 .04 260) | Shell Sage, Data Wrangler |
 
@@ -307,7 +307,7 @@ logs) · Models (extra model folders, verify bundled models, import/export model
 fingerprint, remote policy, allowed assistants, session lifetime, max devices, paired devices
 table, notifications on pairing; see LAN-SHARE §2) · Privacy (network downloads, deny list,
 clear history) · Notifications (per kind) · Shortcuts · Advanced (data folder, journal
-retention, Godot path, reset app, open logs) · About (version, bundle profile, build date, git commit).
+retention, reset app, open logs) · About (version, bundle profile, build date, git commit).
 
 ### 4.11 Onboarding (first run, 4 steps, skippable)
 1. **Welcome**: logo animation (gradient ring forming a hexagon "nexus"), then "Private AI on your Mac".

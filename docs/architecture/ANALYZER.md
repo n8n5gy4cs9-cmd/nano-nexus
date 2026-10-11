@@ -47,13 +47,11 @@ pub struct FolderReport {
 ### Categories (deterministic, by extension, then magic bytes via `infer`)
 `Image, Video, Audio, Document, Pdf, Spreadsheet, Presentation, Code, Data, Archive, Installer,
 Font, Model3D, GameAsset, Executable, System, Other`. The mapping table lives in
-`crates/nexus-analyze/src/categories.rs` (≥ 250 extensions). Examples: `.gd .tscn .tres .godot` → GameAsset/Code (`.gd` = Code;
-`.tscn/.tres/.import` = GameAsset); `.dmg .pkg .exe .msi` → Installer.
+`crates/nexus-analyze/src/categories.rs` (≥ 250 extensions). Examples: `.py .rs .ts .cs .go .java` → Code; `.dmg .pkg .exe .msi` → Installer.
 
 ### Junk rules (each with an id and a "safe to trash?" flag)
 `.DS_Store`, `Thumbs.db`, `desktop.ini`, `~$*.docx` (Office lock files), `*.tmp`, `*.crdownload`, `*.part`
-(stale > 7 days), `node_modules/` (size-reported, **not** auto-trash), `target/` (Rust), `.godot/` (Godot 4
-import cache: regenerable), `__pycache__/`, `.gradle/`, `DerivedData/`, `*.log` > 50 MB.
+(stale > 7 days), `node_modules/` (size-reported, **not** auto-trash), `target/` (Rust), `.venv/`, `dist/`, `build/`, `__pycache__/`, `.gradle/`, `DerivedData/`, `*.log` > 50 MB.
 Folders that can be regenerated are flagged "regenerable" and never "junk-to-delete" by default.
 
 ### Naming issues (files)
@@ -116,15 +114,20 @@ crate, debounced 10 minutes. After a scan, `diff_reports(prev, new)` gives delta
 
 ## 5. Rename Forge
 
+Rename Forge is **language- and framework-agnostic**: point it at any code project and it renames
+symbols, files, and folders while updating every reference it can prove. It also answers
+"where is this used?" (§5.9). No language or engine gets special treatment in the core; per-language
+knowledge lives in data files (tags queries, reserved-name lists).
+
 ### 5.1 Pipeline overview
 ```
 Pick project (grant: ReadWrite needed to apply; Read is enough to analyze)
- → Index (tree-sitter + adapters)          → SymbolIndex
- → Detect issues (naming rules)            → candidates
+ → Index (tree-sitter, per-language tags queries)  → SymbolIndex (+ file/folder tree)
+ → Detect issues (naming rules for symbols, files, folders) → candidates
  → Propose (LLM, batches of ≤ 20)          → proposals (validated)
  → Review grid (user accepts/edits)        → accepted set
- → Plan (exact byte ranges in all refs)    → ChangeSet (+ conflicts)
- → Preview diff → Apply (journal) → Verify (optional: Godot headless check, see §5.7)
+ → Plan (exact byte ranges + file moves)   → ChangeSet (+ conflicts)
+ → Preview diff → Apply (journal) → Verify (optional: the project's own checker, §5.7)
  → Undo available in Changes
 ```
 
@@ -133,96 +136,91 @@ Pick project (grant: ReadWrite needed to apply; Read is enough to analyze)
 pub struct Symbol {
   pub id: SymbolId, pub name: String, pub kind: SymbolKind, pub lang: Lang,
   pub def: Location /* file, byte range, line */, pub scope: ScopeKey /* file::class::func */,
-  pub signature: String,          // e.g. "func calc(a, b) -> int"
+  pub signature: String,          // e.g. "def calc(a, b) -> int"
   pub doc: Option<String>,        // preceding comment
   pub refs: Vec<Ref>,             // all occurrences, including def
-  pub flags: SymbolFlags,         // ENGINE_VIRTUAL, EXPORTED, PUBLIC_API, DYNAMIC_REFS, AUTOLOAD, SIGNAL, OVERRIDE
+  pub flags: SymbolFlags,         // RESERVED, EXPORTED, PUBLIC_API, DYNAMIC_REFS, OVERRIDE, TEST, ENTRY_POINT
 }
-pub enum SymbolKind { Function, Method, Variable, Constant, Parameter, Field, Class, Enum, EnumMember, Signal, Node, File }
-pub struct Ref { pub loc: Location, pub kind: RefKind }   // Code | StringLiteral | SceneFile | ProjectFile | Comment
+pub enum SymbolKind { Function, Method, Variable, Constant, Parameter, Field, Class, Interface, Enum, EnumMember, Module, File, Folder }
+pub struct Ref { pub loc: Location, pub kind: RefKind }   // Code | Import | StringLiteral | ConfigFile | Doc | Comment
 ```
 
 Resolution is **name + scope based** (not a full type checker). Local variables and parameters
-resolve within the function scope. Members resolve within the class (file) and through
-`self.`/bare access. Cross-file references to `class_name` types and autoloads resolve by global
-name. Ambiguous cases (same member name in two classes accessed through an untyped variable,
-e.g. `enemy.hit()`) are marked `AMBIGUOUS` and must be confirmed by the user per occurrence in
-the review grid.
+resolve within the function scope. Members resolve within the class and through
+`self.`/`this.`/bare access. Cross-file references resolve through each language's import graph
+(§5.3). Ambiguous cases (the same member name in two classes accessed through an untyped
+variable, e.g. `enemy.hit()`) are marked `AMBIGUOUS` and must be confirmed by the user per
+occurrence in the review grid.
 
 ### 5.3 Language adapters
-| Language | Grammar crate | Notes |
-|---|---|---|
-| GDScript | `tree-sitter-gdscript` 6.1 | First-class. Godot adapter below. Spike S4: ABI compatibility with `tree-sitter` 0.27 |
-| Rust | `tree-sitter-rust` 0.24 | Skip trait impl methods (`OVERRIDE`) and `pub` items flagged `PUBLIC_API` (warn) |
-| Python | `tree-sitter-python` 0.25 | Dunder methods never renamed |
-| JavaScript / TypeScript | `tree-sitter-javascript` 0.25 / `tree-sitter-typescript` 0.23 | Exported names are flagged `PUBLIC_API` |
-| C# | `tree-sitter-c-sharp` 0.23 | Unity messages (`Start`, `Update`, `Awake`, …) → `ENGINE_VIRTUAL` |
-| Lua | `tree-sitter-lua` 0.5 | LÖVE callbacks (`love.load`, `love.update`, `love.draw`) → `ENGINE_VIRTUAL` |
+| Language | Grammar crate | Import / module resolution | Notes |
+|---|---|---|---|
+| Python | `tree-sitter-python` 0.25 | `import a.b`, `from a import b`, packages via `__init__.py`, relative imports | Dunder methods never renamed; `__all__` entries are refs |
+| JavaScript / TypeScript (+ JSX/TSX) | `tree-sitter-javascript` 0.25 / `tree-sitter-typescript` 0.23 | ES `import`/`export`, `require`, `tsconfig` `paths`, index files, extension-less specifiers | Exported names are flagged `PUBLIC_API`; React components stay PascalCase |
+| Rust | `tree-sitter-rust` 0.24 | `mod x;` ↔ `x.rs` / `x/mod.rs`, `use crate::…`, `pub use` | Trait impl methods (`OVERRIDE`) are skipped; `pub` items flagged `PUBLIC_API` (warn) |
+| C# | `tree-sitter-c-sharp` 0.23 | namespaces and `using`; one type per file convention | Interface implementations and `override` are skipped |
+| Go | `tree-sitter-go` 0.25 | package = folder; `import "module/path"` | Exported (capitalized) names flagged `PUBLIC_API`; renaming a folder rewrites import paths |
+| Java | `tree-sitter-java` 0.23 | `package` and `import` match the folder tree; class = file name | Renaming a public class renames its file |
+| Lua, C/C++, others | `tree-sitter-lua` 0.5, `tree-sitter-c`/`-cpp` | `require` / `#include` | P1, one `tags.scm` each |
 
 Each adapter is a `.scm` tags query file in `crates/nexus-analyze/queries/<lang>/tags.scm`
 (the tree-sitter "tags" convention: `@definition.function`, `@reference.call`, …) plus a small
-Rust resolver.
+Rust resolver for imports. Adding a language = a query file, a reserved-name list, a convention
+table, and fixtures. Spike S4 pins the grammar versions against `tree-sitter` 0.27.
 
-### 5.4 Godot adapter (the important one for your game)
-Godot code refers to names in places that aren't GDScript identifiers. All of them must be
-indexed as `Ref`s, or a rename breaks the game.
+### 5.4 References outside the code
+A rename that only edits identifiers leaves a project broken. These are indexed as `Ref`s:
 
 | Where | Pattern | Ref kind / action |
 |---|---|---|
-| `.tscn` / `.tres` signal connections | `[connection signal="pressed" from="Button" to="." method="_on_button_pressed"]` | SceneFile: rewrite the `method="…"` value (and `signal="…"` for custom signals) |
-| `.tscn` exported property values | inside `[node …]`: `move_speed = 300.0` where `move_speed` is an `@export var` of the attached script | SceneFile: rewrite the key (otherwise the saved value is silently lost) |
-| AnimationPlayer method tracks | `"method": &"spawn_enemy"` in `tracks/N/keys` | SceneFile |
-| `project.godot` autoloads | `[autoload] GameState="*res://autoload/game_state.gd"` | ProjectFile: autoload names are globals used in code |
-| `project.godot` input actions | `[input] move_left={…}` used as `Input.is_action_pressed("move_left")` | StringLiteral: "action rename" mode (opt-in) |
-| String-based calls | `call("x")`, `call_deferred("x")`, `callv`, `has_method("x")`, `Callable(obj, "x")`, `connect("sig", …)`, `emit_signal("sig")`, `rpc("x")`, `set("p")`, `get("p")`, `set_deferred("p")`, `tween.tween_property(o, "p", …)` | StringLiteral: auto-included when the string exactly equals the old name **and** sits in one of these call positions; other equal strings are listed as "possible refs" (unchecked by default) |
-| `$NodePath` / `get_node("A/B")` | node names | Not identifiers. Out of scope unless "Node rename" mode is enabled (P2) |
-| File renames (`res://` paths, `.uid` sidecars) | `ext_resource path="res://…"`, `preload("res://…")` | P2 "file rename mode": update every `res://` reference and move the `.uid` file along |
+| Imports and module declarations | `from util import calc_total`, `import {x} from "./x"`, `mod x;`, `using Foo.Bar;` | Import: rewrite the specifier (symbol renames) or the path (file/folder renames) |
+| Config and manifests | `package.json` (`main`, `bin`, `exports`, scripts), `tsconfig` `paths`, `Cargo.toml` (`[[bin]]`, `[lib]`, mod paths), `pyproject.toml` (entry points, packages), `*.csproj`, `go.mod`, CI workflows, Dockerfiles, YAML/JSON/TOML in general | ConfigFile: rewrite exact path or name tokens (tokenized match, never a substring) |
+| String-based lookups | `getattr(obj, "name")`, `hasattr`, `obj["name"]`, `Reflect.get`, `Type.GetMethod("Name")`, `nameof`, decorators/annotations with names, `importlib.import_module("pkg.mod")`, `eval`-free dynamic dispatch tables | StringLiteral: auto-included when the string exactly equals the old name **and** sits in a recognized call position; other equal strings are listed as "possible refs" (unchecked by default) |
+| Docs | Markdown links and code spans naming the symbol or path (`README.md`, `docs/**`) | Doc: opt-in "Also update docs" |
+| Comments | the old name inside comments or docstrings | Comment: opt-in "Also update comments", off by default |
 
-**Never rename (ENGINE_VIRTUAL deny list):** `_init _ready _process _physics_process _input
-_unhandled_input _unhandled_key_input _shortcut_input _gui_input _enter_tree _exit_tree
-_notification _draw _get _set _get_property_list _property_can_revert _property_get_revert
-_validate_property _to_string _get_configuration_warnings _integrate_forces _static_init
-_can_drop_data _drop_data _get_drag_data _make_custom_tooltip _has_point _structured_text_parser
-_get_minimum_size _run` (EditorScript) and every method that overrides a built-in class method
-(detected via a bundled list of Godot 4.x built-in method names per class, generated from
-`extension_api.json`, in `queries/gdscript/builtin_methods.txt`).
+Dynamic references that cannot be proven (computed names, `eval`, reflection over runtime data) set
+the `DYNAMIC_REFS` flag on the symbol: the grid shows 🔗 and the user decides.
 
-**GDScript style guide targets** (official Godot docs, "GDScript style guide"):
-| Kind | Convention | Example |
-|---|---|---|
-| File names | snake_case | `yaml_parser.gd` |
-| `class_name`, node names, enums (type) | PascalCase | `class_name YAMLParser` |
-| Functions, variables, parameters | snake_case | `func load_level()` |
-| Private/internal members | leading underscore + snake_case | `var _counter` |
-| Signals | snake_case, **past tense** | `signal door_opened` |
-| Constants, enum members | CONSTANT_CASE | `const MAX_SPEED = 200` |
-
-**Godot 3 → 4 modernization hints** (flagged, never auto-applied): `yield(` → `await`, `onready var` →
-`@onready var`, `export var` → `@export var`, `.instance()` → `.instantiate()`, `KinematicBody2D` →
-`CharacterBody2D`, `connect("s", self, "m")` → `s.connect(m)`, `rand_range` → `randf_range`,
-`deg2rad` → `deg_to_rad`, `PoolStringArray` → `PackedStringArray`, `setget` → property syntax.
-The report recommends running Godot's own converter first: `godot --headless --convert-3to4`
-(make a git commit before and after).
+**Never rename (reserved lists, data files):** language keywords and builtins
+(`queries/<lang>/keywords.txt`, `globals.txt`), entry points (`main`, `__main__`), dunder and
+special methods (`__init__`, `toString`, `Dispose`), framework hooks the project declares, test
+functions (`test_*`, `#[test]`, `it(...)`), methods that override or implement a base/trait/interface
+method (found in the index), and anything on the project's **ignore list** (stored per project;
+editable in the UI; `RESERVED` flag).
 
 ### 5.5 Detecting bad names (`naming::check`)
+Conventions per language and kind (from the official style guides):
+| Language | Functions / variables | Types | Constants | Files |
+|---|---|---|---|---|
+| Python (PEP 8) | `snake_case` | `PascalCase` | `CONSTANT_CASE` | `snake_case.py` |
+| JS / TS | `camelCase` | `PascalCase` | `CONSTANT_CASE` or `camelCase` | project style: `kebab-case`, `camelCase`, or `PascalCase` (components); detected from the majority |
+| Rust | `snake_case` | `CamelCase` | `SCREAMING_SNAKE` | `snake_case.rs` |
+| C# | `PascalCase` methods, `camelCase` locals, `_camelCase` private fields | `PascalCase` | `PascalCase` | `PascalCase.cs` = type name |
+| Go | `MixedCaps` (exported) / `mixedCaps` | `MixedCaps` | `MixedCaps` | `snake_case.go` |
+| Java | `camelCase` | `PascalCase` | `CONSTANT_CASE` | `PascalCase.java` = public class |
+
 Rules, each with an id and severity:
 - `case.mismatch` (the kind's convention is violated) · `len.too_short` (< 3 chars, except `i j k x y z dt id ui` and loop indices)
 - `meaningless` (dictionary: `foo bar baz tmp temp stuff thing data2 test1 asdf obj val func1 doit doStuff`)
 - `hungarian` (`strName`, `iCount`, `m_`, `g_`) · `abbrev` (`plyr`, `btn`, `mgr`, `calc`, `cnt`, `idx`; configurable allow-list)
-- `numbered` (`enemy2`, `label_3`) · `signal.tense` (a signal not in past tense, e.g. `signal open_door`)
-- `bool.prefix` (bool vars without `is_/has_/can_/should_`, warn only when the type is known)
+- `numbered` (`enemy2`, `label_3`) · `bool.prefix` (bool vars without `is_/has_/can_/should_`, warn only when the type is known)
 - `inconsistent.synonym` (`get_hp` / `fetch_health` / `read_life` in the same project → suggest one vocabulary)
+- `file.case` (a file or folder name breaks the project's or language's convention) · `file.mismatch` (a file name does not match the main type it holds, where the language expects it) · `file.generic` (`utils`, `helpers`, `misc`, `new_file2`: warn only)
 - `typo` (optional, `symspell`-style dictionary on split words)
 
 ### 5.6 Proposals (LLM, `rename_propose.md`)
 Each batch has ≤ 20 symbols of the same kind and language. Each symbol is sent as:
 ```
-<sym id="s17" kind="function" lang="gdscript" convention="snake_case" file="player.gd" issues="meaningless,abbrev">
-func doStuff2(p):              # signature
+<sym id="s17" kind="function" lang="python" convention="snake_case" file="player.py" issues="meaningless,abbrev">
+def doStuff2(p):               # signature
   # 3 lines of body or doc
-  usages: player.gd:88 `doStuff2(enemy)` · hud.gd:12 `player.doStuff2(target)`
+  usages: player.py:88 `doStuff2(enemy)` · hud.py:12 `player.doStuff2(target)`
 </sym>
 ```
+Files and folders are proposed the same way (`kind="file"`, with the first lines of the file, the
+types it defines, and who imports it).
+
 Schema (pattern chosen per batch from the convention):
 ```json
 {"type":"object","additionalProperties":false,"required":["proposals"],
@@ -235,34 +233,47 @@ Schema (pattern chosen per batch from the convention):
      "reason":{"type":"string","maxLength":120}}}}}}
 ```
 Validation (Rust): the id exists and isn't duplicated · the new name ≠ the old name · not a
-language keyword or builtin · matches the convention · **no collision** in the same scope or
-with globals (class_names, autoloads) · not in ENGINE_VIRTUAL · consistent with the
+language keyword or builtin · matches the convention · **no collision** in the same scope, with
+globals, or (files) with an existing sibling · not `RESERVED` · consistent with the
 accepted-synonym vocabulary. Invalid → one reask. Still invalid → the item gets status
 `needs_manual` (fallback).
 
-### 5.7 Review grid → plan → apply
-Grid columns: ☑ · kind icon · old → **new** (editable, revalidated live) · refs (code / scene /
-string) · confidence bar · reason · issues · flags (⚠ ambiguous, 🔗 dynamic refs, 🌐 public API).
+### 5.7 Review grid → plan → apply → verify
+Grid columns: ☑ · kind icon · old → **new** (editable, revalidated live) · refs (code / import /
+config / string) · confidence bar · reason · issues · flags (⚠ ambiguous, 🔗 dynamic refs, 🌐 public API).
 Bulk actions: accept all ≥ 0.8 · reject flagged · "include string refs" per row.
 
 `plan::build_changeset(accepted)` → for each symbol, an `Edit` per file with exact byte ranges
-of identifier nodes and accepted string or scene refs. Overlap check. Base hashes from index
-time. If the project is a git repo with uncommitted changes, show the banner *"You have
-uncommitted changes. Commit first so you can diff/revert with git too."* with the buttons
-[Continue anyway] [Cancel].
+of identifier nodes and accepted import, config, string, and doc refs. File and folder renames
+become `Move` ops **plus** `Edit`s for every import path and config reference that points at them.
+Overlap check. Base hashes from index time. Two details matter:
+- **Case-only renames** (`Utils.py` → `utils.py`) are executed as two moves through a temporary
+  name, because macOS and Windows file systems are case-insensitive.
+- Folder moves are applied before the edits inside them, so edits target post-move paths.
+
+If the project is a git repo with uncommitted changes, show the banner *"You have uncommitted
+changes. Commit first so you can diff/revert with git too."* with the buttons [Continue anyway]
+[Cancel]. Where the project is a git repo, file renames use plain moves (git detects renames).
 
 After apply: re-index changed files and confirm that no old name remains in the planned
-locations (a self-check). If `godot` is on PATH or configured in Settings, offer
-**Verify with Godot**: for each changed script, run
-`godot --headless --path <project> --check-only --script <res://file.gd>` (`--check-only` must be
-paired with `--script`), then `godot --headless --path <project> --import` (Godot ≥ 4.3), which
-loads the whole project and reports parse errors and broken resources. The output is streamed
-into the panel and any `ERROR`/`SCRIPT ERROR` line marks the verify as failed.
+locations (a self-check). **Verify** (optional, never automatic): detect the project's own
+checker from its manifest and offer to run it with a fixed argument list (never through a shell),
+streaming the output: `cargo check` (Cargo.toml) · `tsc --noEmit` (tsconfig) · `python -m
+compileall -q .` (Python) · `dotnet build --no-restore` (*.csproj) · `go build ./...` (go.mod) ·
+`mvn -q -o compile` or `gradle --offline compileJava` (Java). A non-zero exit marks the verify as
+failed and lists the first errors. The binary must be on PATH.
 
 ### 5.8 Strings mode (`strings_improve`)
-Extract user-facing string literals (heuristics: inside `text =`, `label.text =`, `tr()`,
-`print()` excluded, `.tscn` `text = "…"` properties). The LLM proposes improved text and/or an
-i18n key (`MENU_START_GAME`). Placeholders (`%s %d %0.2f {name} {0}`) are extracted
-deterministically and **must match exactly** in proposals (validated). Export
-`translations.csv` in Godot's format (`keys,en`) and, if wanted, rewrite code to
-`tr("KEY")` via a change set.
+Extract user-facing string literals (heuristics: UI call positions such as `text`, `label`,
+`title`, `message`, `t()`/`gettext()`/`i18n.t()` arguments; log and `print` calls are excluded). The
+LLM proposes improved text and/or an i18n key (`MENU_START_GAME`). Placeholders (`%s %d %0.2f
+{name} {0}`) are extracted deterministically and **must match exactly** in proposals (validated).
+Export the key/text table as CSV or JSON and, if wanted, rewrite code to `t("KEY")` (function name
+configurable) via a change set.
+
+### 5.9 Find: "where is this used, and what is this project?"
+Rename Forge doubles as a code explorer, using the same index:
+- **Find symbol:** search by name (exact, prefix, fuzzy) across symbols, files, and folders; results show kind, location, signature, doc, and a usage count by kind (code / import / config / string).
+- **Usages:** every reference with a 1-line code preview, grouped by file; jump to the editor (M10).
+- **Project overview:** languages and file counts, entry points, largest files and functions, the naming-issue summary, and import hot spots (most-imported files).
+- The router assistants get a read-only tool `find_symbol(query)` that returns this data (budgeted), so "where is `calc_total` used?" in chat works after a project is indexed.

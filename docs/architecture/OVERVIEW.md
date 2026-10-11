@@ -14,7 +14,7 @@
 | AI model | GGUF (tokenizer + chat template embedded) | default: MiniCPM5-1B Opus-Fable5 **V2** Q8_0 |
 | Storage | SQLite via `rusqlite` (bundled, FTS5, WAL) | rusqlite 0.40 |
 | HTTP | `reqwest` 0.13 (rustls, stream) + hand-rolled SSE parser | |
-| Code parsing | `tree-sitter` 0.27 + grammars (gdscript 6.1, rust, python, js, ts, c-sharp, lua) | |
+| Code parsing | `tree-sitter` 0.27 + grammars (python, js, ts, rust, c-sharp, go, java; more as data files) | |
 | Templates | `minijinja` 3 | |
 | Dev tooling | Rust stable (≥ 1.90), Node 22 + pnpm, CMake ≥ 3.21, Xcode CLT, git | |
 | Packaging | macOS: `tauri build --bundles app` + generated overlay (bundle profile) + `codesign` · Windows (**built on the Mac**): `tauri build --runner cargo-xwin --target x86_64-pc-windows-msvc --bundles nsis` | cargo-xwin, NSIS (brew) |
@@ -164,7 +164,7 @@ Linux uses `~/.local/share/dev.nanonexus.app` and Windows uses
 | Building the runtime, fetching the model, bundling, signing | [BUNDLING.md](BUNDLING.md) |
 | Grants, deny list, change sets, journal, TCC | [PERMISSIONS.md](PERMISSIONS.md) |
 | Assistants, prompts, tools, workflows, context budget | [ASSISTANTS.md](ASSISTANTS.md) |
-| Folder/file analyzer, Rename Forge, Godot adapter | [ANALYZER.md](ANALYZER.md) |
+| Folder/file analyzer, Rename Forge | [ANALYZER.md](ANALYZER.md) |
 | Catalog, downloads, GGUF, RAM fit | [MODEL-MANAGER.md](MODEL-MANAGER.md) |
 | SQLite schema, commands, events, error codes | [DATA-AND-IPC.md](DATA-AND-IPC.md) |
 | LAN Share server, pairing, web/mobile UI | [LAN-SHARE.md](LAN-SHARE.md) |

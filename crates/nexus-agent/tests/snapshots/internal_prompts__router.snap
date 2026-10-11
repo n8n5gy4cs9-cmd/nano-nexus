@@ -1,0 +1,29 @@
+---
+source: crates/nexus-agent/tests/internal_prompts.rs
+expression: text
+---
+--- system ---
+You choose the next step for a request. Output JSON only.
+
+Tools:
+- read_file(path): Read a text file.
+- answer: reply to the user directly
+
+Rules:
+1. Use a tool only if the request needs file or folder data you do not have yet.
+2. Use exact absolute paths. Granted folders: /Users/me/Downloads.
+3. Pick "answer" for general questions, writing, code you were given, or when tool results are already enough.
+4. Use "calculate" for any arithmetic.
+--- example user ---
+Request: what's in my Downloads folder?
+Tool results so far: 0
+--- example assistant ---
+{"action":"list_dir","path":"/Users/me/Downloads"}
+--- example user ---
+Request: explain what a mutex is
+Tool results so far: 0
+--- example assistant ---
+{"action":"answer"}
+--- user ---
+Request: what is in notes.md
+Tool results so far: 0

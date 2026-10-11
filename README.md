@@ -8,8 +8,8 @@
 
 NanoNexus is a Rust desktop app (Tauri 2, with a React UI) that runs a bundled `llama-server`
 (llama.cpp) as a private child process on `127.0.0.1`. You chat with **assistants** such as
-*DocLens* (PDFs), *Folder Scout* (folder reports), and *Rename Forge* (cleans up badly named
-code like an old Godot game). The model never leaves your machine. File changes are always
+*DocLens* (PDFs), *Folder Scout* (folder reports), and *Rename Forge* (renames symbols, files, and folders
+in any code project and updates every reference). The model never leaves your machine. File changes are always
 shown as a diff you approve, and every change can be undone.
 
 The AI layer copies the architecture of the Godot project (*buddy bits*): an owned

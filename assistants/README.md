@@ -10,10 +10,9 @@ their sources: [`docs/architecture/ASSISTANTS.md` §2](../docs/architecture/ASSI
 | `nexus.toml` | Nexus | router | Default assistant. Reads granted files and folders via tools |
 | `doc-lens.toml` | DocLens | pipeline `doc_qa` | PDF and doc Q&A with `[p. N]` citations, plus summaries |
 | `folder-scout.toml` | Folder Scout | pipeline `folder_report` | Folder reports, cleanup plans |
-| `rename-forge.toml` | Rename Forge | pipeline `rename_propose` | Renames identifiers and strings (Godot-aware) |
+| `rename-forge.toml` | Rename Forge | pipeline `rename_propose` | Renames identifiers, files, and folders in any code project, updating every reference |
 | `code-mentor.toml` | Code Mentor | chat | Explain and review code |
 | `bug-hunter.toml` | Bug Hunter | chat | Scientific debugging (thinking on by default) |
-| `godot-sidekick.toml` | Godot Sidekick | chat | Godot 4 / GDScript, 3→4 migration |
 | `doc-writer.toml` | Doc Writer | chat | Doc comments and READMEs (Diátaxis) |
 | `commit-crafter.toml` | Commit Crafter | pipeline `commit_message` | Conventional Commits 1.0.0 |
 | `tidy.toml` | Tidy | pipeline `tidy_plan` | Move plans, never deletes |

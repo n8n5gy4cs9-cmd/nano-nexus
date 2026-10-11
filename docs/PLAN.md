@@ -15,10 +15,10 @@
 | **M03** | [App shell and design system](milestones/M03-app-shell.md) | Pretty empty app: sidebar, title bar, themes, runtime pill, notifications plumbing, walking-skeleton `.app` **and Windows skeleton (S7)** | M02 | L |
 | **M04** | [Chat MVP](milestones/M04-chat.md) ★ | **First daily-usable build:** streaming chat, history, stop/regenerate, thinking toggle | M03 | L |
 | **M05** | [Permissions and change sets](milestones/M05-permissions.md) | Grant folders; permission prompts; change set preview/apply/undo; audit; macOS TCC status | M04 | L |
-| **M06** | [Assistants, prompts, tools](milestones/M06-assistants.md) | 18 assistants in a gallery; builder; router tools reading granted files | M05 | L |
+| **M06** | [Assistants, prompts, tools](milestones/M06-assistants.md) | 17 assistants in a gallery; builder; router tools reading granted files | M05 | L |
 | **M07** | [Model manager and downloads](milestones/M07-models.md) | Download view: catalog, HF search, resumable verified downloads, activate, multi-bundled models | M04 | M |
 | **M08** | [Analyzer and reports](milestones/M08-analyzer.md) | Folder Scout report with treemap and AI summary; DocLens PDF summary and Q&A; other pipelines | M06 | XL |
-| **M09** | [Rename Forge](milestones/M09-rename-forge.md) | Your old Godot game renamed safely with preview, undo, and Godot verify | M08 | XL |
+| **M09** | [Rename Forge](milestones/M09-rename-forge.md) | Rename symbols, files, and folders in any code project, safely, with preview, undo, and verify | M08 | XL |
 | **M10** | [Code editor](milestones/M10-editor.md) | Tabs, highlighting, save via journal, AI actions with diff accept | M05, M06 | M |
 | **M11** | [Notifications, jobs, watches](milestones/M11-notifications-jobs.md) | Jobs panel, per-kind notification settings, scheduled folder watches | M08 | M |
 | **M12** | [Bundling, profiles, App Builder (macOS)](milestones/M12-bundling-app-builder.md) | App Builder UI → pick models → signed, verified `.app`; basic build; model packs | M07 (+ features) | L |
@@ -52,7 +52,7 @@ Two rules started early so later milestones stay cheap:
 | **S1** | Does `chat_template_kwargs.enable_thinking=false` disable thinking for the bundled GGUF? Does `--reasoning-format deepseek` split thoughts? | M01 | "Think harder" toggle support |
 | **S2** | Does the OpenAI `json_schema` response_format constrain output on b11552 (pattern, enum), thinking on and off? | M01 | ADR-003 shape |
 | **S3** | Q8_0 vs Q4_K_M on your Mac: tok/s, TTFT, RAM, quality | M01 | ADR-008 default quant |
-| **S4** | `tree-sitter-gdscript 6.1` + `tree-sitter 0.27` ABI; parses Godot 3 and 4 code from your game? | before M09 | Grammar pin/patch |
+| **S4** | `tree-sitter 0.27` ABI + grammars (python, js/ts, rust, c-sharp, go, java); parse your own projects? | before M09 | Grammar pins/patches |
 | **S5** | `pdf-extract` quality on 3 of your PDFs | before M08 | PDF extractor |
 | **S6** | `tauri-specta 2.0.0-rc.25` with `tauri 2.12`? | M03 | ADR-006 |
 | **S7** | Cross-compile the M03 skeleton to `x86_64-pc-windows-msvc` + NSIS **on the Mac**; runs in the Win11 ARM VM (x64 emulation) and on a PC; is the platform config picked by `--target`? | M03 | ADR-014 viability, build flags |
@@ -89,7 +89,7 @@ scripts/build-windows.sh --profile basic --arch x64 # Windows installer, built o
 1. **Runtime and bundling, macOS + Windows** (M01, M03 skeletons + S7): platform risk first.
 2. **Structured output with this model** (S1/S2): the core reliability assumption.
 3. **Permission engine correctness** (M05): safety-critical, property-tested.
-4. **Rename correctness** (M09): Godot adapter, tested on a copy of the real game first.
+4. **Rename correctness** (M09): import/config/string reference handling, tested on a copy of a real project first.
 5. **LAN exposure** (M14): auth and policy tests before any real use on shared Wi-Fi.
 
 ## 7. Working agreements for AI agents

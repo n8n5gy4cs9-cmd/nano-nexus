@@ -1,6 +1,6 @@
 # M06: Assistants, Prompts, Tools, Router
 
-**Goal:** the 18 built-in assistants are live in a gallery, users can create, duplicate,
+**Goal:** the 17 built-in assistants are live in a gallery, users can create, duplicate,
 import, and export their own, and the `router` workflow lets assistants read granted files and
 folders through tools.
 
@@ -38,7 +38,7 @@ prompt appears → Allow → a tool chip shows "Read notes.md" → a grounded an
   numbers and `+ - * / ^ % ( )`, `sqrt`, `round`, and nothing else.
 
 ## Steps
-1. Spec + validation + Registry + prompt_lint (all 18 built-ins must pass; fix the prompts if not).
+1. Spec + validation + Registry + prompt_lint (all 17 built-ins must pass; fix the prompts if not).
 2. Prompt rendering with all variables + shared preamble; snapshot tests with `insta`.
 3. Tools + permission integration (via the broker from M05) + ToolOutput budgeting + tests on temp dirs.
 4. Router workflow + heuristic + tests with a scripted mock LLM (a queue of canned JSON replies).

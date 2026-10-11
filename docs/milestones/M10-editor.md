@@ -4,7 +4,7 @@
 inside the permission and journal model.
 
 **Spec:** UI-DESIGN §4.6, PERMISSIONS §5 (Write op), DATA-AND-IPC (`editor_*`, `fs_*`).
-**Prereqs:** M05, M06. **Exit demo:** open the game folder → open `player.gd` (GDScript
+**Prereqs:** M05, M06. **Exit demo:** open a project folder → open `player.py` (Python
 highlighted) → select a function → "Improve names" → a diff appears → accept 2 of 3 hunks →
 ⌘S → saved through a change set → Undo in Changes reverts it.
 
@@ -15,11 +15,9 @@ highlighted) → select a function → "Improve names" → a diff appears → ac
   selections, search panel, go-to-line, indentation detection, word wrap toggle, minimap off.
 - Languages: `@codemirror/lang-javascript` (js/ts/jsx/tsx), `-rust`, `-python`, `-json`,
   `-markdown`, `-html`, `-css`, `-cpp`, `-java`, `-sql`, `-xml`, `-yaml`, `-php`, plus
-  `@codemirror/legacy-modes` (shell, lua, toml, csharp via clike, swift, go, ruby, ini for .tscn/.godot)
-  and a **custom GDScript `StreamLanguage`** (keywords, annotations `@export` `@onready`,
-  `func`/`signal`/`class_name`, strings, numbers, comments, `$NodePath`, `%UniqueNode`).
+  `@codemirror/legacy-modes` (shell, lua, toml, csharp via clike, swift, go, ruby, ini).
 - Save: `editor_save(path, contents, base_hash)` → a single Write op → confirm popover ("Save
-  changes to player.gd?" with an "Always allow for this folder (session)" option) → apply → journal.
+  changes to player.py?" with an "Always allow for this folder (session)" option) → apply → journal.
   Read-only mode when there's no write grant (with a banner and a "Grant write access" button).
 - AI actions panel: Explain · Improve names · Add docs · Find bugs · Simplify · Ask (free text).
   Edits come back as full-file proposals from the model → **we compute the diff locally** →
@@ -35,7 +33,7 @@ highlighted) → select a function → "Improve names" → a diff appears → ac
 - Large files: > 2 MB opens read-only with a warning. > 20 MB refuses (use Analyzer).
 
 ## Steps
-1. Editor shell (tree + tabs + CodeMirror + theme). 2. Languages + GDScript mode (+ snapshot test of tokens).
+1. Editor shell (tree + tabs + CodeMirror + theme). 2. Languages (+ snapshot test of tokens).
 3. Save via change set + read-only mode. 4. AI actions + merge view. 5. External change detection. 6. Shortcuts and polish.
 
 ## Exit criteria

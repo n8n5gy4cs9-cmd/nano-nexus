@@ -62,3 +62,6 @@ blake3 = "1" # content hashes for change-set base/post hashes
 trash = "5" # move to the system Trash / Recycle Bin (never delete)
 proptest = "1" # property tests for apply/undo
 walkdir = "2"
+jsonschema = { version = "0.33", default-features = false } # validate assistant TOML (as JSON) against schemas/assistant.schema.json
+include_dir = "0.7" # embed assistants/*.toml in the binary (ASSISTANTS §1)
+async-trait = "0.1" # object-safe async Tool trait (ASSISTANTS §5)

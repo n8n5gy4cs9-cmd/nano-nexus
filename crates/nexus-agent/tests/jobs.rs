@@ -40,7 +40,7 @@ async fn serve(replies: Vec<&str>) -> (Scheduler, Seen) {
 
 #[tokio::test]
 async fn title_from_the_model() {
-    let (sched, seen) = serve(vec![r#"{"title":"Godot Signal Debugging"}"#]).await;
+    let (sched, seen) = serve(vec![r#"{"title":"Event Handler Debugging"}"#]).await;
     let t = generate_title(
         &sched,
         "my signal never fires",
@@ -48,7 +48,7 @@ async fn title_from_the_model() {
         CancellationToken::new(),
     )
     .await;
-    assert_eq!(t, "Godot Signal Debugging");
+    assert_eq!(t, "Event Handler Debugging");
     let body = &seen.lock().unwrap()[0];
     assert_eq!(body["response_format"]["json_schema"]["name"], "title");
     assert_eq!(body["max_tokens"], 40);
@@ -65,7 +65,7 @@ async fn invalid_titles_fall_back_to_the_first_words() {
     let (sched, seen) = serve(vec![r#"{"title":"x"}"#, r#"{"title":"y"}"#]).await;
     let t = generate_title(
         &sched,
-        "how do I rotate a quaternion in godot",
+        "how do I rotate a quaternion in unity",
         "…",
         CancellationToken::new(),
     )
@@ -83,7 +83,7 @@ async fn a_dead_runtime_still_gives_a_title() {
 
 #[tokio::test]
 async fn summary_uses_the_previous_summary_and_trims() {
-    let (sched, seen) = serve(vec!["  The user is learning Godot signals.  "]).await;
+    let (sched, seen) = serve(vec!["  The user is learning event handlers.  "]).await;
     let turns = vec![
         SummaryTurn {
             role: "user".into(),
@@ -96,18 +96,18 @@ async fn summary_uses_the_previous_summary_and_trims() {
     ];
     let s = summarize_history(
         &sched,
-        Some("Earlier: they installed Godot."),
+        Some("Earlier: they installed Python."),
         &turns,
         CancellationToken::new(),
     )
     .await
     .unwrap();
-    assert_eq!(s, "The user is learning Godot signals.");
+    assert_eq!(s, "The user is learning event handlers.");
     let user = seen.lock().unwrap()[0]["messages"][1]["content"]
         .as_str()
         .unwrap()
         .to_owned();
-    assert!(user.contains("<previous_summary>Earlier: they installed Godot.</previous_summary>"));
+    assert!(user.contains("<previous_summary>Earlier: they installed Python.</previous_summary>"));
     assert!(user.contains("[user] what is a signal"));
 }
 

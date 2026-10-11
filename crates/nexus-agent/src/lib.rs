@@ -8,14 +8,18 @@ pub mod budget;
 pub mod internal;
 pub mod jobs;
 pub mod prompt;
+pub mod registry;
 pub mod spec;
 pub mod turn;
 
 pub use budget::{
+    estimate_tokens,
     ContextMeter, HistoryItem, HistoryPlan, Limits, SummaryInfo, TokenCounter, Tokenize, plan_history,
 };
+pub use internal::{PromptMeta, RenderedPrompt, internal_names, internal_source, parse_meta, render_full};
 pub use jobs::{SummaryTurn, fallback_title, generate_title, summarize_history};
 pub use prompt::{PREAMBLE, PromptContext, render_system_prompt};
+pub use registry::{FieldError, Registry, Source, ValidationReport, validate_report, validate_toml};
 pub use spec::{AssistantSpec, builtin_nexus};
 pub use turn::{
     AttachmentBlock, ChatBackend, HistoryMessage, StoredSummary, TurnEngine, TurnInput, TurnOutcome,
