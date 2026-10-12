@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 184/234 tasks done (78%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 185/234 tasks done (79%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -221,7 +221,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T12.08** `scripts/make-model-pack.mjs` + `schemas/model-pack.schema.json` usage + test (2026-10-12) — `scripts/make-model-pack.mjs` (`--profile`/`--id`, `--out`, `--verify <pack>`) + test; the pack is validated against `schemas/model-pack.schema.json`
 - [x] **T12.09** In-app model packs: export + import (verify, copy/reference, progress) + `models-extra/` first-launch import (2026-10-12) — `nexus-models::pack` (export, import with copy/reference, SHA-256 on every file, cancel cleans up, `models-extra/pack.json` registered in the background as bundled), commands `models_pack_*` + `models_pick_folder`, Models page dialogs. The Windows kit end-to-end needs the Windows build (M13)
 - [x] **T12.10** Settings → About shows `bundle.json` (profile, commit, date) (2026-10-12) — `AppInfo.build` reads `resources/bundle.json`; Settings → About (`AboutSection`) shows version, platform, profile, commit, build date
-- [ ] **T12.11** Update `guide.html` macOS sections from "planned" to "available"
+- [x] **T12.11** Update `guide.html` macOS sections from "planned" to "available" (2026-10-12) — guide.html: macOS build, model choice and packs are "Available now"; command table updated (stage-bundle, verify-payload); the App Builder's current scope is stated
 - [ ] ⭐ **T12.12** 🍎 Exit check: App Builder 3-model build → works offline on a 2nd Mac; tamper test fails verify; model pack import offline
 
 ## M13: Windows build, cross-compiled on the Mac (MUST) · [spec](docs/milestones/M13-windows.md)

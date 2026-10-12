@@ -230,7 +230,7 @@ node scripts/fetch-model.mjs --verify</code></pre></li>
 <div class="note"><strong>Where things go</strong>Everything heavy lives in <code>vendor/</code> (git-ignored):
 <code>vendor/runtime/</code> for <code>llama-server</code> builds and <code>vendor/models/&lt;id&gt;/</code> for GGUF files with their <code>lock.json</code>. Nothing large is ever committed.</div>
 
-<h2 id="basic-mac">2 · Basic build: macOS <span class="badge b-plan">Planned · M12</span> <span class="badge b-mac">🍎</span></h2>
+<h2 id="basic-mac">2 · Basic build: macOS <span class="badge b-now">Available now</span> <span class="badge b-mac">🍎</span></h2>
 <p>The basic build ships exactly one model, the default from <code>bundles/basic.json</code>.</p>
 <pre><code>scripts/build-app.sh --profile basic</code></pre>
 <p>What it does: checks the toolchain → re-verifies the model and runtime against their locks → stages the files → builds the app → re-hashes everything inside the built <code>.app</code> → signs it with your identity → zips it.</p>
@@ -264,9 +264,10 @@ scripts/build-windows.sh --profile basic --arch arm64                  <span cla
 <div class="note warn"><strong>Why three formats?</strong>NSIS installers can't be much bigger than 2 GB. When the models add up to more than 1.8 GB, the builder automatically switches to the offline kit (or portable ZIP), so any number of models works.</div>
 <div class="note"><strong>Testing without a PC</strong>In a Windows 11 <b>ARM</b> VM on your Mac (UTM or Parallels), the arm64 build runs natively and the x64 build runs under Windows' x64 emulation (CPU only, slower, fine for smoke tests). Do final GPU and performance checks on the real PC.</div>
 
-<h2 id="choose-models">4 · Choose which models are bundled <span class="badge b-plan">Planned · M12</span></h2>
+<h2 id="choose-models">4 · Choose which models are bundled <span class="badge b-now">Available now</span></h2>
 <h3>The easy way: App Builder</h3>
 <pre><code>node scripts/app-builder.mjs</code></pre>
+<div class="note"><strong>Today</strong>The App Builder lets you pick your own <code>.gguf</code> files and catalog models, add book folders, and choose the target. For a Hugging Face repo or a saved profile, use the same choices on the command line: <code>node scripts/bundle.mjs --hf owner/repo:Q4_K_M --profile studio</code> (see <code>--help</code>). The illustration below shows the finished design.</div>
 <p>Your browser opens a private page on <code>127.0.0.1</code> (protected by a one-time token):</p>
 <figure class="mock" aria-label="App Builder preview (illustration)">
   <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span>&nbsp; NanoNexus App Builder · 127.0.0.1</div>
@@ -332,7 +333,7 @@ node scripts/fetch-model.mjs --list</code></pre>
 </ol>
 <div class="note ok"><strong>No internet is ever needed</strong>The kit includes the WebView2 offline installer, the Windows llama.cpp runtime, and all models. Updates work the same way: build a new kit, or send just new models as a <a href="#packs">model pack</a>.</div>
 
-<h2 id="packs">6 · Add models later, without rebuilding <span class="badge b-plan">Planned · M12</span></h2>
+<h2 id="packs">6 · Add models later, without rebuilding <span class="badge b-now">Available now</span></h2>
 <p>A <b>model pack</b> is a folder with <code>pack.json</code> plus GGUF files. It works for macOS and Windows installs alike.</p>
 <h3>Make a pack</h3>
 <pre><code>node scripts/make-model-pack.mjs --id gemma-4-e4b-q4 --id qwen3.5-4b-q4 --out /Volumes/USB
@@ -408,7 +409,7 @@ node scripts/verify-payload.mjs path/to/NanoNexus.app  <span class="c"># re-hash
   <li><b>Verify:</b> <code>node scripts/knowledge-manifest.mjs verify &lt;path-to&gt;/resources/knowledge</code> re-hashes every file and reports missing, changed, or unlisted ones. The build's verify step runs the same check.</li>
   <li><b>First launch:</b> the app registers the libraries and indexes them in the background (hash-based, so later launches skip unchanged files). Large libraries take a moment before the first answer; the Library page shows progress.</li>
 </ol>
-<div class="note"><strong>Heads-up</strong>The build scripts for this (<code>stage-bundle</code>, <code>verify-payload</code>) arrive with M12/M13; the profile field, the manifest tool, and the in-app loader are already in place. A prebuilt index (no first-launch indexing) is a planned optimization.</div>
+<div class="note"><strong>Heads-up</strong>The build scripts for this (<code>stage-bundle</code>, <code>verify-payload</code>) are in place for macOS; the Windows build arrives with M13. A prebuilt index (no first-launch indexing) is a planned optimization.</div>
 
 <h2 id="reference">11 · Command reference</h2>
 <table>
@@ -417,10 +418,12 @@ node scripts/verify-payload.mjs path/to/NanoNexus.app  <span class="c"># re-hash
   <tr><td><code>scripts/progress.sh [--next|--write]</code></td><td>Project progress from <code>tasks.md</code></td><td><span class="badge b-now">now</span></td></tr>
   <tr><td><code>scripts/setup-runtime.sh</code></td><td>Build the pinned macOS <code>llama-server</code></td><td><span class="badge b-now">now</span></td></tr>
   <tr><td><code>node scripts/fetch-model.mjs …</code></td><td>Download, import, verify, and list models (<code>--profile</code>, <code>--id</code>, <code>--repo</code>, <code>--local</code>)</td><td><span class="badge b-now">now</span></td></tr>
+  <tr><td><code>node scripts/stage-bundle.mjs --profile P --target T</code></td><td>Stage the models, manifest and Tauri overlay for one build</td><td><span class="badge b-now">now</span></td></tr>
+  <tr><td><code>node scripts/verify-payload.mjs &lt;app&gt;</code></td><td>Re-hash a built app against its manifest and runtime lock</td><td><span class="badge b-now">now</span></td></tr>
   <tr><td><code>scripts/check.sh</code></td><td>Run all project checks</td><td><span class="badge b-now">now</span></td></tr>
-  <tr><td><code>node scripts/app-builder.mjs</code></td><td>App Builder UI: choose models and targets, then build</td><td><span class="badge b-plan">M12</span></td></tr>
-  <tr><td><code>scripts/build-app.sh --profile P</code></td><td>Signed, verified macOS app</td><td><span class="badge b-plan">M12</span></td></tr>
-  <tr><td><code>node scripts/make-model-pack.mjs</code></td><td>Make a model pack for USB sideloading</td><td><span class="badge b-plan">M12</span></td></tr>
+  <tr><td><code>node scripts/app-builder.mjs</code></td><td>App Builder UI: choose models and targets, then build</td><td><span class="badge b-now">now</span></td></tr>
+  <tr><td><code>scripts/build-app.sh --profile P</code></td><td>Signed, verified macOS app</td><td><span class="badge b-now">now</span></td></tr>
+  <tr><td><code>node scripts/make-model-pack.mjs</code></td><td>Make a model pack for USB sideloading</td><td><span class="badge b-now">now</span></td></tr>
   <tr><td><code>node scripts/fetch-runtime-windows.mjs</code></td><td>Pinned, verified Windows llama.cpp runtime</td><td><span class="badge b-plan">M03/M13</span></td></tr>
   <tr><td><code>scripts/build-windows.sh --profile P --arch A [--format F]</code></td><td>Windows installer, portable ZIP, or offline kit, built on the Mac</td><td><span class="badge b-plan">M13</span></td></tr>
 </table>
