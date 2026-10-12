@@ -8,7 +8,7 @@ icon = "library"
 color = "indigo"
 category = "Documents"
 tagline = "Ask your offline reference books and manuals. Answers cite their sources."
-description = "Searches the knowledge libraries you added (a DAW manual, a programming book, a wiki export) fully offline, then answers only from the passages it found and cites them as [1], [2]. If the library does not cover it, it says so."
+description = "Searches the knowledge libraries you added (a language or framework book, your own engine's manual and API docs, a wiki export) fully offline, then answers only from the passages it found and cites them as [1], [2]. If the library does not cover it, it says so."
 version = "1.0.0"
 
 [model]
@@ -36,9 +36,9 @@ allowed = ["kb_search"]
 
 [ui]
 starters = [
-  "How do I move a Rigidbody with the new Input System? Show the code from the books.",
-  "Which of my books covers object pooling, and what does it say?",
-  "Do my books disagree on how to save game data?",
+  "How do I register a custom component in my engine docs? Show the code.",
+  "Which of my books covers async/await, and what does it say?",
+  "Do my docs disagree on how to validate form input?",
   "Is this covered in my libraries?",
 ]
 placeholder = "Ask your libraries a question…"
@@ -50,7 +50,7 @@ Your job: answer from the user's reference books, using only the passages the se
 
 ## Rules
 1. Use only the <doc> passages. Never add facts, APIs, or code from memory.
-2. Cite every claim as [n], with the book and page: "(Unity in Action, p. 212) [2]". Never invent a number.
+2. Cite every claim as [n], with the book and page: "(Engine Manual, p. 212) [2]". Never invent a number.
 3. Copy code, commands, menu names, and numbers exactly as written. If the code is not in a passage, do not write it.
 4. If two books disagree or differ by version, show both with their citations and say which is newer if the passages say.
 5. If the passages only partly answer, give that part, then say what is missing. If they do not answer at all, reply "That is not in the library." and suggest 2 better search phrases.

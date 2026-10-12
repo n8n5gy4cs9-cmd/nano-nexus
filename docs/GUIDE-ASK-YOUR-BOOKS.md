@@ -1,6 +1,6 @@
 # Ask your books without hallucinations
 
-For: "I have 5 Unity PDFs, one of them has the answer, and I want the code from the book, not a guess."
+For: "I have 5 programming books or doc sets (JavaScript, HTML/CSS, PHP, my own game engine's manual), one of them has the answer, and I want the code from the book, not a guess."
 
 ## How it works (so you know where it can fail)
 Search is keyword-based (BM25), offline, with no model involved. The Librarian first runs `kb_search`,
@@ -8,7 +8,7 @@ gets the top few passages (about 1,200 tokens), and may answer only from those. 
 does not return, the model never sees. So **most wrong answers are search misses, not model lies.**
 
 ## Setup (once)
-1. Library page → add each PDF. Prefer **one library per book** or per topic ("Unity-UI", "Unity-Physics").
+1. Library page → add each PDF. Prefer **one library per book** or per topic ("JavaScript", "PHP", "MyEngine-API", "MyEngine-Manual").
    Searches can then be scoped, and the citation names the book.
 2. Check the indexing note on each document. **Scanned PDFs (images) are skipped; there is no OCR.** If
    a book shows 0 chunks, export a text version or use an OCR'd copy.
@@ -22,12 +22,12 @@ does not return, the model never sees. So **most wrong answers are search misses
 
 ## How to ask
 - **Use the book's own words.** Class, method, and menu names beat descriptions:
-  "Rigidbody.AddForce ForceMode.Impulse jump" finds more than "how do I make the player jump".
+  "addEventListener passive" or "Entity::SetPosition" finds more than "how do I react to scrolling" or "how do I move an object".
 - **One question per message**, with the task and the thing you need:
   "Show the code for object pooling with `ObjectPool<T>`. Quote it exactly and give book + page."
 - **Demand the quote:** "Quote the exact passage, then explain." A claim with no quote is suspect.
 - **Allow no-answer:** end with "If it is not in the books, say so." (The Librarian does this already.)
-- **Scope it** when you know the book: pick that library, or name it ("in the Unity in Action book").
+- **Scope it** when you know the book: pick that library, or name it ("in the MyEngine manual").
 
 ## Finding which book has it
 1. Ask "Which of my books covers X? List book and page for each." The sources list shows who matched.
@@ -40,7 +40,7 @@ does not return, the model never sees. So **most wrong answers are search misses
   "use only code that appears in the passage".
 - "That is not in the library" is a good result. Rephrase with the book's terms (or its index entries)
   before concluding the book lacks it.
-- Version drift: Unity APIs change. Ask "which Unity version is this for?" and check the book's edition.
+- Version drift: APIs change between versions (PHP 7 vs 8, ES5 vs ES2024, your engine v1 vs v2). Ask "which version is this for?" and check the book's edition.
 
 ## When it still goes wrong
 | Symptom | Likely cause | Fix |
