@@ -89,7 +89,8 @@ function defaultFetchRuntime(t, root) {
 
 /**
  * Stage `models` (locks from vendor/models) for one target. Returns `{ dir, bytes, overlay, kb, manifest }`.
- * `opts`: `root` (repo root), `modelsDir`, `fetchRuntime(t)`, `now` (ISO string).
+ * `opts`: `root` (repo root), `modelsDir`, `fetchRuntime(t)`, `now` (ISO string),
+ * `webview` (Windows: the `webviewInstallMode` type, default from `profile.windows.webview`).
  */
 export async function stage(profile, key, models, opts = {}) {
   const root = opts.root ?? REPO;
@@ -175,8 +176,11 @@ export async function stage(profile, key, models, opts = {}) {
   if (kb) resources[`${rel}/knowledge/`] = 'knowledge/';
   if (t.win) resources[`${rel}/runtime/`] = 'runtime/';
   const overlay = path.join(root, 'apps', 'desktop', 'src-tauri', 'gen', `tauri.bundle.${profile.name}.${t.dir}.json`);
+  const bundle = { resources };
+  const webview = opts.webview ?? profile.windows?.webview;
+  if (t.win && webview) bundle.windows = { webviewInstallMode: { type: webview } };
   fs.mkdirSync(path.dirname(overlay), { recursive: true });
-  fs.writeFileSync(overlay, JSON.stringify({ bundle: { resources } }, null, 2) + '\n');
+  fs.writeFileSync(overlay, JSON.stringify({ bundle }, null, 2) + '\n');
   return { dir, bytes, overlay, kb, manifest };
 }
 
@@ -193,7 +197,8 @@ function parseArgs(argv) {
   const o = {};
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a === '--profile' || a === '--target') o[a.slice(2)] = argv[++i];
+    if (a === '--profile' || a === '--target' || a === '--webview') o[a.slice(2)] = argv[++i];
+    else if (a === '--only-default') o.onlyDefault = true;
     else if (a === '-h' || a === '--help') o.help = true;
     else throw new Error(`Unknown option ${a}`);
   }
@@ -203,7 +208,7 @@ function parseArgs(argv) {
 async function main() {
   const o = parseArgs(process.argv.slice(2));
   if (o.help || !o.profile || !o.target) {
-    console.log('Usage: node scripts/stage-bundle.mjs --profile <name|path> --target macos-arm64|windows-x64|windows-arm64');
+    console.log('Usage: node scripts/stage-bundle.mjs --profile <name|path> --target macos-arm64|windows-x64|windows-arm64 [--only-default] [--webview embedBootstrapper|offlineInstaller|…]');
     process.exit(o.help ? 0 : 2);
   }
   const { resolveProfile, VENDOR_MODELS } = await import('./fetch-model.mjs');
@@ -212,7 +217,9 @@ async function main() {
   const { profile } = resolveProfile(o.profile);
   const problems = validate(profile, 'bundle-profile.schema.json');
   if (problems.length) throw new Error(`profile "${o.profile}" is invalid:\n  ${problems.join('\n  ')}`);
-  const st = await stage(profile, key, locksFor(profile, VENDOR_MODELS));
+  // --only-default: an offline kit's installer carries just the default model.
+  const used = o.onlyDefault ? { ...profile, models: profileIds(profile).filter((id) => id === profile.default) } : profile;
+  const st = await stage(used, key, locksFor(used, VENDOR_MODELS), o.webview ? { webview: o.webview } : {});
   console.log(`staged ${st.manifest.models.length} model(s), ${st.bytes} bytes -> ${path.relative(REPO, st.dir)}`);
   console.log(`overlay: ${path.relative(REPO, st.overlay)}`);
 }
