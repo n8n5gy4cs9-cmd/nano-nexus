@@ -40,7 +40,8 @@ if [ "$SETUP" = "1" ] && [ "$WEB" = "0" ]; then
   fi
 
   # 2) Default model. fetch-model hits the network even when up to date, so only run when absent.
-  if [ ! -f vendor/models/index.json ]; then
+  DEFAULT_MODEL_PATH="$(node scripts/fetch-model.mjs --print-default-path 2>/dev/null || true)"
+  if [ ! -f vendor/models/index.json ] || [ -z "$DEFAULT_MODEL_PATH" ] || [ ! -f "$DEFAULT_MODEL_PATH" ]; then
     step "Fetching default model"
     node scripts/fetch-model.mjs
   fi
