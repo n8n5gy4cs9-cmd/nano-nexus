@@ -44,6 +44,9 @@ tokio = { workspace = true, features = ["signal"] }
 tracing.workspace = true
 time.workspace = true
 
+[target.'cfg(windows)'.dependencies]
+window-vibrancy.workspace = true
+
 [dev-dependencies]
 wiremock.workspace = true
 sha2.workspace = true

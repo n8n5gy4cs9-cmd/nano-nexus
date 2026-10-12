@@ -120,6 +120,20 @@ fn bridge_app_events(app: &tauri::AppHandle) {
     });
 }
 
+/// Windows 11: the Mica backdrop behind the window (UI-DESIGN). Windows 10 and older refuse it; the
+/// opaque theme background is used then.
+#[cfg(windows)]
+fn apply_windows_backdrop(app: &tauri::App) {
+    if let Some(window) = app.get_webview_window("main")
+        && let Err(e) = window_vibrancy::apply_mica(&window, None)
+    {
+        tracing::info!("Mica is not available on this Windows version: {e}");
+    }
+}
+
+#[cfg(not(windows))]
+fn apply_windows_backdrop(_app: &tauri::App) {}
+
 fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let paths = resolve_paths(app)?;
     paths.ensure_dirs()?;
@@ -265,6 +279,7 @@ pub fn run() {
         .invoke_handler(specta.invoke_handler())
         .setup(move |app| {
             specta.mount_events(app);
+            apply_windows_backdrop(app);
             setup(app)
         })
         .build(tauri::generate_context!());

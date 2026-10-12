@@ -227,7 +227,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 ## M13: Windows build, cross-compiled on the Mac (MUST) · [spec](docs/milestones/M13-windows.md)
 - [x] **T13.01** `scripts/doctor.sh --windows` checks (targets, cargo-xwin, makensis, clang-cl, lld-link, XWIN_CACHE_DIR) (2026-10-12) — already in `scripts/doctor.sh --windows`; re-checked 2026-10-12 (targets, cargo-xwin, makensis, clang-cl, lld-link, llvm-rc, XWIN_CACHE_DIR, fetched runtimes)
 - [ ] **T13.02** 🍎 Harden `fetch-runtime-windows.mjs` (x64 vulkan/cpu, arm64) on the Mac; locks recorded
-- [ ] **T13.03** Rust Windows specifics complete: paths (dunce), Recycle Bin, CFA detection, Windows deny list, Mica, Ctrl shortcuts
+- [x] **T13.03** Rust Windows specifics complete: paths (dunce), Recycle Bin, CFA detection, Windows deny list, Mica, Ctrl shortcuts (2026-10-12) — already present: dunce paths, Recycle Bin (`trash`), CFA detection (`nexus-fs::os`), Windows deny list, Job Object + CREATE_NO_WINDOW, Ctrl via `platform.ts`. Added Mica (`window-vibrancy` 0.8, `apply_mica` at startup on Windows). `nexus-core`, `nexus-fs` and `nexus-llm` type-check for x86_64-pc-windows-msvc here; the app crate needs the Windows toolchain (C dependencies), so the Windows-only code is not compiled until the Mac build
 - [ ] **T13.04** `windows/hooks.nsh` (offline kit post-install copy) + NSIS config (currentUser, compression none, WebView2 mode)
 - [ ] **T13.05** `scripts/build-windows.sh` installer format (x64 + arm64)
 - [ ] **T13.06** Portable format + `portable.flag` → data in `.\data\` (AppPaths portable mode)

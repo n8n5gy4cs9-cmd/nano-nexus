@@ -47,6 +47,7 @@ nix = { version = "0.30", default-features = false } # safe SIGTERM / killpg (un
 win32job = "2" # Windows Job Object (KILL_ON_JOB_CLOSE) for llama-server, ADR-014
 sysinfo = { version = "0.39", default-features = false, features = ["system"] } # verify a stale server pid still belongs to our llama-server before killing
 tauri = "2.12" # never 3.x (ADR-001)
+window-vibrancy = "0.8" # Mica backdrop on Windows 11 (same version Tauri itself uses)
 tauri-build = "2.7"
 rusqlite = { version = "0.40", features = ["bundled"] } # bundled SQLite incl. FTS5 (DATA-AND-IPC §1)
 tauri-specta = { version = "=2.0.0-rc.25", features = ["derive", "typescript"] } # ADR-006; exact pin during the rc period
