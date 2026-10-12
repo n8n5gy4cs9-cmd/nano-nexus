@@ -158,6 +158,11 @@ fn truncate_with_note(text: &str, total_tokens: u32, keep_tokens: u32) -> String
 
 /// `<file path="…">…</file>`, with a literal closing tag inside the text neutralised.
 fn file_block(a: &AttachmentBlock, text: &str) -> String {
+    // Tool results already carry their own `<tool_result …>` / `<file …>` tags. Wrapping them again in
+    // `<file path="tool result: list_dir">` made small models echo that wrapper into their answers.
+    if a.path.is_none() && a.label.starts_with("tool result") {
+        return text.replace("</file>", "<\\/file>");
+    }
     let name = a.path.as_deref().unwrap_or(&a.label);
     let safe = text.replace("</file>", "<\\/file>");
     format!("<file path=\"{}\">\n{}\n</file>", name.replace('"', "'"), safe)
@@ -624,6 +629,25 @@ mod tests {
         assert!(last.ends_with("Summarize it"));
         assert_eq!(out.attachment_tokens.len(), 2);
         assert!(out.attachment_tokens.iter().sum::<u32>() <= 3000);
+    }
+
+    #[tokio::test]
+    async fn tool_results_are_not_wrapped_in_a_second_file_tag() {
+        let mock = Mock::new(vec![Script::Events(vec![c("x"), Ok(done("stop"))])]);
+        let mut i = input("What is in Downloads?");
+        i.attachments = vec![AttachmentBlock {
+            label: "tool result: list_dir".into(),
+            path: None,
+            text: "<tool_result name=\"list_dir\">\na.txt\n</tool_result>".into(),
+        }];
+        run(&mock, i).await;
+        let reqs = mock.requests();
+        let last = &reqs[0].messages.last().unwrap().content;
+        assert!(last.starts_with("<tool_result name=\"list_dir\">"), "{last}");
+        assert!(
+            !last.contains("tool result: list_dir"),
+            "the label must not reach the model"
+        );
     }
 
     #[tokio::test]
