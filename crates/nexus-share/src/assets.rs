@@ -36,7 +36,10 @@ fn respond(path: &str, data: &'static [u8], head: bool) -> Response {
     let mut res = Response::new(if head { Body::empty() } else { Body::from(data) });
     let h = res.headers_mut();
     h.insert(header::CONTENT_TYPE, HeaderValue::from_static(mime(path)));
-    h.insert(header::CACHE_CONTROL, HeaderValue::from_static(cache_control(path)));
+    h.insert(
+        header::CACHE_CONTROL,
+        HeaderValue::from_static(cache_control(path)),
+    );
     res
 }
 
@@ -60,10 +63,10 @@ pub fn serve(method: &Method, uri: &Uri) -> Response {
         return respond(path, file.contents(), head);
     }
     let last = path.rsplit('/').next().unwrap_or(path);
-    if !last.contains('.') {
-        if let Some(index) = DIST.get_file("index.html") {
-            return respond("index.html", index.contents(), head);
-        }
+    if !last.contains('.')
+        && let Some(index) = DIST.get_file("index.html")
+    {
+        return respond("index.html", index.contents(), head);
     }
     let mut res = Response::new(Body::from("not found"));
     *res.status_mut() = StatusCode::NOT_FOUND;

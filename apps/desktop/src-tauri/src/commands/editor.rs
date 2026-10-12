@@ -49,9 +49,15 @@ pub async fn editor_ai(
     request: EditorAiRequest,
     on_event: Channel<EditorAiEvent>,
 ) -> CmdResult<()> {
-    service::editor::ai(ctx.inner(), &Caller::Desktop, &job_id, request, Arc::new(ChannelSink(on_event)))
-        .await
-        .map_err(IpcError::from)
+    service::editor::ai(
+        ctx.inner(),
+        &Caller::Desktop,
+        &job_id,
+        request,
+        Arc::new(ChannelSink(on_event)),
+    )
+    .await
+    .map_err(IpcError::from)
 }
 
 #[tauri::command]

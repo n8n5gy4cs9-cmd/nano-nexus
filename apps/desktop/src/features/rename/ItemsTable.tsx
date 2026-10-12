@@ -1,5 +1,5 @@
 import { Check, ChevronDown, ChevronRight, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { Badge, Button, IconButton, Input } from "@/components/ui";
 import { cn } from "@/lib/cn";
@@ -46,7 +46,11 @@ function Row({
   const [open, setOpen] = useState(false);
   const name = chosenName(item) ?? "";
   const [draft, setDraft] = useState(name);
-  useEffect(() => setDraft(name), [name]);
+  const [seenName, setSeenName] = useState(name);
+  if (seenName !== name) {
+    setSeenName(name);
+    setDraft(name);
+  }
   const commit = () => {
     if (draft.trim() && draft !== name) onEdit(item, draft.trim());
     else setDraft(name);

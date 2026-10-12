@@ -74,9 +74,16 @@ pub fn vendor_server_binary(vendor_dir: &Path) -> Option<PathBuf> {
         .collect();
     found.sort();
     // Prefer the folder for this OS and CPU.
-    let arch = if std::env::consts::ARCH == "aarch64" { "arm64" } else { std::env::consts::ARCH };
+    let arch = if std::env::consts::ARCH == "aarch64" {
+        "arm64"
+    } else {
+        std::env::consts::ARCH
+    };
     let host = format!("{}-{arch}", std::env::consts::OS);
-    let mine = found.iter().find(|p| p.to_string_lossy().contains(&host)).cloned();
+    let mine = found
+        .iter()
+        .find(|p| p.to_string_lossy().contains(&host))
+        .cloned();
     mine.or_else(|| found.into_iter().next())
 }
 

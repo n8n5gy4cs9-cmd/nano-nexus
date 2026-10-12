@@ -169,12 +169,14 @@ impl Auth {
         let n = u32::from_le_bytes(random_bytes::<4>()?) % 1_000_000;
         let pin = format!("{n:06}");
         let expires_ms = now_ms() + PAIRING_TTL.as_millis() as i64;
-        let mut inner = self.inner.lock().map_err(|_| NexusError::Internal("auth lock".into()))?;
+        let mut inner = self
+            .inner
+            .lock()
+            .map_err(|_| NexusError::Internal("auth lock".into()))?;
         inner.pairing = Some(Pairing {
             secret: secret.clone(),
             pin: pin.clone(),
             expires: Instant::now() + PAIRING_TTL,
-
         });
         Ok(PairingCode {
             secret,
@@ -211,15 +213,22 @@ impl Auth {
     ) -> Result<(ShareDevice, String), NexusError> {
         let name = name.trim();
         if name.is_empty() || name.chars().count() > 60 {
-            return Err(NexusError::InvalidInput("name a device with 1-60 characters".into()));
+            return Err(NexusError::InvalidInput(
+                "name a device with 1-60 characters".into(),
+            ));
         }
         let code = code.trim();
         {
-            let mut inner = self.inner.lock().map_err(|_| NexusError::Internal("auth lock".into()))?;
+            let mut inner = self
+                .inner
+                .lock()
+                .map_err(|_| NexusError::Internal("auth lock".into()))?;
             let attempts = inner.attempts.entry(ip).or_default();
             if let Some(until) = attempts.locked_until {
                 if now < until {
-                    return Err(NexusError::Busy("too many wrong codes; try again in a few minutes".into()));
+                    return Err(NexusError::Busy(
+                        "too many wrong codes; try again in a few minutes".into(),
+                    ));
                 }
                 *attempts = Attempts::default();
             }
@@ -234,7 +243,10 @@ impl Auth {
             };
             if !valid {
                 let attempts = inner.attempts.entry(ip).or_default();
-                if attempts.window_start.is_none_or(|s| now.duration_since(s) > ATTEMPT_WINDOW) {
+                if attempts
+                    .window_start
+                    .is_none_or(|s| now.duration_since(s) > ATTEMPT_WINDOW)
+                {
                     attempts.window_start = Some(now);
                     attempts.failures = 0;
                 }
@@ -278,8 +290,15 @@ impl Auth {
         if token.is_empty() || token.len() > 128 {
             return None;
         }
-        let device = self.store.share_device_by_hash(&sha256_hex(token)).ok().flatten()?;
-        if let Err(e) = self.store.touch_share_device(&device.id, ip.map(|i| i.to_string()).as_deref()) {
+        let device = self
+            .store
+            .share_device_by_hash(&sha256_hex(token))
+            .ok()
+            .flatten()?;
+        if let Err(e) = self
+            .store
+            .touch_share_device(&device.id, ip.map(|i| i.to_string()).as_deref())
+        {
             tracing::warn!("could not record device activity: {e}");
         }
         Some(device)
@@ -350,8 +369,16 @@ mod tests {
         let code = a.new_pairing_code().unwrap();
         assert_eq!(code.pin.len(), 6);
         let (_, token) = a.pair(&code.pin, "iPad", ip(7), None).unwrap();
-        assert!(a.store.share_device_by_hash(&token).unwrap().is_none(), "plain token must not be stored");
-        assert!(a.store.share_device_by_hash(&sha256_hex(&token)).unwrap().is_some());
+        assert!(
+            a.store.share_device_by_hash(&token).unwrap().is_none(),
+            "plain token must not be stored"
+        );
+        assert!(
+            a.store
+                .share_device_by_hash(&sha256_hex(&token))
+                .unwrap()
+                .is_some()
+        );
     }
 
     #[test]
@@ -398,7 +425,17 @@ mod tests {
         for _ in 0..MAX_ATTEMPTS {
             let _ = b.pair_at("nope", "x", ip(9), None, t0);
         }
-        assert!(b.pair_at(&c2.pin, "x", ip(9), None, t0 + LOCKOUT + Duration::from_secs(1)).is_ok());
+        // Still locked out a second later ...
+        assert!(matches!(
+            b.pair_at(&c2.pin, "x", ip(9), None, t0 + Duration::from_secs(1)),
+            Err(NexusError::Busy(_))
+        ));
+        // ... and free after LOCKOUT. The pairing code itself has expired by then (PAIRING_TTL < LOCKOUT),
+        // so the answer is Unauthorized again, not Busy.
+        assert!(matches!(
+            b.pair_at(&c2.pin, "x", ip(9), None, t0 + LOCKOUT + Duration::from_secs(1)),
+            Err(NexusError::Unauthorized)
+        ));
     }
 
     #[test]
@@ -424,7 +461,10 @@ mod tests {
         let c = a.new_pairing_code().unwrap();
         a.pair(&c.secret, "one", ip(5), None).unwrap();
         let c = a.new_pairing_code().unwrap();
-        assert!(matches!(a.pair(&c.secret, "two", ip(6), None), Err(NexusError::Conflict(_))));
+        assert!(matches!(
+            a.pair(&c.secret, "two", ip(6), None),
+            Err(NexusError::Conflict(_))
+        ));
     }
 
     #[test]

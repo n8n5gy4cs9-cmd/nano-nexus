@@ -164,7 +164,10 @@ impl AppState {
     }
 
     /// The job registry: persisted in `store`, updates go to the event bus.
-    pub fn build_jobs(store: &Arc<Store>, bus: &tokio::sync::broadcast::Sender<AppEvent>) -> nexus_store::JobRegistry {
+    pub fn build_jobs(
+        store: &Arc<Store>,
+        bus: &tokio::sync::broadcast::Sender<AppEvent>,
+    ) -> nexus_store::JobRegistry {
         let bus = bus.clone();
         nexus_store::JobRegistry::new(
             store.clone(),

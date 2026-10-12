@@ -118,7 +118,8 @@ test("installed models are grouped, the active one is marked, and the bundle can
       installed({ id: "f", name: "Found One", source: "discovered", removal: "unlink" }),
     ],
   });
-  await screen.findByText("Bundled One");
+  // The name also appears in the model picker, so expect more than one match.
+  expect((await screen.findAllByText("Bundled One")).length).toBeGreaterThan(0);
   expect(screen.getByText("Active")).toBeTruthy();
   expect(screen.getByRole("heading", { name: "Downloaded" })).toBeTruthy();
   expect(screen.queryByLabelText("Delete Bundled One")).toBeNull();

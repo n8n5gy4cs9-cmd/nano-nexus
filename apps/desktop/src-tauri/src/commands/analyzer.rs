@@ -8,8 +8,8 @@ use tauri::State;
 use tauri::ipc::Channel;
 
 use super::CmdResult;
-use crate::service::analyzer::{CleanupPlan, ExportFile, ExportFormat, FolderReportView, ReportSummary};
 use crate::service;
+use crate::service::analyzer::{CleanupPlan, ExportFile, ExportFormat, FolderReportView, ReportSummary};
 use crate::state::AppState;
 
 type Ctx<'a> = State<'a, Arc<AppState>>;
@@ -37,7 +37,9 @@ pub async fn analyze_folder(
     let progress: Arc<dyn Fn(ScanProgress) + Send + Sync> = Arc::new(move |p| {
         let _ = on_event.send(p);
     });
-    service::analyzer::analyze_folder(&ctx, &job_id, &root, mode, progress).await.map_err(ipc)
+    service::analyzer::analyze_folder(&ctx, &job_id, &root, mode, progress)
+        .await
+        .map_err(ipc)
 }
 
 #[tauri::command]
@@ -93,6 +95,13 @@ pub async fn file_report(ctx: Ctx<'_>, path: String) -> CmdResult<String> {
 /// Plan (not apply) a cleanup of duplicates and safe junk; review it on the Changes page.
 #[tauri::command]
 #[specta::specta]
-pub async fn report_cleanup_plan(ctx: Ctx<'_>, id: String, include_duplicates: bool, include_junk: bool) -> CmdResult<CleanupPlan> {
-    service::analyzer::cleanup_plan(&ctx, &id, include_duplicates, include_junk).await.map_err(ipc)
+pub async fn report_cleanup_plan(
+    ctx: Ctx<'_>,
+    id: String,
+    include_duplicates: bool,
+    include_junk: bool,
+) -> CmdResult<CleanupPlan> {
+    service::analyzer::cleanup_plan(&ctx, &id, include_duplicates, include_junk)
+        .await
+        .map_err(ipc)
 }

@@ -180,7 +180,8 @@ mod tests {
         s.insert_share_device(&device("d1"), "hash1").unwrap();
         assert_eq!(s.share_device_by_hash("hash1").unwrap().unwrap().id, "d1");
         assert!(s.share_device_by_hash("nope").unwrap().is_none());
-        s.update_share_device("d1", Some("iPad"), Some(SharePolicy::Full)).unwrap();
+        s.update_share_device("d1", Some("iPad"), Some(SharePolicy::Full))
+            .unwrap();
         let d = s.share_device("d1").unwrap().unwrap();
         assert_eq!((d.name.as_str(), d.policy), ("iPad", SharePolicy::Full));
         assert_eq!(s.count_share_devices().unwrap(), 1);

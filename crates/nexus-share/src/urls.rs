@@ -64,16 +64,19 @@ pub fn share_urls(bind: IpAddr, port: u16, https: bool, mdns_name: Option<&str>)
     } else {
         vec![bind.to_string()]
     };
-    let mut urls: Vec<String> = hosts.into_iter().map(|h| format!("{scheme}://{h}:{port}")).collect();
+    let mut urls: Vec<String> = hosts
+        .into_iter()
+        .map(|h| format!("{scheme}://{h}:{port}"))
+        .collect();
     if bind.is_unspecified() {
         // The computer's own .local name works without any extra advertising, so list it first.
         if let Some(host) = host_local_name() {
             urls.push(format!("{scheme}://{host}.local:{port}"));
         }
-        if let Some(name) = mdns_name {
-            if host_local_name().as_deref() != Some(name) {
-                urls.push(format!("{scheme}://{name}.local:{port}"));
-            }
+        if let Some(name) = mdns_name
+            && host_local_name().as_deref() != Some(name)
+        {
+            urls.push(format!("{scheme}://{name}.local:{port}"));
         }
     }
     urls
@@ -103,7 +106,11 @@ mod tests {
 
     #[test]
     fn private_ranges_sort_first() {
-        let mut v = vec![Ipv4Addr::new(8, 8, 8, 8), Ipv4Addr::new(10, 0, 0, 2), Ipv4Addr::new(192, 168, 1, 2)];
+        let mut v = [
+            Ipv4Addr::new(8, 8, 8, 8),
+            Ipv4Addr::new(10, 0, 0, 2),
+            Ipv4Addr::new(192, 168, 1, 2),
+        ];
         v.sort_by_key(|i| rank(*i));
         assert_eq!(v[0], Ipv4Addr::new(192, 168, 1, 2));
         assert_eq!(v[2], Ipv4Addr::new(8, 8, 8, 8));
@@ -117,11 +124,18 @@ mod tests {
 
     #[test]
     fn pairing_url_uses_a_fragment() {
-        assert_eq!(pairing_url("http://1.2.3.4:9889", "abc"), "http://1.2.3.4:9889/pair#abc");
+        assert_eq!(
+            pairing_url("http://1.2.3.4:9889", "abc"),
+            "http://1.2.3.4:9889/pair#abc"
+        );
     }
 
     #[test]
     fn qr_is_an_svg() {
-        assert!(qr_svg("http://192.168.1.20:9889/pair#abc").unwrap().contains("<svg"));
+        assert!(
+            qr_svg("http://192.168.1.20:9889/pair#abc")
+                .unwrap()
+                .contains("<svg")
+        );
     }
 }

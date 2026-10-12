@@ -306,6 +306,7 @@ pub fn sync_extra_folders(store: &Store, dirs: &[PathBuf]) -> Result<usize, Mode
 
 /// Result of re-hashing one model.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename = "ModelVerifyResult")]
 pub struct VerifyResult {
     pub id: String,
     pub ok: bool,

@@ -20,6 +20,13 @@ for arg in "$@"; do
   esac
 done
 
+# Linux: tauri.macos.conf.json (which sets macOSPrivateApi) is not merged, and tauri-build refuses the
+# `macos-private-api` cargo feature without it. Setting it here lets the whole workspace compile on Linux.
+# (Also needs: libwebkit2gtk-4.1-dev libgtk-3-dev libsoup-3.0-dev librsvg2-dev libayatana-appindicator3-dev.)
+if [ "$(uname -s)" != "Darwin" ] && [ -z "${TAURI_CONFIG:-}" ]; then
+  export TAURI_CONFIG='{"app":{"macOSPrivateApi":true}}'
+fi
+
 step() { printf '\n\033[1m▶ %s\033[0m\n' "$*"; }
 skip() { printf '\033[2m  (skipped: %s)\033[0m\n' "$*"; }
 

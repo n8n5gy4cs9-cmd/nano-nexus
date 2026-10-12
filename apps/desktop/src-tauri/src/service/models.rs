@@ -478,7 +478,12 @@ pub fn pump(ctx: &Ctx) {
         // Cancelling the job in the Jobs panel cancels the download (and discards the part file).
         let finished = CancellationToken::new();
         if let Some(job) = &job {
-            let (ctx, token, finished, id) = (Arc::clone(&ctx), job.token.clone(), finished.clone(), download_id.clone());
+            let (ctx, token, finished, id) = (
+                Arc::clone(&ctx),
+                job.token.clone(),
+                finished.clone(),
+                download_id.clone(),
+            );
             tokio::spawn(async move {
                 tokio::select! {
                     _ = token.cancelled() => { signal_running(&ctx, &id, INTENT_CANCEL); }
@@ -505,7 +510,8 @@ fn end_download_job(ctx: &AppCtx, job: &nexus_core::ids::JobId, download_id: &st
             ctx.jobs.finish(job, Some(format!("/models?focus={download_id}")));
         }
         Ok(Some(d)) if d.status == "failed" => {
-            ctx.jobs.fail(job, d.error.as_deref().unwrap_or("The download failed."));
+            ctx.jobs
+                .fail(job, d.error.as_deref().unwrap_or("The download failed."));
         }
         // Paused or cancelled: the entry leaves the running list; Resume starts a new one.
         _ => {
@@ -552,7 +558,11 @@ async fn run_download(
             }
             if let Some(job) = &job {
                 let fraction = (p.total > 0).then(|| p.bytes as f32 / p.total as f32);
-                ctx.jobs.progress(job, fraction, Some(format!("{:.1} MB/s", p.bytes_per_sec / 1_048_576.0)));
+                ctx.jobs.progress(
+                    job,
+                    fraction,
+                    Some(format!("{:.1} MB/s", p.bytes_per_sec / 1_048_576.0)),
+                );
             }
             let _ = ctx.bus.send(AppEvent::DownloadProgress(DownloadView {
                 id: id.clone(),

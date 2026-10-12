@@ -7,7 +7,10 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use nexus_analyze::watch::{Debounce, FolderWatcher, ReportDelta, diff_reports, is_due, is_significant, notification_text, watch_folder};
+use nexus_analyze::watch::{
+    Debounce, FolderWatcher, ReportDelta, diff_reports, is_due, is_significant, notification_text,
+    watch_folder,
+};
 use nexus_analyze::{DupMode, FolderReport};
 use nexus_core::error::NexusError;
 use nexus_core::events::{NotificationAction, NotificationLevel};
@@ -47,7 +50,10 @@ pub struct WatchView {
 }
 
 fn now_ms() -> i64 {
-    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis() as i64).unwrap_or(0)
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis() as i64)
+        .unwrap_or(0)
 }
 
 fn last_run_ms(ctx: &AppCtx, w: &WatchRow) -> Option<i64> {
@@ -57,11 +63,23 @@ fn last_run_ms(ctx: &AppCtx, w: &WatchRow) -> Option<i64> {
 
 fn view(ctx: &AppCtx, w: WatchRow) -> WatchView {
     let last = last_run_ms(ctx, &w);
-    WatchView { id: w.id, root: w.root, schedule: w.schedule, enabled: w.enabled, last_report_id: w.last_report_id, last_run_at: last.map(|t| t as f64) }
+    WatchView {
+        id: w.id,
+        root: w.root,
+        schedule: w.schedule,
+        enabled: w.enabled,
+        last_report_id: w.last_report_id,
+        last_run_at: last.map(|t| t as f64),
+    }
 }
 
 pub fn list(ctx: &AppCtx) -> Result<Vec<WatchView>, NexusError> {
-    Ok(ctx.store.list_watches()?.into_iter().map(|w| view(ctx, w)).collect())
+    Ok(ctx
+        .store
+        .list_watches()?
+        .into_iter()
+        .map(|w| view(ctx, w))
+        .collect())
 }
 
 fn check_schedule(schedule: &str) -> Result<(), NexusError> {
@@ -79,9 +97,13 @@ pub fn create(ctx: &Arc<AppCtx>, root: &str, schedule: &str) -> Result<WatchView
         return Err(NexusError::InvalidInput(format!("{root} is not a folder")));
     }
     if path.parent().is_none() || path == home_dir() {
-        return Err(NexusError::InvalidInput("Pick a subfolder: watching the whole home or root folder is too noisy.".into()));
+        return Err(NexusError::InvalidInput(
+            "Pick a subfolder: watching the whole home or root folder is too noisy.".into(),
+        ));
     }
-    ctx.perms.check("watch", path, Access::Read).map_err(|e| NexusError::PermissionDenied(e.to_string()))?;
+    ctx.perms
+        .check("watch", path, Access::Read)
+        .map_err(|e| NexusError::PermissionDenied(e.to_string()))?;
     let row = ctx.store.insert_watch(&MessageId::new().0, root, schedule)?;
     sync_watchers(ctx);
     Ok(view(ctx, row))
@@ -108,10 +130,17 @@ pub fn delete(ctx: &Arc<AppCtx>, id: &str) -> Result<bool, NexusError> {
 
 /// Start file watchers for enabled `on_change` watches and stop the ones that no longer apply.
 pub fn sync_watchers(ctx: &Arc<AppCtx>) {
-    let Ok(watches) = ctx.store.list_watches() else { return };
-    let wanted: HashMap<String, WatchRow> =
-        watches.into_iter().filter(|w| w.enabled && w.schedule == "on_change").map(|w| (w.id.clone(), w)).collect();
-    let Ok(mut active) = ctx.watches.active.lock() else { return };
+    let Ok(watches) = ctx.store.list_watches() else {
+        return;
+    };
+    let wanted: HashMap<String, WatchRow> = watches
+        .into_iter()
+        .filter(|w| w.enabled && w.schedule == "on_change")
+        .map(|w| (w.id.clone(), w))
+        .collect();
+    let Ok(mut active) = ctx.watches.active.lock() else {
+        return;
+    };
     active.retain(|id, _| wanted.contains_key(id));
     let home = home_dir();
     for (id, w) in wanted {
@@ -127,7 +156,13 @@ pub fn sync_watchers(ctx: &Arc<AppCtx>) {
         });
         match started {
             Ok(watcher) => {
-                active.insert(id, Active { debounce, _watcher: watcher });
+                active.insert(
+                    id,
+                    Active {
+                        debounce,
+                        _watcher: watcher,
+                    },
+                );
             }
             Err(e) => tracing::warn!(root = %w.root, "could not watch folder: {e}"),
         }
@@ -140,17 +175,39 @@ fn load_folder_report(ctx: &AppCtx, id: &str) -> Option<FolderReport> {
     serde_json::from_str(&text).ok()
 }
 
-fn notify(ctx: &AppCtx, level: NotificationLevel, title: String, body: Option<String>, report_id: Option<&str>) {
-    let action = report_id.map(|id| NotificationAction { label: "Open report".into(), route: format!("/analyzer?report={id}") });
-    let _ = ctx.bus.send(AppEvent::Notify(NewNotification { level, kind: "watch".into(), title, body, action }));
+fn notify(
+    ctx: &AppCtx,
+    level: NotificationLevel,
+    title: String,
+    body: Option<String>,
+    report_id: Option<&str>,
+) {
+    let action = report_id.map(|id| NotificationAction {
+        label: "Open report".into(),
+        route: format!("/analyzer?report={id}"),
+    });
+    let _ = ctx.bus.send(AppEvent::Notify(NewNotification {
+        level,
+        kind: "watch".into(),
+        title,
+        body,
+        action,
+    }));
 }
 
 /// Scan the watched folder now and compare with the previous report. `manual` (Run now) always tells
 /// the user what happened; scheduled runs only notify when a threshold is crossed.
 pub async fn run(ctx: &Arc<AppCtx>, id: &str, manual: bool) -> Result<Option<ReportDelta>, NexusError> {
-    let w = ctx.store.get_watch(id)?.ok_or_else(|| NexusError::NotFound("watch".into()))?;
+    let w = ctx
+        .store
+        .get_watch(id)?
+        .ok_or_else(|| NexusError::NotFound("watch".into()))?;
     {
-        let mut running = ctx.watches.running.lock().map_err(|_| NexusError::Internal("watch lock".into()))?;
+        let mut running = ctx
+            .watches
+            .running
+            .lock()
+            .map_err(|_| NexusError::Internal("watch lock".into()))?;
         if !running.insert(id.to_owned()) {
             return Err(NexusError::InvalidInput("This watch is already running.".into()));
         }
@@ -164,17 +221,37 @@ pub async fn run(ctx: &Arc<AppCtx>, id: &str, manual: bool) -> Result<Option<Rep
 
 async fn run_inner(ctx: &Arc<AppCtx>, w: &WatchRow, manual: bool) -> Result<Option<ReportDelta>, NexusError> {
     // A background run never asks for access: without a grant the user is told once and the run is skipped.
-    if ctx.perms.check("watch", Path::new(&w.root), Access::Read).is_err() {
-        notify(ctx, NotificationLevel::Warning, format!("Watch needs access to {}", w.root), Some("Open the Analyzer and allow the folder again.".into()), None);
+    if ctx
+        .perms
+        .check("watch", Path::new(&w.root), Access::Read)
+        .is_err()
+    {
+        notify(
+            ctx,
+            NotificationLevel::Warning,
+            format!("Watch needs access to {}", w.root),
+            Some("Open the Analyzer and allow the folder again.".into()),
+            None,
+        );
         return Err(NexusError::PermissionDenied(w.root.clone()));
     }
     let job_id = MessageId::new().0;
-    let new_id = super::analyzer::analyze_folder(ctx, &job_id, &w.root, DupMode::Fast, Arc::new(|_| {})).await?;
-    let prev = w.last_report_id.as_deref().and_then(|id| load_folder_report(ctx, id));
+    let new_id =
+        super::analyzer::analyze_folder(ctx, &job_id, &w.root, DupMode::Fast, Arc::new(|_| {})).await?;
+    let prev = w
+        .last_report_id
+        .as_deref()
+        .and_then(|id| load_folder_report(ctx, id));
     ctx.store.set_watch_last_report(&w.id, &new_id)?;
     let (Some(prev), Some(new)) = (prev, load_folder_report(ctx, &new_id)) else {
         if manual {
-            notify(ctx, NotificationLevel::Info, "Watch baseline saved".into(), Some(format!("{} will be compared with this scan next time.", w.root)), Some(&new_id));
+            notify(
+                ctx,
+                NotificationLevel::Info,
+                "Watch baseline saved".into(),
+                Some(format!("{} will be compared with this scan next time.", w.root)),
+                Some(&new_id),
+            );
         }
         return Ok(None);
     };
@@ -183,14 +260,22 @@ async fn run_inner(ctx: &Arc<AppCtx>, w: &WatchRow, manual: bool) -> Result<Opti
         let (title, body) = notification_text(&delta);
         notify(ctx, NotificationLevel::Info, title, Some(body), Some(&new_id));
     } else if manual {
-        notify(ctx, NotificationLevel::Info, "No big changes".into(), Some(format!("{} is about the same as last time.", w.root)), Some(&new_id));
+        notify(
+            ctx,
+            NotificationLevel::Info,
+            "No big changes".into(),
+            Some(format!("{} is about the same as last time.", w.root)),
+            Some(&new_id),
+        );
     }
     Ok(Some(delta))
 }
 
 /// One scheduler pass: start every watch that is due. Runs execute in the background.
 pub fn tick(ctx: &Arc<AppCtx>) {
-    let Ok(watches) = ctx.store.list_watches() else { return };
+    let Ok(watches) = ctx.store.list_watches() else {
+        return;
+    };
     let now = now_ms();
     for w in watches.into_iter().filter(|w| w.enabled) {
         let due = if w.schedule == "on_change" {

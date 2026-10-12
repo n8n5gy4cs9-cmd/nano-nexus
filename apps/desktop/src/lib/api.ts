@@ -20,7 +20,7 @@ import type {
   MemoryInfo,
   RepoFiles,
   SearchHit,
-  VerifyResult,
+  ModelVerifyResult,
   AppInfo,
   AssistantCard,
   AssistantDetail,
@@ -217,7 +217,7 @@ export const api = {
     pickFile: () => getTransport().call<string | null>("models_pick_file"),
     import: (path: string, copy: boolean) => getTransport().call<InstalledModel>("models_import", { path, copy }),
     rescan: () => getTransport().call<number>("models_rescan"),
-    verifyBundled: () => getTransport().call<VerifyResult[]>("models_verify_bundled"),
+    verifyBundled: () => getTransport().call<ModelVerifyResult[]>("models_verify_bundled"),
     /** Subscribe to `download:progress`. */
     onProgress: (handler: (d: DownloadView) => void): Promise<Unsubscribe> => getTransport().on<DownloadView>("download:progress", handler),
     /** Subscribe to `model:changed`. */

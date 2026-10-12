@@ -17,7 +17,11 @@ pub struct TlsMaterial {
 }
 
 fn colon_hex(bytes: &[u8]) -> String {
-    bytes.iter().map(|b| format!("{b:02X}")).collect::<Vec<_>>().join(":")
+    bytes
+        .iter()
+        .map(|b| format!("{b:02X}"))
+        .collect::<Vec<_>>()
+        .join(":")
 }
 
 fn io(e: std::io::Error) -> NexusError {
@@ -36,14 +40,18 @@ pub fn load_or_create(dir: &Path, names: &[String]) -> Result<TlsMaterial, Nexus
     sorted.sort();
     sorted.dedup();
     let wanted = sorted.join("\n");
-    if std::fs::read_to_string(&names_f).ok().as_deref() == Some(wanted.as_str()) {
-        if let (Ok(cert_pem), Ok(key_pem), Ok(fingerprint)) = (
+    if std::fs::read_to_string(&names_f).ok().as_deref() == Some(wanted.as_str())
+        && let (Ok(cert_pem), Ok(key_pem), Ok(fingerprint)) = (
             std::fs::read_to_string(&cert_f),
             std::fs::read_to_string(&key_f),
             std::fs::read_to_string(&fp_f),
-        ) {
-            return Ok(TlsMaterial { cert_pem, key_pem, fingerprint: fingerprint.trim().to_owned() });
-        }
+        )
+    {
+        return Ok(TlsMaterial {
+            cert_pem,
+            key_pem,
+            fingerprint: fingerprint.trim().to_owned(),
+        });
     }
     let certified = rcgen::generate_simple_self_signed(sorted)
         .map_err(|e| NexusError::Internal(format!("could not create the HTTPS certificate: {e}")))?;
@@ -60,7 +68,11 @@ pub fn load_or_create(dir: &Path, names: &[String]) -> Result<TlsMaterial, Nexus
     }
     std::fs::write(&names_f, &wanted).map_err(io)?;
     std::fs::write(&fp_f, &fingerprint).map_err(io)?;
-    Ok(TlsMaterial { cert_pem, key_pem, fingerprint })
+    Ok(TlsMaterial {
+        cert_pem,
+        key_pem,
+        fingerprint,
+    })
 }
 
 #[cfg(test)]

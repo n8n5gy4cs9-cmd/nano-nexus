@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FilePlus2, FolderPlus, Library, MessageCircle, RefreshCw, Search, Trash2, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -14,13 +14,18 @@ import { useAssistantChoice } from "@/stores/assistant";
 import { PassageDialog } from "./PassageDialog";
 import type { KbLibrary, KbPassage, KbProgress } from "./types";
 
+/** A copy of `obj` without `key`. */
+function omit<V>(obj: Record<string, V>, key: string): Record<string, V> {
+  return Object.fromEntries(Object.entries(obj).filter(([k]) => k !== key));
+}
+
 export const LIBRARIES_KEY = ["knowledge", "libraries"] as const;
 
 /** Library page: add reference material, watch indexing, and check what the model would see. */
 export function LibraryPage() {
   const qc = useQueryClient();
   const [progress, setProgress] = useState<Record<string, KbProgress>>({});
-  const jobs = useRef<Record<string, string>>({});
+  const [jobs, setJobs] = useState<Record<string, string>>({});
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<KbPassage[] | null>(null);
   const [open, setOpen] = useState<number | null>(null);
@@ -47,16 +52,12 @@ export function LibraryPage() {
   const reindex = useMutation({
     mutationFn: async (id: string) => {
       const job = crypto.randomUUID();
-      jobs.current[id] = job;
+      setJobs((cur) => ({ ...cur, [id]: job }));
       try {
         return await api.knowledge.reindex(job, id, (p) => setProgress((cur) => ({ ...cur, [id]: p })));
       } finally {
-        delete jobs.current[id];
-        setProgress((cur) => {
-          const rest = { ...cur };
-          delete rest[id];
-          return rest;
-        });
+        setJobs((cur) => omit(cur, id));
+        setProgress((cur) => omit(cur, id));
       }
     },
     onSuccess: (r) => {
@@ -174,11 +175,11 @@ export function LibraryPage() {
               key={l.id}
               lib={l}
               progress={progress[l.id]}
-              busy={reindex.isPending && jobs.current[l.id] !== undefined}
+              busy={reindex.isPending && jobs[l.id] !== undefined}
               onToggle={(enabled) => toggle.mutate({ id: l.id, enabled })}
               onReindex={() => reindex.mutate(l.id)}
               onCancel={() => {
-                const job = jobs.current[l.id];
+                const job = jobs[l.id];
                 if (job) void api.knowledge.cancel(job);
               }}
               onRemove={() => remove.mutate(l.id)}

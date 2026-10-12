@@ -275,13 +275,16 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let ctx = AppState::for_tests(dir.path());
         let cards = list(&ctx).unwrap();
-        assert_eq!(cards.len(), 18);
+        assert_eq!(cards.len(), 19);
         assert_eq!(cards[0].id, "nexus");
         assert!(cards[0].available);
         let scout = cards.iter().find(|c| c.id == "folder-scout").unwrap();
         assert!(scout.available);
         let forge = cards.iter().find(|c| c.id == "rename-forge").unwrap();
-        assert!(forge.available, "Rename Forge is selectable (its pipeline lives on the Rename Forge page)");
+        assert!(
+            forge.available,
+            "Rename Forge is selectable (its pipeline lives on the Rename Forge page)"
+        );
     }
 
     #[tokio::test]

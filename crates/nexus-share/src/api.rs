@@ -66,7 +66,13 @@ const BASE: &[&str] = &[
     "notifications_mark_read",
 ];
 
-const READ: &[&str] = &["reports_list", "report_folder", "report_body", "models_list", "fs_grants_list"];
+const READ: &[&str] = &[
+    "reports_list",
+    "report_folder",
+    "report_body",
+    "models_list",
+    "fs_grants_list",
+];
 
 const FULL: &[&str] = &["models_activate"];
 
@@ -105,7 +111,13 @@ mod tests {
 
     #[test]
     fn chat_policies_cannot_apply_or_grant() {
-        for cmd in ["changeset_apply", "changeset_undo", "fs_grant", "settings_set", "share_start"] {
+        for cmd in [
+            "changeset_apply",
+            "changeset_undo",
+            "fs_grant",
+            "settings_set",
+            "share_start",
+        ] {
             for p in [SharePolicy::ChatOnly, SharePolicy::ChatRead] {
                 assert_eq!(authorize(p, cmd).unwrap_err().code, ErrorCode::NotFound, "{cmd}");
             }

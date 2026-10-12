@@ -10,7 +10,9 @@ use tauri::ipc::Channel;
 
 use super::CmdResult;
 use crate::service;
-use crate::service::rename::{RenameItemView, RenamePlanOptions, RenamePlanView, RenameProgress, RenameSessionView};
+use crate::service::rename::{
+    RenameItemView, RenamePlanOptions, RenamePlanView, RenameProgress, RenameSessionView,
+};
 use crate::state::AppState;
 
 type Ctx<'a> = State<'a, Arc<AppState>>;
@@ -34,7 +36,9 @@ pub async fn rename_session_create(
     root: String,
     on_event: Channel<RenameProgress>,
 ) -> CmdResult<RenameSessionView> {
-    service::rename::session_create(&ctx, &job_id, &root, progress_to(on_event)).await.map_err(ipc)
+    service::rename::session_create(&ctx, &job_id, &root, progress_to(on_event))
+        .await
+        .map_err(ipc)
 }
 
 #[tauri::command]
@@ -51,7 +55,11 @@ pub async fn rename_session_delete(ctx: Ctx<'_>, session_id: String) -> CmdResul
 
 #[tauri::command]
 #[specta::specta]
-pub async fn rename_items(ctx: Ctx<'_>, session_id: String, status: Option<String>) -> CmdResult<Vec<RenameItemView>> {
+pub async fn rename_items(
+    ctx: Ctx<'_>,
+    session_id: String,
+    status: Option<String>,
+) -> CmdResult<Vec<RenameItemView>> {
     service::rename::items(&ctx, &session_id, status.as_deref()).map_err(ipc)
 }
 
@@ -66,9 +74,16 @@ pub async fn rename_propose(
     try_again: bool,
     on_event: Channel<RenameProgress>,
 ) -> CmdResult<u32> {
-    service::rename::propose_names(&ctx, &job_id, &session_id, symbol_ids, try_again, progress_to(on_event))
-        .await
-        .map_err(ipc)
+    service::rename::propose_names(
+        &ctx,
+        &job_id,
+        &session_id,
+        symbol_ids,
+        try_again,
+        progress_to(on_event),
+    )
+    .await
+    .map_err(ipc)
 }
 
 #[tauri::command]
@@ -81,14 +96,21 @@ pub async fn rename_item_update(
     status: Option<String>,
     include_strings: Option<bool>,
 ) -> CmdResult<RenameItemView> {
-    service::rename::item_update(&ctx, &session_id, &symbol_id, final_name, status, include_strings).map_err(ipc)
+    service::rename::item_update(&ctx, &session_id, &symbol_id, final_name, status, include_strings)
+        .map_err(ipc)
 }
 
 /// Plan the accepted renames as a change set to review on the Changes page.
 #[tauri::command]
 #[specta::specta]
-pub async fn rename_plan(ctx: Ctx<'_>, session_id: String, options: RenamePlanOptions) -> CmdResult<RenamePlanView> {
-    service::rename::plan(&ctx, &session_id, options).await.map_err(ipc)
+pub async fn rename_plan(
+    ctx: Ctx<'_>,
+    session_id: String,
+    options: RenamePlanOptions,
+) -> CmdResult<RenamePlanView> {
+    service::rename::plan(&ctx, &session_id, options)
+        .await
+        .map_err(ipc)
 }
 
 #[tauri::command]
@@ -110,7 +132,9 @@ pub async fn rename_verify(
     let sink: Arc<dyn Fn(String) + Send + Sync> = Arc::new(move |l| {
         let _ = on_event.send(l);
     });
-    service::rename::verify(&ctx, &job_id, &session_id, &checker_id, sink).await.map_err(ipc)
+    service::rename::verify(&ctx, &job_id, &session_id, &checker_id, sink)
+        .await
+        .map_err(ipc)
 }
 
 #[tauri::command]

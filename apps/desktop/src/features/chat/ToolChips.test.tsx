@@ -5,7 +5,7 @@ import { ToolChips, parseToolTrace } from "./ToolChips";
 
 describe("parseToolTrace", () => {
   it("reads stored chips and ignores junk", () => {
-    expect(parseToolTrace('[{"tool":"read_file","args":{},"summary":"Read a.md","ok":true}]')).toEqual([{ tool: "read_file", summary: "Read a.md", ok: true }]);
+    expect(parseToolTrace('[{"tool":"read_file","args":{},"summary":"Read a.md","ok":true}]')).toEqual([{ tool: "read_file", summary: "Read a.md", ok: true, args: {} }]);
     expect(parseToolTrace(null)).toEqual([]);
     expect(parseToolTrace("not json")).toEqual([]);
     expect(parseToolTrace('{"a":1}')).toEqual([]);

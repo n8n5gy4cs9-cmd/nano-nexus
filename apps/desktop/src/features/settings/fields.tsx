@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useState } from "react";
 
 import { Input, Switch } from "@/components/ui";
 
@@ -79,7 +79,11 @@ export function TextRow({
   width?: string;
 }) {
   const [draft, setDraft] = useState(value);
-  useEffect(() => setDraft(value), [value]);
+  const [seenValue, setSeenValue] = useState(value);
+  if (seenValue !== value) {
+    setSeenValue(value);
+    setDraft(value);
+  }
   const commit = () => {
     if (draft !== value) onCommit(draft);
   };

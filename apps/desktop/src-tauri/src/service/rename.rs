@@ -7,8 +7,8 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use nexus_agent::pipelines::rename::{ProposeOptions, propose};
-use nexus_agent::tools::Gatekeeper;
 use nexus_agent::pipelines::{PipelineCx, SchedulerJson};
+use nexus_agent::tools::Gatekeeper;
 use nexus_analyze::code::index::{Flags, IndexOptions, build_index};
 use nexus_analyze::code::plan::{PlanOptions, RenameItem, plan_renames};
 use nexus_analyze::code::propose::{ProposalStatus, Validator};
@@ -27,7 +27,14 @@ use tokio_util::sync::CancellationToken;
 use super::pipelines::{gatekeeper, home_dir, pipeline_err, tool_err};
 use crate::state::{AppCtx, AppEvent};
 
-const STATUSES: &[&str] = &["candidate", "proposed", "accepted", "rejected", "needs_manual", "applied"];
+const STATUSES: &[&str] = &[
+    "candidate",
+    "proposed",
+    "accepted",
+    "rejected",
+    "needs_manual",
+    "applied",
+];
 
 /// Loaded indexes and running jobs.
 #[derive(Default)]
@@ -159,13 +166,20 @@ fn session_row(ctx: &AppCtx, id: &str) -> Result<RenameSessionRow, NexusError> {
 }
 
 fn load_index(ctx: &AppCtx, s: &RenameSessionRow) -> Result<Arc<CodeIndex>, NexusError> {
-    if let Some(i) = ctx.renames.indexes.lock().ok().and_then(|m| m.get(&s.id).cloned()) {
+    if let Some(i) = ctx
+        .renames
+        .indexes
+        .lock()
+        .ok()
+        .and_then(|m| m.get(&s.id).cloned())
+    {
         return Ok(i);
     }
-    let index = Arc::new(
-        CodeIndex::load(Path::new(&s.index_path))
-            .map_err(|e| NexusError::InvalidInput(format!("The project index is gone ({e}); index the project again.")))?,
-    );
+    let index = Arc::new(CodeIndex::load(Path::new(&s.index_path)).map_err(|e| {
+        NexusError::InvalidInput(format!(
+            "The project index is gone ({e}); index the project again."
+        ))
+    })?);
     if let Ok(mut m) = ctx.renames.indexes.lock() {
         m.insert(s.id.clone(), index.clone());
     }
@@ -173,14 +187,24 @@ fn load_index(ctx: &AppCtx, s: &RenameSessionRow) -> Result<Arc<CodeIndex>, Nexu
 }
 
 fn view_of(index: &CodeIndex, r: RenameItemRow, error: Option<String>) -> RenameItemView {
-    let sym = r.symbol_id.parse::<u32>().ok().and_then(|n| index.symbol(SymbolId(n)));
+    let sym = r
+        .symbol_id
+        .parse::<u32>()
+        .ok()
+        .and_then(|n| index.symbol(SymbolId(n)));
     let (path, line, usages) = match sym {
         Some(s) => {
             let path = match s.kind {
-                nexus_analyze::code::SymbolKind::File | nexus_analyze::code::SymbolKind::Folder => s.signature.clone(),
+                nexus_analyze::code::SymbolKind::File | nexus_analyze::code::SymbolKind::Folder => {
+                    s.signature.clone()
+                }
                 _ => index.path_of(s.def.file).unwrap_or_default().to_owned(),
             };
-            (path, s.def.line, s.refs.iter().filter(|x| !x.is_def).count() as u32)
+            (
+                path,
+                s.def.line,
+                s.refs.iter().filter(|x| !x.is_def).count() as u32,
+            )
         }
         None => (String::new(), 0, 0),
     };
@@ -228,7 +252,9 @@ pub async fn session_create(
     let job = ctx.jobs.start("index", &format!("Index {root}"))?;
     let progress = mirror_progress(ctx, &job.id, progress);
     let result = session_create_job(ctx, job_id, &job.token, root, progress).await;
-    super::jobs::end(ctx, &job.id, &result, |v| Some(format!("/rename?session={}", v.id)));
+    super::jobs::end(ctx, &job.id, &result, |v| {
+        Some(format!("/rename?session={}", v.id))
+    });
     result
 }
 
@@ -245,7 +271,10 @@ async fn session_create_job(
         .await
         .map_err(tool_err)?;
     if !canon.is_dir() {
-        return Err(NexusError::InvalidInput(format!("{} is not a folder", canon.display())));
+        return Err(NexusError::InvalidInput(format!(
+            "{} is not a folder",
+            canon.display()
+        )));
     }
     let id = MessageId::new().0;
     let dir = ctx.paths.cache.join("rename").join(&id);
@@ -264,7 +293,11 @@ async fn session_create_job(
 
     let cancel = cancel.clone();
     ctx.renames.add_job(job_id, cancel.clone());
-    progress(RenameProgress { phase: "indexing".into(), done: 0, total: 0 });
+    progress(RenameProgress {
+        phase: "indexing".into(),
+        done: 0,
+        total: 0,
+    });
     let (root_path, save_to, token) = (canon.clone(), index_path.clone(), cancel.clone());
     let built = tokio::task::spawn_blocking(move || {
         let index = build_index(&root_path, &IndexOptions::default(), None, &token)?;
@@ -277,11 +310,19 @@ async fn session_create_job(
         Ok(i) => i,
         Err(e) => {
             let _ = ctx.store.set_rename_session_status(&id, "failed", None);
-            return Err(if cancel.is_cancelled() { NexusError::Cancelled } else { NexusError::InvalidInput(e.to_string()) });
+            return Err(if cancel.is_cancelled() {
+                NexusError::Cancelled
+            } else {
+                NexusError::InvalidInput(e.to_string())
+            });
         }
     };
 
-    progress(RenameProgress { phase: "detecting".into(), done: 0, total: 0 });
+    progress(RenameProgress {
+        phase: "detecting".into(),
+        done: 0,
+        total: 0,
+    });
     let cands = detect(&index, &RuleOptions::default());
     let rows: Vec<RenameItemRow> = cands
         .iter()
@@ -296,7 +337,9 @@ async fn session_create_job(
                 final_name: None,
                 confidence: None,
                 reason: None,
-                issues: Some(json_list(&c.issues.iter().map(|i| i.rule.clone()).collect::<Vec<_>>())),
+                issues: Some(json_list(
+                    &c.issues.iter().map(|i| i.rule.clone()).collect::<Vec<_>>(),
+                )),
                 flags: Some(json_list(&flag_names(s.flags))),
                 status: "candidate".into(),
                 include_strings: false,
@@ -307,7 +350,8 @@ async fn session_create_job(
     let mut langs: Vec<String> = index.files.iter().map(|f| f.lang.name().to_owned()).collect();
     langs.sort();
     langs.dedup();
-    ctx.store.set_rename_session_status(&id, "ready", Some(&json_list(&langs)))?;
+    ctx.store
+        .set_rename_session_status(&id, "ready", Some(&json_list(&langs)))?;
     let view = RenameSessionView {
         id: id.clone(),
         root: canon.display().to_string(),
@@ -321,7 +365,11 @@ async fn session_create_job(
     if let Ok(mut m) = ctx.renames.indexes.lock() {
         m.insert(id, Arc::new(index));
     }
-    progress(RenameProgress { phase: "done".into(), done: view.issues, total: view.issues });
+    progress(RenameProgress {
+        phase: "done".into(),
+        done: view.issues,
+        total: view.issues,
+    });
     Ok(view)
 }
 
@@ -331,7 +379,11 @@ pub fn sessions_list(ctx: &AppCtx, limit: u32) -> Result<Vec<RenameSessionView>,
         .list_rename_sessions(limit.clamp(1, 100))?
         .into_iter()
         .map(|s| RenameSessionView {
-            issues: ctx.store.list_rename_items(&s.id, None).map(|v| v.len() as u32).unwrap_or(0),
+            issues: ctx
+                .store
+                .list_rename_items(&s.id, None)
+                .map(|v| v.len() as u32)
+                .unwrap_or(0),
             langs: parse_list(Some(&s.langs)),
             id: s.id,
             root: s.root,
@@ -359,7 +411,11 @@ pub fn session_delete(ctx: &AppCtx, id: &str) -> Result<bool, NexusError> {
 }
 
 /// Items of a session, optionally one status (`candidate | proposed | accepted | …`).
-pub fn items(ctx: &AppCtx, session_id: &str, status: Option<&str>) -> Result<Vec<RenameItemView>, NexusError> {
+pub fn items(
+    ctx: &AppCtx,
+    session_id: &str,
+    status: Option<&str>,
+) -> Result<Vec<RenameItemView>, NexusError> {
     let s = session_row(ctx, session_id)?;
     let index = load_index(ctx, &s)?;
     Ok(ctx
@@ -382,8 +438,13 @@ pub async fn propose_names(
 ) -> Result<u32, NexusError> {
     let job = ctx.jobs.start("propose", "Propose new names")?;
     let progress = mirror_progress(ctx, &job.id, progress);
-    let result = propose_names_job(ctx, job_id, &job.token, session_id, symbol_ids, try_again, progress).await;
-    super::jobs::end(ctx, &job.id, &result, |_| Some(format!("/rename?session={session_id}")));
+    let result = propose_names_job(
+        ctx, job_id, &job.token, session_id, symbol_ids, try_again, progress,
+    )
+    .await;
+    super::jobs::end(ctx, &job.id, &result, |_| {
+        Some(format!("/rename?session={session_id}"))
+    });
     result
 }
 
@@ -415,22 +476,36 @@ async fn propose_names_job(
     if cands.is_empty() {
         return Ok(0);
     }
-    let mut opts = ProposeOptions { try_again, ..ProposeOptions::default() };
+    let mut opts = ProposeOptions {
+        try_again,
+        ..ProposeOptions::default()
+    };
     for r in stored.iter().filter(|r| todo.contains(&r.symbol_id)) {
         if let (Some(p), Ok(n)) = (&r.proposed, r.symbol_id.parse::<u32>()) {
             opts.rejected.entry(SymbolId(n)).or_default().push(p.clone());
         }
     }
-    ctx.store.set_rename_session_status(session_id, "proposing", None)?;
+    ctx.store
+        .set_rename_session_status(session_id, "proposing", None)?;
     let cancel = cancel.clone();
     ctx.renames.add_job(job_id, cancel.clone());
     let gate = gatekeeper(ctx, "rename");
     let llm = SchedulerJson(Arc::new(ctx.scheduler.clone()));
     let status = |_: String| {};
-    let cx = PipelineCx { llm: &llm, gate: &gate, cancel: &cancel, status: &status, home: Some(home_dir()) };
+    let cx = PipelineCx {
+        llm: &llm,
+        gate: &gate,
+        cancel: &cancel,
+        status: &status,
+        home: Some(home_dir()),
+    };
     let total = cands.len() as u32;
     let result = propose(&cx, &index, &cands, &opts, &|done, total| {
-        progress(RenameProgress { phase: "proposing".into(), done: done as u32, total: total as u32 });
+        progress(RenameProgress {
+            phase: "proposing".into(),
+            done: done as u32,
+            total: total as u32,
+        });
     })
     .await;
     ctx.renames.end_job(job_id);
@@ -470,13 +545,20 @@ async fn propose_names_job(
         ctx.store.update_rename_item(session_id, &key, &patch)?;
     }
     ctx.store.set_rename_session_status(session_id, "ready", None)?;
-    progress(RenameProgress { phase: "done".into(), done: total, total });
+    progress(RenameProgress {
+        phase: "done".into(),
+        done: total,
+        total,
+    });
     let _ = ctx.bus.send(AppEvent::Notify(NewNotification {
         level: NotificationLevel::Success,
         kind: "job".into(),
         title: format!("{made} rename proposals ready"),
         body: Some(format!("Project: {}", s.root)),
-        action: Some(NotificationAction { label: "Review".into(), route: format!("/rename?session={session_id}") }),
+        action: Some(NotificationAction {
+            label: "Review".into(),
+            route: format!("/rename?session={session_id}"),
+        }),
     }));
     Ok(made)
 }
@@ -499,8 +581,16 @@ pub fn item_update(
     {
         return Err(NexusError::InvalidInput(format!("unknown status `{st}`")));
     }
-    let id = SymbolId(symbol_id.parse().map_err(|_| NexusError::InvalidInput("bad symbol id".into()))?);
-    let mut patch = RenameItemPatch { status, include_strings, ..RenameItemPatch::default() };
+    let id = SymbolId(
+        symbol_id
+            .parse()
+            .map_err(|_| NexusError::InvalidInput("bad symbol id".into()))?,
+    );
+    let mut patch = RenameItemPatch {
+        status,
+        include_strings,
+        ..RenameItemPatch::default()
+    };
     let mut error = None;
     if let Some(name) = final_name {
         let name = name.trim().to_owned();
@@ -545,13 +635,23 @@ pub async fn plan(
         .list_rename_items(session_id, Some("accepted"))?
         .into_iter()
         .filter_map(|r| {
-            Some(RenameItem { symbol: SymbolId(r.symbol_id.parse().ok()?), new_name: r.final_name.or(r.proposed)? })
+            Some(RenameItem {
+                symbol: SymbolId(r.symbol_id.parse().ok()?),
+                new_name: r.final_name.or(r.proposed)?,
+            })
         })
         .collect();
     if items.is_empty() {
-        return Err(NexusError::InvalidInput("Accept at least one rename first.".into()));
+        return Err(NexusError::InvalidInput(
+            "Accept at least one rename first.".into(),
+        ));
     }
-    let popts = PlanOptions { docs: opts.docs, comments: opts.comments, ambiguous: opts.ambiguous, public_api: opts.public_api };
+    let popts = PlanOptions {
+        docs: opts.docs,
+        comments: opts.comments,
+        ambiguous: opts.ambiguous,
+        public_api: opts.public_api,
+    };
     let planned = tokio::task::spawn_blocking(move || plan_renames(&index, &items, &popts, now_ms()))
         .await
         .map_err(|e| NexusError::Internal(e.to_string()))?
@@ -575,7 +675,13 @@ pub async fn plan(
 /// A rename change set was applied (accepted items become `applied`) or undone (back to `accepted`).
 /// Other change sets are ignored.
 pub fn on_changeset_status(ctx: &AppCtx, changeset_id: &str, status: &str) {
-    let Some(session) = ctx.renames.plans.lock().ok().and_then(|m| m.get(changeset_id).cloned()) else {
+    let Some(session) = ctx
+        .renames
+        .plans
+        .lock()
+        .ok()
+        .and_then(|m| m.get(changeset_id).cloned())
+    else {
         return;
     };
     let (from, to) = match status {
@@ -622,15 +728,27 @@ pub async fn verify(
 }
 
 /// Where a symbol and its usages are (for the occurrence drawer).
-pub fn usages(ctx: &AppCtx, session_id: &str, symbol_id: &str) -> Result<Vec<nexus_analyze::code::find::Usage>, NexusError> {
+pub fn usages(
+    ctx: &AppCtx,
+    session_id: &str,
+    symbol_id: &str,
+) -> Result<Vec<nexus_analyze::code::find::Usage>, NexusError> {
     let s = session_row(ctx, session_id)?;
     let index = load_index(ctx, &s)?;
-    let id = SymbolId(symbol_id.parse().map_err(|_| NexusError::InvalidInput("bad symbol id".into()))?);
+    let id = SymbolId(
+        symbol_id
+            .parse()
+            .map_err(|_| NexusError::InvalidInput("bad symbol id".into()))?,
+    );
     Ok(nexus_analyze::code::find::usages(&index, id))
 }
 
 /// Search symbols, files and folders of the indexed project.
-pub fn find(ctx: &AppCtx, session_id: &str, query: &str) -> Result<Vec<nexus_analyze::code::find::Found>, NexusError> {
+pub fn find(
+    ctx: &AppCtx,
+    session_id: &str,
+    query: &str,
+) -> Result<Vec<nexus_analyze::code::find::Found>, NexusError> {
     let s = session_row(ctx, session_id)?;
     let index = load_index(ctx, &s)?;
     Ok(nexus_analyze::code::find::find_symbols(&index, query, 50))

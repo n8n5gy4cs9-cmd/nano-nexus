@@ -19,7 +19,12 @@ pub fn cancel(ctx: &AppCtx, id: &str) -> bool {
 
 /// Close a job from the worker's result: `Cancelled` → cancelled, other errors → failed,
 /// success → done with the route that opens the result.
-pub fn end<T>(ctx: &AppCtx, id: &JobId, result: &Result<T, NexusError>, result_ref: impl FnOnce(&T) -> Option<String>) {
+pub fn end<T>(
+    ctx: &AppCtx,
+    id: &JobId,
+    result: &Result<T, NexusError>,
+    result_ref: impl FnOnce(&T) -> Option<String>,
+) {
     match result {
         Ok(v) => {
             ctx.jobs.finish(id, result_ref(v));
@@ -43,11 +48,18 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let ctx = AppCtx::for_tests(dir.path());
         let a = ctx.jobs.start("scan", "A").unwrap();
-        end(&ctx, &a.id, &Ok::<_, NexusError>("r1".to_owned()), |r| Some(format!("/analyzer?report={r}")));
+        end(&ctx, &a.id, &Ok::<_, NexusError>("r1".to_owned()), |r| {
+            Some(format!("/analyzer?report={r}"))
+        });
         let b = ctx.jobs.start("scan", "B").unwrap();
         end(&ctx, &b.id, &Err::<String, _>(NexusError::Cancelled), |_| None);
         let c = ctx.jobs.start("scan", "C").unwrap();
-        end(&ctx, &c.id, &Err::<String, _>(NexusError::InvalidInput("nope".into())), |_| None);
+        end(
+            &ctx,
+            &c.id,
+            &Err::<String, _>(NexusError::InvalidInput("nope".into())),
+            |_| None,
+        );
         let jobs = list(&ctx, 10).unwrap();
         let by = |t: &str| jobs.iter().find(|j| j.title == t).unwrap().clone();
         assert_eq!(by("A").status, JobStatus::Done);

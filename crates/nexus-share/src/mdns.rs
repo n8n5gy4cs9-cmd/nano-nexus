@@ -19,7 +19,11 @@ pub fn sanitize_name(name: &str) -> String {
         .collect();
     let trimmed = cleaned.trim_matches('-');
     let short: String = trimmed.chars().take(63).collect();
-    if short.is_empty() { "nanonexus".into() } else { short }
+    if short.is_empty() {
+        "nanonexus".into()
+    } else {
+        short
+    }
 }
 
 impl Advertiser {
@@ -28,9 +32,16 @@ impl Advertiser {
         let name = sanitize_name(name);
         let daemon = ServiceDaemon::new().map_err(|e| e.to_string())?;
         let host = format!("{name}.local.");
-        let info = ServiceInfo::new("_http._tcp.local.", &name, &host, "", port, None::<HashMap<String, String>>)
-            .map_err(|e| e.to_string())?
-            .enable_addr_auto();
+        let info = ServiceInfo::new(
+            "_http._tcp.local.",
+            &name,
+            &host,
+            "",
+            port,
+            None::<HashMap<String, String>>,
+        )
+        .map_err(|e| e.to_string())?
+        .enable_addr_auto();
         daemon.register(info).map_err(|e| e.to_string())?;
         Ok(Self { daemon })
     }

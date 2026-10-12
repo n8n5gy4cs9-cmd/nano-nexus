@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 
 import { api } from "./api";
 import { IpcException, toIpcException } from "./ipc";
@@ -66,6 +66,9 @@ test("streams deliver events in order", async () => {
   expect(result).toBe(7);
 });
 
-test("default transport is Tauri", () => {
-  expect(getTransport()).toBe(tauriTransport);
+test("default transport is Tauri", async () => {
+  const spy = vi.spyOn(tauriTransport, "call").mockResolvedValue("from tauri");
+  expect(await getTransport().call("anything")).toBe("from tauri");
+  expect(spy).toHaveBeenCalledWith("anything", undefined);
+  spy.mockRestore();
 });

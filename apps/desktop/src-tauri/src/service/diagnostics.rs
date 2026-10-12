@@ -43,8 +43,16 @@ pub async fn report(ctx: &AppCtx) -> String {
     out.push_str("\n## Model runtime\n");
     let state = ctx.supervisor.state();
     match &state {
-        RuntimeState::Ready { model_id, ctx_size, gpu_layers, .. } => {
-            let _ = writeln!(out, "- Ready: {model_id} (context {ctx_size}, GPU layers {gpu_layers})");
+        RuntimeState::Ready {
+            model_id,
+            ctx_size,
+            gpu_layers,
+            ..
+        } => {
+            let _ = writeln!(
+                out,
+                "- Ready: {model_id} (context {ctx_size}, GPU layers {gpu_layers})"
+            );
         }
         RuntimeState::Failed { reason, log_tail, .. } => {
             let _ = writeln!(out, "- FAILED: {reason}");
@@ -86,7 +94,11 @@ pub async fn report(ctx: &AppCtx) -> String {
                     m.name,
                     if m.active { " (active)" } else { "" },
                     m.source,
-                    if m.file_exists { "file found" } else { "FILE MISSING" }
+                    if m.file_exists {
+                        "file found"
+                    } else {
+                        "FILE MISSING"
+                    }
                 );
             }
         }
@@ -98,9 +110,22 @@ pub async fn report(ctx: &AppCtx) -> String {
     out.push_str("\n## LAN Share\n");
     let share = ctx.share.status();
     if share.running {
-        let _ = writeln!(out, "- On, port {}, {} device(s): {}", share.port, share.devices, share.urls.join(", "));
+        let _ = writeln!(
+            out,
+            "- On, port {}, {} device(s): {}",
+            share.port,
+            share.devices,
+            share.urls.join(", ")
+        );
     } else {
-        let _ = writeln!(out, "- Off{}", share.error.map(|e| format!(" (last error: {e})")).unwrap_or_default());
+        let _ = writeln!(
+            out,
+            "- Off{}",
+            share
+                .error
+                .map(|e| format!(" (last error: {e})"))
+                .unwrap_or_default()
+        );
     }
 
     let tail = ctx.supervisor.log_tail(12).await;

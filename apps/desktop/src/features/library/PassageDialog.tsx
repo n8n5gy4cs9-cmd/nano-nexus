@@ -8,18 +8,19 @@ import type { KbPassage } from "./types";
 
 /** Shows one library passage in full (a clicked citation or a search result). No query cache needed. */
 export function PassageDialog({ chunkId, onClose }: { chunkId: number | null; onClose: () => void }) {
-  const [passage, setPassage] = useState<KbPassage | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // The answer remembers which chunk it is for, so a new chunk shows "Loading…" without an effect-time reset.
+  const [result, setResult] = useState<{ id: number; passage: KbPassage | null; error: string | null } | null>(null);
+  const current = result && result.id === chunkId ? result : null;
+  const passage = current?.passage ?? null;
+  const error = current?.error ?? null;
 
   useEffect(() => {
-    setPassage(null);
-    setError(null);
     if (chunkId === null) return;
     let alive = true;
     api.knowledge
       .passage(chunkId)
-      .then((p) => alive && setPassage(p))
-      .catch((e: unknown) => alive && setError(toIpcException(e).message));
+      .then((p) => alive && setResult({ id: chunkId, passage: p, error: null }))
+      .catch((e: unknown) => alive && setResult({ id: chunkId, passage: null, error: toIpcException(e).message }));
     return () => {
       alive = false;
     };

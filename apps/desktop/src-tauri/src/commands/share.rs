@@ -44,7 +44,9 @@ pub async fn share_stop(ctx: Ctx<'_>) -> CmdResult<ShareStatus> {
 #[tauri::command]
 #[specta::specta]
 pub async fn share_set_enabled(ctx: Ctx<'_>, enabled: bool) -> CmdResult<ShareStatus> {
-    service::share::set_enabled(&ctx, enabled).await.map_err(IpcError::from)
+    service::share::set_enabled(&ctx, enabled)
+        .await
+        .map_err(IpcError::from)
 }
 
 /// Change one `share.*` setting (restarts a running server when needed).

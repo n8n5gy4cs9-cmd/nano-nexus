@@ -79,10 +79,12 @@ impl ShareController {
 }
 
 fn bind_ip(settings: &Settings) -> Result<IpAddr, NexusError> {
-    settings
-        .share_bind
-        .parse()
-        .map_err(|_| NexusError::InvalidInput(format!("`{}` is not a valid address to listen on", settings.share_bind)))
+    settings.share_bind.parse().map_err(|_| {
+        NexusError::InvalidInput(format!(
+            "`{}` is not a valid address to listen on",
+            settings.share_bind
+        ))
+    })
 }
 
 fn announce(ctx: &Ctx, status: &ShareStatus) {
@@ -103,10 +105,15 @@ pub async fn start(ctx: &Ctx) -> Result<ShareStatus, NexusError> {
         return Ok(ctx.share.status());
     }
     ctx.share.auth.set_config(auth_config(&settings));
-    let mdns_name = settings.share_mdns.then(|| nexus_share::mdns::sanitize_name(&settings.share_mdns_name));
+    let mdns_name = settings
+        .share_mdns
+        .then(|| nexus_share::mdns::sanitize_name(&settings.share_mdns_name));
     // HTTPS: a self-signed certificate covering this computer's addresses and its .local name.
     let tls = if settings.share_https {
-        let mut names: Vec<String> = nexus_share::urls::lan_addresses().iter().map(|ip| ip.to_string()).collect();
+        let mut names: Vec<String> = nexus_share::urls::lan_addresses()
+            .iter()
+            .map(|ip| ip.to_string())
+            .collect();
         names.push("localhost".into());
         names.push("127.0.0.1".into());
         if let Some(n) = &mdns_name {
@@ -135,7 +142,12 @@ pub async fn start(ctx: &Ctx) -> Result<ShareStatus, NexusError> {
             *guard = Some(server);
             drop(guard);
             ctx.share.auth.new_pairing_code()?;
-            let urls = share_urls(bind, settings.share_port, settings.share_https, mdns_name.as_deref());
+            let urls = share_urls(
+                bind,
+                settings.share_port,
+                settings.share_https,
+                mdns_name.as_deref(),
+            );
             let st = ctx.share.set_status(|s| {
                 s.running = true;
                 s.port = settings.share_port;
@@ -192,7 +204,11 @@ pub async fn restart(ctx: &Ctx) -> Result<ShareStatus, NexusError> {
 /// Persist `share.enabled` (the pill switch) and start or stop to match.
 pub async fn set_enabled(ctx: &Ctx, enabled: bool) -> Result<ShareStatus, NexusError> {
     persist(ctx, "share.enabled", Value::Bool(enabled))?;
-    if enabled { start(ctx).await } else { Ok(stop(ctx).await) }
+    if enabled {
+        start(ctx).await
+    } else {
+        Ok(stop(ctx).await)
+    }
 }
 
 fn persist(ctx: &AppState, key: &str, value: Value) -> Result<Settings, NexusError> {
@@ -207,12 +223,16 @@ fn persist(ctx: &AppState, key: &str, value: Value) -> Result<Settings, NexusErr
 /// Change a `share.*` setting; running servers restart when the socket or its security changes.
 pub async fn settings_set(ctx: &Ctx, key: &str, value: Value) -> Result<ShareStatus, NexusError> {
     if !key.starts_with("share.") || key == "share.enabled" {
-        return Err(NexusError::InvalidInput("only sharing settings can be changed here".into()));
+        return Err(NexusError::InvalidInput(
+            "only sharing settings can be changed here".into(),
+        ));
     }
     if key == "share.port" {
         let ok = value.as_u64().is_some_and(|p| (1024..=65535).contains(&p));
         if !ok {
-            return Err(NexusError::InvalidInput("the port must be between 1024 and 65535".into()));
+            return Err(NexusError::InvalidInput(
+                "the port must be between 1024 and 65535".into(),
+            ));
         }
     }
     let next = persist(ctx, key, value)?;
@@ -243,7 +263,11 @@ pub fn pairing_code(ctx: &AppState) -> Result<PairingView, NexusError> {
     let base = st.urls.first().cloned().unwrap_or_default();
     let url = pairing_url(&base, &code.secret);
     let svg = qr_svg(&url).unwrap_or_default();
-    Ok(PairingView { code, url, qr_svg: svg })
+    Ok(PairingView {
+        code,
+        url,
+        qr_svg: svg,
+    })
 }
 
 pub fn devices(ctx: &AppState) -> Result<Vec<ShareDevice>, NexusError> {
@@ -256,10 +280,12 @@ pub fn device_update(
     name: Option<&str>,
     policy: Option<SharePolicy>,
 ) -> Result<(), NexusError> {
-    if let Some(n) = name {
-        if n.trim().is_empty() || n.chars().count() > 60 {
-            return Err(NexusError::InvalidInput("name a device with 1-60 characters".into()));
-        }
+    if let Some(n) = name
+        && (n.trim().is_empty() || n.chars().count() > 60)
+    {
+        return Err(NexusError::InvalidInput(
+            "name a device with 1-60 characters".into(),
+        ));
     }
     Ok(ctx.store.update_share_device(id, name.map(str::trim), policy)?)
 }
@@ -285,10 +311,10 @@ pub async fn init(ctx: Ctx) {
         let ctx = ctx.clone();
         tokio::spawn(async move { bridge_pushes(ctx).await });
     }
-    if settings.share_autostart {
-        if let Err(e) = start(&ctx).await {
-            tracing::warn!("LAN share did not autostart: {e}");
-        }
+    if settings.share_autostart
+        && let Err(e) = start(&ctx).await
+    {
+        tracing::warn!("LAN share did not autostart: {e}");
     }
 }
 
@@ -452,7 +478,10 @@ struct Ids {
 }
 
 fn assistant_allowed(settings: &Settings, id: &str) -> bool {
-    settings.share_allowed_assistants.iter().any(|a| a == "*" || a == id)
+    settings
+        .share_allowed_assistants
+        .iter()
+        .any(|a| a == "*" || a == id)
 }
 
 #[async_trait]
@@ -502,7 +531,10 @@ impl ShareApi for AppShareApi {
                 let result = svc::chat::send(ctx, &caller, send, Arc::new(JsonSink(sink))).map_err(ipc)?;
                 if is_new {
                     let origin = format!("remote:{}", device.id);
-                    if let Err(e) = ctx.store.set_conversation_origin(result.conversation_id.0.as_str(), &origin) {
+                    if let Err(e) = ctx
+                        .store
+                        .set_conversation_origin(result.conversation_id.0.as_str(), &origin)
+                    {
                         tracing::warn!("could not tag the remote conversation: {e}");
                     }
                 }
@@ -514,11 +546,26 @@ impl ShareApi for AppShareApi {
             }
             "chat_regenerate" => {
                 let r: RegenArgs = args(a)?;
-                out(svc::chat::regenerate(ctx, &caller, &MessageId(r.assistant_message_id), r.think, Arc::new(JsonSink(sink))).map_err(ipc)?)
+                out(svc::chat::regenerate(
+                    ctx,
+                    &caller,
+                    &MessageId(r.assistant_message_id),
+                    r.think,
+                    Arc::new(JsonSink(sink)),
+                )
+                .map_err(ipc)?)
             }
             "chat_edit_resend" => {
                 let e: EditArgs = args(a)?;
-                out(svc::chat::edit_resend(ctx, &caller, &MessageId(e.user_message_id), &e.text, e.think, Arc::new(JsonSink(sink))).map_err(ipc)?)
+                out(svc::chat::edit_resend(
+                    ctx,
+                    &caller,
+                    &MessageId(e.user_message_id),
+                    &e.text,
+                    e.think,
+                    Arc::new(JsonSink(sink)),
+                )
+                .map_err(ipc)?)
             }
             "conversations_list" => {
                 let l: ListArgs = args(a)?;

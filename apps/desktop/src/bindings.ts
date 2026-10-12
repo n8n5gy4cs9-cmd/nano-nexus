@@ -8,6 +8,8 @@ export const commands = {
 	appInfo: () => typedError<AppInfo, IpcError>(__TAURI_INVOKE("app_info")),
 	/**  Open a web link in the OS browser (https/http only). */
 	openExternal: (url: string) => typedError<null, IpcError>(__TAURI_INVOKE("open_external", { url })),
+	/**  The `/nano-nexus` report: runtime, models, share, recent log lines, and quick help. */
+	appDiagnostics: () => typedError<string, IpcError>(__TAURI_INVOKE("app_diagnostics")),
 	/**  Read files the user dropped onto the window (paths come from the OS drop event). */
 	attachmentsRead: (paths: string[]) => typedError<AttachmentInput[], IpcError>(__TAURI_INVOKE("attachments_read", { paths })),
 	/**  Open the native file picker and read the chosen files. Empty when the user cancels. */
@@ -50,6 +52,8 @@ export const commands = {
 	fsDenyRemove: (root: string) => typedError<boolean, IpcError>(__TAURI_INVOKE("fs_deny_remove", { root })),
 	/**  Native folder picker. `None` when the user cancels. */
 	fsPickFolder: () => typedError<string | null, IpcError>(__TAURI_INVOKE("fs_pick_folder")),
+	/**  Native picker for any one file. `None` when the user cancels. */
+	fsPickAnyFile: () => typedError<string | null, IpcError>(__TAURI_INVOKE("fs_pick_any_file")),
 	fsListDir: (path: string) => typedError<DirEntryInfo[], IpcError>(__TAURI_INVOKE("fs_list_dir", { path })),
 	fsReadText: (path: string) => typedError<TextFile, IpcError>(__TAURI_INVOKE("fs_read_text", { path })),
 	fsStat: (path: string) => typedError<FileStat, IpcError>(__TAURI_INVOKE("fs_stat", { path })),
@@ -86,6 +90,66 @@ export const commands = {
 	assistantRenderToml: (spec: AssistantSpec_Deserialize) => typedError<string, IpcError>(__TAURI_INVOKE("assistant_render_toml", { spec })),
 	/**  Parse TOML into a spec for the builder (nothing is saved). */
 	assistantDraft: (toml: string) => typedError<AssistantSpec_Serialize, IpcError>(__TAURI_INVOKE("assistant_draft", { toml })),
+	/**
+	 *  Scan a folder (`duplicates`: `off | fast | full`). Progress arrives on `on_event` (about 10 times a second).
+	 *  Returns the saved report's id.
+	 */
+	analyzeFolder: (jobId: string, root: string, duplicates: string, onEvent: Channel<ScanProgress>) => typedError<string, IpcError>(__TAURI_INVOKE("analyze_folder", { jobId, root, duplicates, onEvent })),
+	analyzeCancel: (jobId: string) => typedError<boolean, IpcError>(__TAURI_INVOKE("analyze_cancel", { jobId })),
+	reportsList: (kind: string | null, limit: number) => typedError<ReportSummary[], IpcError>(__TAURI_INVOKE("reports_list", { kind, limit })),
+	reportFolder: (id: string) => typedError<FolderReportView, IpcError>(__TAURI_INVOKE("report_folder", { id })),
+	/**  The JSON body of a file / secrets / logs report. */
+	reportBody: (id: string) => typedError<string, IpcError>(__TAURI_INVOKE("report_body", { id })),
+	reportDelete: (id: string) => typedError<boolean, IpcError>(__TAURI_INVOKE("report_delete", { id })),
+	reportNarrativeSave: (id: string, text: string) => typedError<null, IpcError>(__TAURI_INVOKE("report_narrative_save", { id, text })),
+	reportExport: (id: string, format: ExportFormat) => typedError<ExportFile, IpcError>(__TAURI_INVOKE("report_export", { id, format })),
+	/**  Build a report for one file; returns the report id. */
+	fileReport: (path: string) => typedError<string, IpcError>(__TAURI_INVOKE("file_report", { path })),
+	/**  Plan (not apply) a cleanup of duplicates and safe junk; review it on the Changes page. */
+	reportCleanupPlan: (id: string, includeDuplicates: boolean, includeJunk: boolean) => typedError<CleanupPlan, IpcError>(__TAURI_INVOKE("report_cleanup_plan", { id, includeDuplicates, includeJunk })),
+	/**  Running jobs first, then recent finished ones. */
+	jobsList: (limit: number) => typedError<JobSummary[], IpcError>(__TAURI_INVOKE("jobs_list", { limit })),
+	/**  Cancel a running job; `false` when it already ended. */
+	jobCancel: (id: string) => typedError<boolean, IpcError>(__TAURI_INVOKE("job_cancel", { id })),
+	watchesList: () => typedError<WatchView[], IpcError>(__TAURI_INVOKE("watches_list")),
+	/**  `schedule`: `daily | weekly | on_change`. */
+	watchCreate: (root: string, schedule: string) => typedError<WatchView, IpcError>(__TAURI_INVOKE("watch_create", { root, schedule })),
+	watchSetEnabled: (id: string, enabled: boolean) => typedError<null, IpcError>(__TAURI_INVOKE("watch_set_enabled", { id, enabled })),
+	watchSetSchedule: (id: string, schedule: string) => typedError<null, IpcError>(__TAURI_INVOKE("watch_set_schedule", { id, schedule })),
+	watchDelete: (id: string) => typedError<boolean, IpcError>(__TAURI_INVOKE("watch_delete", { id })),
+	/**  Scan now and compare with the last report. `None` for the first run (it saves the baseline). */
+	watchRunNow: (id: string) => typedError<{
+	root: string,
+	prev_at: number,
+	new_at: number,
+	prev_bytes: number,
+	new_bytes: number,
+	/**  `new_bytes - prev_bytes` (negative when the folder shrank). */
+	bytes_delta: number,
+	files_delta: number,
+	/**  Files among the largest that were not there before. */
+	new_big_files: FileRef[],
+	/**  Duplicate groups (by hash) that did not exist before. */
+	new_duplicate_groups: number,
+	/**  Bytes wasted by those new groups. */
+	new_duplicate_bytes: number,
+} | null, IpcError>(__TAURI_INVOKE("watch_run_now", { id })),
+	/**  Index a project folder and list its naming issues. `job_id` is the handle for `rename_cancel`. */
+	renameSessionCreate: (jobId: string, root: string, onEvent: Channel<RenameProgress>) => typedError<RenameSessionView, IpcError>(__TAURI_INVOKE("rename_session_create", { jobId, root, onEvent })),
+	renameSessions: (limit: number) => typedError<RenameSessionView[], IpcError>(__TAURI_INVOKE("rename_sessions", { limit })),
+	renameSessionDelete: (sessionId: string) => typedError<boolean, IpcError>(__TAURI_INVOKE("rename_session_delete", { sessionId })),
+	renameItems: (sessionId: string, status: string | null) => typedError<RenameItemView[], IpcError>(__TAURI_INVOKE("rename_items", { sessionId, status })),
+	/**  Ask the model for names; returns how many proposals were made. */
+	renamePropose: (jobId: string, sessionId: string, symbolIds: string[] | null, tryAgain: boolean, onEvent: Channel<RenameProgress>) => typedError<number, IpcError>(__TAURI_INVOKE("rename_propose", { jobId, sessionId, symbolIds, tryAgain, onEvent })),
+	renameItemUpdate: (sessionId: string, symbolId: string, finalName: string | null, status: string | null, includeStrings: boolean | null) => typedError<RenameItemView, IpcError>(__TAURI_INVOKE("rename_item_update", { sessionId, symbolId, finalName, status, includeStrings })),
+	/**  Plan the accepted renames as a change set to review on the Changes page. */
+	renamePlan: (sessionId: string, options: RenamePlanOptions) => typedError<RenamePlanView, IpcError>(__TAURI_INVOKE("rename_plan", { sessionId, options })),
+	renameCheckers: (sessionId: string) => typedError<Checker[], IpcError>(__TAURI_INVOKE("rename_checkers", { sessionId })),
+	/**  Run the project's own checker; output lines arrive on `on_output`. */
+	renameVerify: (jobId: string, sessionId: string, checkerId: string, onEvent: Channel<string>) => typedError<VerifyResult, IpcError>(__TAURI_INVOKE("rename_verify", { jobId, sessionId, checkerId, onEvent })),
+	renameUsages: (sessionId: string, symbolId: string) => typedError<Usage[], IpcError>(__TAURI_INVOKE("rename_usages", { sessionId, symbolId })),
+	renameFind: (sessionId: string, query: string) => typedError<Found[], IpcError>(__TAURI_INVOKE("rename_find", { sessionId, query })),
+	renameCancel: (jobId: string) => typedError<boolean, IpcError>(__TAURI_INVOKE("rename_cancel", { jobId })),
 	modelsList: () => typedError<InstalledModel[], IpcError>(__TAURI_INVOKE("models_list")),
 	modelsCatalog: () => typedError<CatalogCard[], IpcError>(__TAURI_INVOKE("models_catalog")),
 	modelsMemory: () => typedError<MemoryInfo, IpcError>(__TAURI_INVOKE("models_memory")),
@@ -105,16 +169,58 @@ export const commands = {
 	/**  Re-scan the extra model folders (after changing `models.extra_dirs`). Returns how many models they hold. */
 	modelsRescan: () => typedError<number, IpcError>(__TAURI_INVOKE("models_rescan")),
 	/**  Re-hash the bundled models. */
-	modelsVerifyBundled: () => typedError<VerifyResult[], IpcError>(__TAURI_INVOKE("models_verify_bundled")),
+	modelsVerifyBundled: () => typedError<ModelVerifyResult[], IpcError>(__TAURI_INVOKE("models_verify_bundled")),
+	/**  Is there a write grant for this file? (No: the editor opens it read-only.) */
+	editorCanWrite: (path: string) => typedError<boolean, IpcError>(__TAURI_INVOKE("editor_can_write", { path })),
+	/**  Save the buffer through a change set. Fails with `conflict` if the file changed since `base_hash`. */
+	editorSave: (path: string, contents: string, baseHash: string | null) => typedError<EditorSaveResult, IpcError>(__TAURI_INVOKE("editor_save", { path, contents, baseHash })),
+	/**  Run an AI action on a selection; the text streams over `on_event`. */
+	editorAi: (jobId: string, request: EditorAiRequest, onEvent: Channel<EditorAiEvent>) => typedError<null, IpcError>(__TAURI_INVOKE("editor_ai", { jobId, request, onEvent })),
+	editorAiCancel: (jobId: string) => typedError<boolean, IpcError>(__TAURI_INVOKE("editor_ai_cancel", { jobId })),
+	shareStatus: () => typedError<ShareStatus, IpcError>(__TAURI_INVOKE("share_status")),
+	/**  Start sharing with the saved settings (`port_in_use` if the port is taken). */
+	shareStart: () => typedError<ShareStatus, IpcError>(__TAURI_INVOKE("share_start")),
+	shareStop: () => typedError<ShareStatus, IpcError>(__TAURI_INVOKE("share_stop")),
+	/**  The pill switch: saves `share.enabled` and starts or stops. */
+	shareSetEnabled: (enabled: boolean) => typedError<ShareStatus, IpcError>(__TAURI_INVOKE("share_set_enabled", { enabled })),
+	/**  Change one `share.*` setting (restarts a running server when needed). */
+	shareSettingsSet: (key: string, value: SettingValue) => typedError<ShareStatus, IpcError>(__TAURI_INVOKE("share_settings_set", { key, value })),
+	/**  A new QR + PIN (the old one stops working). */
+	sharePairingCode: () => typedError<PairingView, IpcError>(__TAURI_INVOKE("share_pairing_code")),
+	shareDevicesList: () => typedError<ShareDevice[], IpcError>(__TAURI_INVOKE("share_devices_list")),
+	shareDeviceUpdate: (id: string, name: string | null, policy: "chat_only" | "chat_read" | "full" | null) => typedError<null, IpcError>(__TAURI_INVOKE("share_device_update", { id, name, policy })),
+	/**  Revoke a device: its session ends immediately. */
+	shareDeviceRevoke: (id: string) => typedError<boolean, IpcError>(__TAURI_INVOKE("share_device_revoke", { id })),
+	/**  Every library with counts. */
+	kbList: () => typedError<Library[], IpcError>(__TAURI_INVOKE("kb_list")),
+	/**  One library with its documents (skipped and failed files carry a note). */
+	kbDetail: (id: string) => typedError<KbLibraryDetail, IpcError>(__TAURI_INVOKE("kb_detail", { id })),
+	/**  Create a library from folders/files the user picked or dropped. Call `kb_reindex` next. */
+	kbAdd: (name: string | null, paths: string[], reference: boolean) => typedError<Library, IpcError>(__TAURI_INVOKE("kb_add", { name, paths, reference })),
+	/**  Index or incrementally re-index a library. Progress arrives on `on_event` after every file. */
+	kbReindex: (jobId: string, libraryId: string, onEvent: Channel<KbProgress>) => typedError<KbIndexResult, IpcError>(__TAURI_INVOKE("kb_reindex", { jobId, libraryId, onEvent })),
+	/**  Stop a running index job. `false` if it is not running. */
+	kbCancel: (jobId: string) => typedError<boolean, IpcError>(__TAURI_INVOKE("kb_cancel", { jobId })),
+	kbSetEnabled: (id: string, enabled: boolean) => typedError<null, IpcError>(__TAURI_INVOKE("kb_set_enabled", { id, enabled })),
+	/**  Remove a library (copied files are deleted; referenced folders are never touched). */
+	kbRemove: (id: string) => typedError<null, IpcError>(__TAURI_INVOKE("kb_remove", { id })),
+	/**  Passage search: what the model would see for this question. */
+	kbSearch: (query: string, libraryIds: string[] | null, k: number) => typedError<Passage[], IpcError>(__TAURI_INVOKE("kb_search", { query, libraryIds, k })),
+	/**  One passage in full (a clicked citation). */
+	kbPassage: (chunkId: number) => typedError<Passage, IpcError>(__TAURI_INVOKE("kb_passage", { chunkId })),
 };
 
 /** Events */
 export const events = {
 	changesetUpdate: makeEvent<ChangeSetUpdate>("changeset:update"),
+	conversationUpdated: makeEvent<ConversationUpdated>("conversation:updated"),
 	downloadProgress: makeEvent<DownloadProgressEvent>("download:progress"),
+	jobUpdate: makeEvent<JobUpdate>("job:update"),
 	modelChanged: makeEvent<ModelChanged>("model:changed"),
 	notificationNew: makeEvent<NotificationNew>("notification:new"),
+	permissionRequest: makeEvent<PermissionRequested>("permission:request"),
 	runtimeStatus: makeEvent<RuntimeStatus>("runtime:status"),
+	shareStatus: makeEvent<ShareStatusChanged>("share:status"),
 };
 
 /* Types */
@@ -135,6 +241,19 @@ export type ActivateResult = {
 	id: string,
 	/**  For example "This model has no chat template; replies may be poor." */
 	warning: string | null,
+};
+
+export type AgeBuckets = {
+	last_7d: AgeStat,
+	last_30d: AgeStat,
+	last_365d: AgeStat,
+	older: AgeStat,
+	unknown: AgeStat,
+};
+
+export type AgeStat = {
+	files: number,
+	bytes: number,
 };
 
 /**  Static facts about this install. */
@@ -310,6 +429,15 @@ export type CatalogEntry = {
 	notes?: string | null,
 };
 
+export type Category = "image" | "video" | "audio" | "document" | "pdf" | "spreadsheet" | "presentation" | "code" | "data" | "archive" | "installer" | "font" | "model3d" | "game_asset" | "executable" | "system" | "other";
+
+export type CategoryStat = {
+	category: Category,
+	files: number,
+	bytes: number,
+	pct_bytes: number | null,
+};
+
 export type ChangePreview = {
 	files: FilePreview[],
 	totals: Totals,
@@ -362,6 +490,26 @@ export type ChatSendResult = {
 	conversation_id: ConversationId,
 	user_message_id: MessageId,
 	assistant_message_id: MessageId,
+};
+
+/**  A checker the project supports. */
+export type Checker = {
+	id: string,
+	/**  What the button says: "cargo check". */
+	label: string,
+	program: string,
+	args: string[],
+	/**  Directory to run in, relative to the project root (`""` = the root). */
+	dir: string,
+	/**  The program was found on PATH. */
+	available: boolean,
+};
+
+/**  What a cleanup plan would do. */
+export type CleanupPlan = {
+	changeset_id: string,
+	files: number,
+	bytes: number | null,
 };
 
 export type Conflict = {
@@ -424,6 +572,9 @@ export type ConversationUpdate = {
 	archived: boolean | null,
 };
 
+/**  Global event `conversation:updated`: a title or summary changed. */
+export type ConversationUpdated = ConversationId;
+
 export type ConversationWithMessages = {
 	conversation: Conversation,
 	messages: Message[],
@@ -449,6 +600,27 @@ export type DirEntryInfo = {
 	modified: number | null,
 };
 
+export type DirRef = {
+	rel_path: string,
+	bytes: number,
+	files: number,
+};
+
+/**  One indexed (or skipped/failed) file. */
+export type DocumentRow = {
+	id: number,
+	library_id: string,
+	path: string,
+	title: string | null,
+	hash: string,
+	kind: string,
+	pages: number,
+	bytes: number,
+	/**  `indexed | skipped | failed` */
+	status: string,
+	note: string | null,
+};
+
 /**  Global event `download:progress`: sent about 4 times a second while a download runs, and on every status change. */
 export type DownloadProgressEvent = DownloadView;
 
@@ -468,8 +640,54 @@ export type DownloadView = {
 	phase: Phase | null,
 };
 
+export type DupGroup = {
+	bytes_each: number,
+	hash: string,
+	paths: string[],
+	/**  `false` when only the size and first 64 KiB matched (fast mode). */
+	confirmed: boolean,
+};
+
+/**  Streamed to the panel. */
+export type EditorAiEvent = { type: "content"; delta: string } | { type: "done" } | { type: "error"; message: string };
+
+/**  What the AI panel asks for. */
+export type EditorAiRequest = {
+	/**  `improve_names` · `add_docs` · `simplify` · `fix_bugs` (rewrites) · `explain` · `ask` (text answers). */
+	action: string,
+	language: string,
+	file_name: string,
+	selection: string,
+	context_before: string,
+	context_after: string,
+	/**  The user's question or instruction for `ask`. */
+	instructions: string | null,
+};
+
+export type EditorSaveResult = {
+	changeset_id: string,
+	/**  blake3 of the saved contents: the base hash of the next save. */
+	hash: string,
+};
+
 /**  Stable machine-readable error code (see DATA-AND-IPC §4). Serialized as snake_case. */
 export type ErrorCode = "runtime_unavailable" | "model_missing" | "permission_denied" | "os_permission_denied" | "path_denied" | "not_found" | "invalid_input" | "llm_invalid_output" | "context_overflow" | "cancelled" | "conflict" | "checksum_mismatch" | "insufficient_disk" | "network" | "busy" | "port_in_use" | "unauthorized" | "forbidden_remote" | "internal";
+
+/**  A ready-to-save export: the webview downloads it (the app never writes arbitrary paths). */
+export type ExportFile = {
+	file_name: string,
+	mime: string,
+	contents: string,
+};
+
+/**  `markdown | json | csv_largest | csv_duplicates | csv_junk` */
+export type ExportFormat = "markdown" | "json" | "csv_largest" | "csv_duplicates" | "csv_junk";
+
+export type ExtStat = {
+	ext: string,
+	files: number,
+	bytes: number,
+};
 
 /**  One problem found in an assistant file, tied to the field it concerns. */
 export type FieldError = {
@@ -496,6 +714,13 @@ export type FilePreview = {
 	binary: boolean,
 };
 
+export type FileRef = {
+	rel_path: string,
+	bytes: number,
+	modified: number | null,
+	category: Category,
+};
+
 export type FileStat = {
 	path: string,
 	is_dir: boolean,
@@ -510,6 +735,60 @@ export type Fit = {
 	need_bytes: number,
 	budget_bytes: number,
 	badge: Badge,
+};
+
+export type FolderReport = {
+	id: string,
+	root: string,
+	/**  Unix milliseconds. */
+	scanned_at: number,
+	duration_ms: number,
+	totals: FolderTotals,
+	by_category: CategoryStat[],
+	by_extension: ExtStat[],
+	largest_files: FileRef[],
+	largest_dirs: DirRef[],
+	age: AgeBuckets,
+	duplicates: DupGroup[],
+	wasted_by_duplicates: number,
+	empty_dirs: string[],
+	empty_files: string[],
+	junk: JunkHit[],
+	naming_issues: NamingHit[],
+	max_depth: number,
+	deepest_path: string,
+	treemap: TreeNode,
+	warnings: ScanWarning[],
+	truncated: boolean,
+};
+
+/**  A folder report with its AI narrative (if one was saved). */
+export type FolderReportView = {
+	report: FolderReport,
+	shown_root: string,
+	narrative: string | null,
+};
+
+export type FolderTotals = {
+	files: number,
+	dirs: number,
+	bytes: number,
+	hidden_files: number,
+	symlinks: number,
+};
+
+/**  One search result. */
+export type Found = {
+	symbol: SymbolId,
+	name: string,
+	kind: SymbolKind,
+	/**  Project-relative path (for files and folders: the path itself). */
+	path: string,
+	line: number,
+	signature: string,
+	doc: string | null,
+	matched: MatchKind,
+	usages: UsageCounts,
 };
 
 /**  A downloadable model: one GGUF, or all shards of a split one. */
@@ -599,6 +878,93 @@ export type IpcError = {
 	detail: string | null,
 };
 
+/**  A background job. */
+export type JobId = string;
+
+/**  Lifecycle of a background job. */
+export type JobStatus = "queued" | "running" | "done" | "failed" | "cancelled";
+
+/**  Payload of `job:update`. */
+export type JobSummary = {
+	id: JobId,
+	kind: string,
+	title: string,
+	status: JobStatus,
+	/**  0.0..=1.0 when known. */
+	progress: number | null,
+	detail: string | null,
+	result_ref: string | null,
+	error: string | null,
+};
+
+/**  Global event `job:update`: a job started, progressed (at most 4 Hz), or ended. */
+export type JobUpdate = JobSummary;
+
+export type JunkHit = {
+	rule: string,
+	rel_path: string,
+	bytes: number,
+	/**  Safe to move to the Trash without a second thought. */
+	safe_to_trash: boolean,
+	/**  Rebuilt automatically by a tool (node_modules, target, ...): report the size, never auto-trash. */
+	regenerable: boolean,
+};
+
+/**  What an index run did. */
+export type KbIndexResult = {
+	library_id: string,
+	indexed: number,
+	unchanged: number,
+	skipped: number,
+	failed: number,
+	removed: number,
+	chunks: number,
+	/**  The library size cap stopped the run early. */
+	truncated: boolean,
+};
+
+/**  A library with its documents (the Library page's detail view). */
+export type KbLibraryDetail = {
+	library: Library,
+	documents: DocumentRow[],
+};
+
+/**  Progress of an index run (sent after every file). */
+export type KbProgress = {
+	library_id: string,
+	files_done: number,
+	files_total: number,
+	current: string,
+	chunks: number,
+	skipped: number,
+};
+
+/**  A named folder of documents. */
+export type Library = {
+	id: string,
+	name: string,
+	source: LibrarySource,
+	path: string,
+	/**  `copy` (files live in the app data dir) or `reference` (read in place). */
+	mode: string,
+	enabled: boolean,
+	doc_count: number,
+	chunk_count: number,
+	bytes: number,
+	indexed_at: number | null,
+	created_at: number,
+};
+
+/**  Where a library came from. */
+export type LibrarySource = 
+/**  Shipped inside the app resources (read-only). */
+"bundled" | 
+/**  Added by the user. */
+"user";
+
+/**  How well a name matched the query (best first). */
+export type MatchKind = "exact" | "prefix" | "substring" | "fuzzy";
+
 export type MemoryInfo = {
 	total_bytes: number,
 	available_bytes: number,
@@ -658,6 +1024,21 @@ export type ModelParams = {
 	max_tokens?: number,
 };
 
+/**  Result of re-hashing one model. */
+export type ModelVerifyResult = {
+	id: string,
+	ok: boolean,
+	missing: boolean,
+	actual_sha256: string | null,
+};
+
+export type NamingHit = {
+	/**  `spaces | mixed_separators | non_ascii | too_long | copy_pattern | trailing | inconsistent_case | extension_mismatch` */
+	kind: string,
+	rel_path: string,
+	detail: string,
+};
+
 /**  A click action attached to a notification. */
 export type NotificationAction = {
 	label: string,
@@ -702,6 +1083,39 @@ export type OsPermissionsStatus = {
 	full_disk_access: string | null,
 };
 
+/**  A fresh pairing code: the QR secret (URL fragment) and the 6-digit PIN. */
+export type PairingCode = {
+	secret: string,
+	pin: string,
+	/**  Unix ms when this code stops working. */
+	expires_at: number,
+};
+
+/**  A pairing code plus what the desktop shows: the URL the QR encodes and the QR itself (SVG). */
+export type PairingView = {
+	code: PairingCode,
+	url: string,
+	qr_svg: string,
+};
+
+/**  A retrieved chunk with everything needed to cite it. */
+export type Passage = {
+	chunk_id: number,
+	document_id: number,
+	library_id: string,
+	library_name: string,
+	/**  Document title, or its relative path when it has none. */
+	document: string,
+	doc_path: string,
+	/**  Breadcrumb, e.g. `Reaper manual > Routing > Sends`. */
+	heading_path: string,
+	page: number | null,
+	text: string,
+	tokens: number,
+	/**  Higher is better (negated BM25 plus boosts). */
+	score: number | null,
+};
+
 /**  Shown in the permission modal ("Folder Scout wants to read ~/Downloads"). */
 export type PermissionRequest = {
 	id: string,
@@ -714,6 +1128,9 @@ export type PermissionRequest = {
 	requested_by: string | null,
 };
 
+/**  Global event `permission:request`: a tool needs a folder the user has not granted. */
+export type PermissionRequested = PermissionRequest;
+
 export type PermissionsSpec = {
 	/**  `read | write | create | move | trash` */
 	needs?: string[],
@@ -725,6 +1142,9 @@ export type PromptSpec = {
 	system: string,
 };
 
+/**  What kind of occurrence a reference is. */
+export type RefKind = "code" | "import" | "string_literal" | "config_file" | "doc" | "comment";
+
 /**  How a model can be removed. */
 export type Removal = 
 /**  The file is deleted. */
@@ -734,12 +1154,97 @@ export type Removal =
 /**  Part of the install (the bundle). */
 "protected";
 
+export type RenameItemView = {
+	symbol_id: string,
+	old_name: string,
+	kind: string,
+	path: string,
+	line: number,
+	proposed: string | null,
+	final_name: string | null,
+	confidence: number | null,
+	reason: string | null,
+	issues: string[],
+	flags: string[],
+	status: string,
+	include_strings: boolean,
+	/**  Occurrences besides the definition. */
+	usages: number,
+	/**  Why the last edit was refused (the stored values are unchanged). */
+	error: string | null,
+};
+
+export type RenamePlanOptions = {
+	docs: boolean,
+	comments: boolean,
+	ambiguous: boolean,
+	public_api: boolean,
+};
+
+/**  What the planner produced. */
+export type RenamePlanView = {
+	changeset_id: string,
+	edits: number,
+	skipped: string[],
+	/**  Project-relative files with uncommitted git changes that the plan touches. */
+	dirty: string[],
+};
+
+/**  Progress of an index or proposal job. */
+export type RenameProgress = {
+	/**  `indexing | detecting | proposing | done` */
+	phase: string,
+	done: number,
+	total: number,
+};
+
+export type RenameSessionView = {
+	id: string,
+	root: string,
+	status: string,
+	langs: string[],
+	files: number,
+	symbols: number,
+	issues: number,
+	created_at: number | null,
+};
+
 export type RepoFiles = {
 	repo: string,
 	sha: string,
 	license: string | null,
 	gated: boolean,
 	files: GgufFile[],
+};
+
+/**  What changed between two scans of the same folder. */
+export type ReportDelta = {
+	root: string,
+	prev_at: number,
+	new_at: number,
+	prev_bytes: number,
+	new_bytes: number,
+	/**  `new_bytes - prev_bytes` (negative when the folder shrank). */
+	bytes_delta: number,
+	files_delta: number,
+	/**  Files among the largest that were not there before. */
+	new_big_files: FileRef[],
+	/**  Duplicate groups (by hash) that did not exist before. */
+	new_duplicate_groups: number,
+	/**  Bytes wasted by those new groups. */
+	new_duplicate_bytes: number,
+};
+
+/**  One line of the saved-reports list. */
+export type ReportSummary = {
+	id: string,
+	/**  `folder | file | rename | secrets | logs | data` */
+	kind: string,
+	target: string,
+	title: string,
+	summary: string | null,
+	has_narrative: boolean,
+	created_at: number | null,
 };
 
 /**  State of the llama-server supervisor (published as `runtime:status`). */
@@ -760,6 +1265,20 @@ export type Sampling = {
 export type SamplingPresets = {
 	no_think: Sampling,
 	think?: Sampling | null,
+};
+
+/**  Throttled to 10 Hz while scanning. */
+export type ScanProgress = {
+	files_seen: number,
+	bytes_seen: number,
+	current_dir: string,
+	/**  `walking | hashing | summarizing` */
+	phase: string,
+};
+
+export type ScanWarning = {
+	path: string,
+	error: string,
 };
 
 export type SearchHit = {
@@ -796,6 +1315,10 @@ export type Settings = {
 	"notifications.os_when_unfocused"?: boolean,
 	/**  Per-kind switches; a kind that is absent counts as enabled (see [`Settings::notification_kind_enabled`]). */
 	"notifications.kinds"?: { [key in string]: boolean },
+	/**  Quiet hours start, local time `"HH:MM"`. Empty = no quiet hours. */
+	"notifications.quiet_start"?: string,
+	/**  Quiet hours end, local time `"HH:MM"` (may be earlier than the start: overnight). */
+	"notifications.quiet_end"?: string,
 	"journal.retention_days"?: number,
 	"journal.max_bytes"?: number,
 	"models.extra_dirs"?: string[],
@@ -811,13 +1334,56 @@ export type Settings = {
 	"share.session_days"?: number,
 	"share.max_devices"?: number,
 	"share.notify_pairing"?: boolean,
+	/**  Knowledge libraries (M17): inject retrieved passages into ordinary chats. Off = prompts are unchanged. */
+	"knowledge.chat_context"?: boolean,
+	/**  Token budget of the injected passages (and of `kb_search` results). */
+	"knowledge.max_tokens"?: number,
+	/**  Duo assistant: model id used for easy questions. Empty = the active model. */
+	"duo.light_model_id"?: string,
+	/**  Duo assistant: model id used for hard questions. Empty = the active model. */
+	"duo.strong_model_id"?: string,
+};
+
+/**  A paired LAN device (the token itself is never stored or shown, only its hash is kept). */
+export type ShareDevice = {
+	id: string,
+	name: string,
+	policy: SharePolicy,
+	user_agent: string | null,
+	last_ip: string | null,
+	created_at: number,
+	last_seen_at: number | null,
+	expires_at: number,
 };
 
 /**  What a paired LAN device may do. */
 export type SharePolicy = "chat_only" | "chat_read" | "full";
 
+/**  What the desktop shows about sharing (`share_status`, event `share:status`). */
+export type ShareStatus = {
+	running: boolean,
+	port: number,
+	/**  `http(s)://<ip>:<port>` for each LAN address (private ranges first), then the Bonjour name. */
+	urls: string[],
+	devices: number,
+	https_fingerprint: string | null,
+	/**  Set when the last start failed (`port_in_use` and so on) with a human-readable reason. */
+	error: string | null,
+	/**  When the port is taken, the next free port to offer. */
+	suggested_port: number | null,
+};
+
+/**  Global event `share:status`: sharing started, stopped, or the device list changed. */
+export type ShareStatusChanged = ShareStatus;
+
 /**  Where an assistant came from. */
 export type Source = "builtin" | "user";
+
+/**  A symbol id (index into [`CodeIndex::symbols`]). */
+export type SymbolId = number;
+
+/**  What a symbol is. Files and folders are symbols too (their "references" are imports and config entries). */
+export type SymbolKind = "function" | "method" | "variable" | "constant" | "parameter" | "field" | "class" | "interface" | "enum" | "enum_member" | "module" | "file" | "folder";
 
 export type TextFile = {
 	path: string,
@@ -853,6 +1419,19 @@ export type TreeFile = {
 	size: number,
 	/**  SHA-256 of the content (the LFS oid); `None` for small non-LFS files. */
 	sha256: string | null,
+};
+
+/**  A node of the pruned treemap. */
+export type TreeNode = {
+	name: string,
+	rel_path: string,
+	bytes: number,
+	files: number,
+	/**  Dominant category (by bytes) for color. */
+	category: Category,
+	/**  Several small items merged together. */
+	other: boolean,
+	children: TreeNode[],
 };
 
 export type UiSpec = UiSpec_Serialize | UiSpec_Deserialize;
@@ -891,6 +1470,26 @@ export type UndoOutcome = {
 	status: string,
 };
 
+/**  One occurrence with a one-line preview. */
+export type Usage = {
+	path: string,
+	line: number,
+	kind: RefKind,
+	ambiguous: boolean,
+	is_def: boolean,
+	preview: string,
+};
+
+/**  Occurrences of a symbol by kind (the definition is not counted). */
+export type UsageCounts = {
+	code: number,
+	import: number,
+	config: number,
+	string: number,
+	doc: number,
+	comment: number,
+};
+
 /**  Result of `assistant_validate`. */
 export type ValidationReport = {
 	ok: boolean,
@@ -901,12 +1500,28 @@ export type ValidationReport = {
 	id: string | null,
 };
 
-/**  Result of re-hashing one model. */
+/**  How a run ended. */
 export type VerifyResult = {
-	id: string,
 	ok: boolean,
+	exit_code: number | null,
+	cancelled: boolean,
+	timed_out: boolean,
+	/**  The program could not be started (not installed). */
 	missing: boolean,
-	actual_sha256: string | null,
+	/**  The first lines that look like errors. */
+	first_errors: string[],
+};
+
+/**  One watch as the UI shows it. */
+export type WatchView = {
+	id: string,
+	root: string,
+	/**  `daily | weekly | on_change` */
+	schedule: string,
+	enabled: boolean,
+	last_report_id: string | null,
+	/**  Unix milliseconds of the last run. */
+	last_run_at: number | null,
 };
 
 export type WorkflowSpec = WorkflowSpec_Serialize | WorkflowSpec_Deserialize;

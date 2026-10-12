@@ -1,6 +1,7 @@
 //! Transport-agnostic business API. Each Tauri command is a thin wrapper over a function here;
 //! LAN Share will call the same functions with `Caller::Remote` over WebSocket (M14).
 
+pub mod analyzer;
 pub mod app;
 pub mod assistants;
 pub mod attachments;
@@ -15,14 +16,13 @@ pub mod knowledge;
 pub mod models;
 pub mod notifications;
 pub mod permissions;
-pub mod rename;
 pub mod pipelines;
-pub mod analyzer;
+pub mod rename;
 pub mod runtime;
 pub mod settings;
 pub mod share;
-pub mod watches;
 pub mod sink;
+pub mod watches;
 
 use nexus_core::settings::SharePolicy;
 

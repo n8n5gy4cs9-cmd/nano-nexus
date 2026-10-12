@@ -5,8 +5,8 @@ use specta_typescript::Typescript;
 use tauri_specta::{Builder, collect_commands, collect_events};
 
 use crate::commands::{
-    analyzer, app, assistants, attachments, chat, conversations, editor, fs, jobs, knowledge, models, notifications, permissions, rename,
-    runtime, settings, share, watches,
+    analyzer, app, assistants, attachments, chat, conversations, editor, fs, jobs, knowledge, models,
+    notifications, permissions, rename, runtime, settings, share, watches,
 };
 
 /// All commands and events.

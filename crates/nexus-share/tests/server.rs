@@ -27,7 +27,11 @@ impl ShareApi for Echo {
         _cancel: CancellationToken,
     ) -> Result<Value, IpcError> {
         if cmd == "boom" {
-            return Err(IpcError { code: ErrorCode::Internal, message: "boom".into(), detail: None });
+            return Err(IpcError {
+                code: ErrorCode::Internal,
+                message: "boom".into(),
+                detail: None,
+            });
         }
         Ok(json!({ "echo": cmd }))
     }
@@ -79,7 +83,12 @@ async fn health_is_public_and_carries_security_headers() {
     assert_eq!(h["x-frame-options"], "DENY");
     assert_eq!(h["referrer-policy"], "no-referrer");
     assert_eq!(h["cache-control"], "no-store");
-    assert!(h["content-security-policy"].to_str().unwrap().contains("default-src 'self'"));
+    assert!(
+        h["content-security-policy"]
+            .to_str()
+            .unwrap()
+            .contains("default-src 'self'")
+    );
     server.stop().await;
 }
 
@@ -87,11 +96,35 @@ async fn health_is_public_and_carries_security_headers() {
 async fn nothing_is_served_without_a_session() {
     let (server, _auth) = start(0).await;
     let client = reqwest::Client::new();
-    assert_eq!(client.get(url(&server, "/api/session")).send().await.unwrap().status(), 401);
+    assert_eq!(
+        client
+            .get(url(&server, "/api/session"))
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        401
+    );
     // The WebSocket endpoint never upgrades without a session (a plain GET is rejected).
-    assert!(client.get(url(&server, "/api/ws")).send().await.unwrap().status().is_client_error());
+    assert!(
+        client
+            .get(url(&server, "/api/ws"))
+            .send()
+            .await
+            .unwrap()
+            .status()
+            .is_client_error()
+    );
     // Unknown API paths never fall through to the web app.
-    assert_eq!(client.get(url(&server, "/api/nope")).send().await.unwrap().status(), 404);
+    assert_eq!(
+        client
+            .get(url(&server, "/api/nope"))
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        404
+    );
     // The web app itself is public (it only contains the pairing screen and code).
     assert_eq!(client.get(url(&server, "/")).send().await.unwrap().status(), 200);
     server.stop().await;
@@ -139,10 +172,24 @@ async fn logout_needs_csrf_and_revokes_the_device() {
     let client = reqwest::Client::new();
     let code = auth.new_pairing_code().unwrap();
     let res = pair(&client, &server, &code.secret).await;
-    let cookie = res.headers()["set-cookie"].to_str().unwrap().split(';').next().unwrap().to_owned();
-    let csrf = res.json::<Value>().await.unwrap()["csrf"].as_str().unwrap().to_owned();
+    let cookie = res.headers()["set-cookie"]
+        .to_str()
+        .unwrap()
+        .split(';')
+        .next()
+        .unwrap()
+        .to_owned();
+    let csrf = res.json::<Value>().await.unwrap()["csrf"]
+        .as_str()
+        .unwrap()
+        .to_owned();
 
-    let without = client.post(url(&server, "/api/logout")).header("cookie", &cookie).send().await.unwrap();
+    let without = client
+        .post(url(&server, "/api/logout"))
+        .header("cookie", &cookie)
+        .send()
+        .await
+        .unwrap();
     assert_eq!(without.status(), 403);
     let wrong = client
         .post(url(&server, "/api/logout"))
@@ -160,7 +207,16 @@ async fn logout_needs_csrf_and_revokes_the_device() {
         .await
         .unwrap();
     assert_eq!(ok.status(), 200);
-    assert_eq!(client.get(url(&server, "/api/session")).header("cookie", &cookie).send().await.unwrap().status(), 401);
+    assert_eq!(
+        client
+            .get(url(&server, "/api/session"))
+            .header("cookie", &cookie)
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        401
+    );
     server.stop().await;
 }
 
@@ -170,10 +226,28 @@ async fn revoking_a_device_ends_its_session() {
     let client = reqwest::Client::new();
     let code = auth.new_pairing_code().unwrap();
     let res = pair(&client, &server, &code.pin).await;
-    let cookie = res.headers()["set-cookie"].to_str().unwrap().split(';').next().unwrap().to_owned();
-    let id = res.json::<Value>().await.unwrap()["device"]["id"].as_str().unwrap().to_owned();
+    let cookie = res.headers()["set-cookie"]
+        .to_str()
+        .unwrap()
+        .split(';')
+        .next()
+        .unwrap()
+        .to_owned();
+    let id = res.json::<Value>().await.unwrap()["device"]["id"]
+        .as_str()
+        .unwrap()
+        .to_owned();
     assert!(auth.revoke(&id).unwrap());
-    assert_eq!(client.get(url(&server, "/api/session")).header("cookie", &cookie).send().await.unwrap().status(), 401);
+    assert_eq!(
+        client
+            .get(url(&server, "/api/session"))
+            .header("cookie", &cookie)
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        401
+    );
     server.stop().await;
 }
 
@@ -182,7 +256,10 @@ async fn a_taken_port_is_reported_and_stop_releases_it() {
     let (first, auth) = start(0).await;
     let port = first.local_addr().port();
     let api = Arc::new(Echo(broadcast::channel(4).0));
-    let err = ShareServer::start(config(port), auth.clone(), api.clone()).await.err().unwrap();
+    let err = ShareServer::start(config(port), auth.clone(), api.clone())
+        .await
+        .err()
+        .unwrap();
     assert!(matches!(err, NexusError::PortInUse(p) if p == port));
     first.stop().await;
     let again = ShareServer::start(config(port), auth, api).await.unwrap();

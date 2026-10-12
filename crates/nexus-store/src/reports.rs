@@ -43,7 +43,12 @@ impl Store {
     }
 
     pub fn get_report(&self, id: &str) -> Result<Option<ReportRow>, StoreError> {
-        self.with_conn(|c| Ok(c.query_row("SELECT * FROM reports WHERE id = ?1", params![id], row).optional()?))
+        self.with_conn(|c| {
+            Ok(
+                c.query_row("SELECT * FROM reports WHERE id = ?1", params![id], row)
+                    .optional()?,
+            )
+        })
     }
 
     /// Newest first, optionally one kind only.
@@ -55,7 +60,12 @@ impl Store {
     }
 
     /// The newest report of `kind` for `target` (to compare scans).
-    pub fn latest_report_for(&self, kind: &str, target: &str, before: i64) -> Result<Option<ReportRow>, StoreError> {
+    pub fn latest_report_for(
+        &self,
+        kind: &str,
+        target: &str,
+        before: i64,
+    ) -> Result<Option<ReportRow>, StoreError> {
         self.with_conn(|c| {
             Ok(c.query_row(
                 "SELECT * FROM reports WHERE kind = ?1 AND target = ?2 AND created_at < ?3 ORDER BY created_at DESC LIMIT 1",
@@ -68,8 +78,15 @@ impl Store {
 
     pub fn set_report_narrative(&self, id: &str, text: &str) -> Result<(), StoreError> {
         self.with_conn(|c| {
-            let n = c.execute("UPDATE reports SET ai_narrative = ?2 WHERE id = ?1", params![id, text])?;
-            if n == 0 { Err(StoreError::NotFound("report")) } else { Ok(()) }
+            let n = c.execute(
+                "UPDATE reports SET ai_narrative = ?2 WHERE id = ?1",
+                params![id, text],
+            )?;
+            if n == 0 {
+                Err(StoreError::NotFound("report"))
+            } else {
+                Ok(())
+            }
         })
     }
 
@@ -83,7 +100,16 @@ mod tests {
     use super::*;
 
     fn r(id: &str, kind: &str, target: &str, at: i64) -> ReportRow {
-        ReportRow { id: id.into(), kind: kind.into(), target: target.into(), title: format!("t {id}"), summary: None, json_path: format!("/r/{id}.json"), ai_narrative: None, created_at: at }
+        ReportRow {
+            id: id.into(),
+            kind: kind.into(),
+            target: target.into(),
+            title: format!("t {id}"),
+            summary: None,
+            json_path: format!("/r/{id}.json"),
+            ai_narrative: None,
+            created_at: at,
+        }
     }
 
     #[test]
@@ -92,7 +118,14 @@ mod tests {
         s.insert_report(&r("a", "folder", "/d", 1)).unwrap();
         s.insert_report(&r("b", "secrets", "/d", 2)).unwrap();
         s.insert_report(&r("c", "folder", "/d", 3)).unwrap();
-        assert_eq!(s.list_reports(None, 10).unwrap().iter().map(|x| x.id.as_str()).collect::<Vec<_>>(), ["c", "b", "a"]);
+        assert_eq!(
+            s.list_reports(None, 10)
+                .unwrap()
+                .iter()
+                .map(|x| x.id.as_str())
+                .collect::<Vec<_>>(),
+            ["c", "b", "a"]
+        );
         assert_eq!(s.list_reports(Some("folder"), 10).unwrap().len(), 2);
         assert_eq!(s.list_reports(None, 1).unwrap().len(), 1);
         assert_eq!(s.latest_report_for("folder", "/d", 3).unwrap().unwrap().id, "a");
@@ -105,7 +138,13 @@ mod tests {
         let s = Store::open_in_memory().unwrap();
         s.insert_report(&r("a", "folder", "/d", 1)).unwrap();
         s.set_report_narrative("a", "You have 3 files.").unwrap();
-        assert_eq!(s.get_report("a").unwrap().unwrap().ai_narrative.as_deref(), Some("You have 3 files."));
-        assert!(matches!(s.set_report_narrative("zz", "x"), Err(StoreError::NotFound(_))));
+        assert_eq!(
+            s.get_report("a").unwrap().unwrap().ai_narrative.as_deref(),
+            Some("You have 3 files.")
+        );
+        assert!(matches!(
+            s.set_report_narrative("zz", "x"),
+            Err(StoreError::NotFound(_))
+        ));
     }
 }

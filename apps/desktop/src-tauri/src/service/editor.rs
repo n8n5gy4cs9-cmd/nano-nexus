@@ -40,12 +40,20 @@ fn actor(caller: &Caller) -> String {
 }
 
 fn desktop_only(caller: &Caller) -> Result<(), NexusError> {
-    if caller.is_desktop() { Ok(()) } else { Err(NexusError::ForbiddenRemote) }
+    if caller.is_desktop() {
+        Ok(())
+    } else {
+        Err(NexusError::ForbiddenRemote)
+    }
 }
 
 /// Does a grant allow writing this file? (`false` puts the editor in read-only mode.)
 pub fn can_write(ctx: &Ctx, caller: &Caller, path: &str) -> bool {
-    caller.is_desktop() && ctx.perms.check(&actor(caller), Path::new(path), Access::Write).is_ok()
+    caller.is_desktop()
+        && ctx
+            .perms
+            .check(&actor(caller), Path::new(path), Access::Write)
+            .is_ok()
 }
 
 /// Save the buffer: plan one `Write` op (guarded by `base_hash`) and apply it. Blocking (disk work).
@@ -58,7 +66,9 @@ pub fn save(
 ) -> Result<EditorSaveResult, NexusError> {
     desktop_only(caller)?;
     if contents.len() > MAX_SAVE_BYTES {
-        return Err(NexusError::InvalidInput("the file is larger than 2 MB; use another tool for it".into()));
+        return Err(NexusError::InvalidInput(
+            "the file is larger than 2 MB; use another tool for it".into(),
+        ));
     }
     let name = Path::new(path)
         .file_name()
@@ -151,7 +161,11 @@ pub fn build_request(req: &EditorAiRequest) -> Result<ChatRequest, NexusError> {
                 )),
             ]
         }
-        other => return Err(NexusError::InvalidInput(format!("unknown editor action `{other}`"))),
+        other => {
+            return Err(NexusError::InvalidInput(format!(
+                "unknown editor action `{other}`"
+            )));
+        }
     };
     let rewrite = !matches!(req.action.as_str(), "explain" | "ask");
     let mut chat = ChatRequest::new(messages).streaming().thinking(false);
@@ -175,7 +189,10 @@ pub async fn ai(
     let key = MessageId(format!("editor:{job_id}"));
     let token = ctx.chats.register(&key);
     let result = async {
-        let mut stream = ctx.scheduler.stream(Priority::Interactive, chat, token.clone()).await?;
+        let mut stream = ctx
+            .scheduler
+            .stream(Priority::Interactive, chat, token.clone())
+            .await?;
         while let Some(item) = stream.next().await {
             match item? {
                 StreamEvent::Content(delta) => {
@@ -202,7 +219,9 @@ pub async fn ai(
         }
         Err(e) => {
             let err = NexusError::from(e);
-            sink.send(EditorAiEvent::Error { message: err.to_string() });
+            sink.send(EditorAiEvent::Error {
+                message: err.to_string(),
+            });
             Err(err)
         }
     }
@@ -243,14 +262,21 @@ mod tests {
         assert!(build_request(&req("ask")).is_err());
         let mut asked = req("ask");
         asked.instructions = Some("why is this slow?".into());
-        assert!(build_request(&asked).unwrap().messages[1].content.contains("why is this slow?"));
+        assert!(
+            build_request(&asked).unwrap().messages[1]
+                .content
+                .contains("why is this slow?")
+        );
         assert!(build_request(&req("delete_everything")).is_err());
     }
 
     #[test]
     fn remotes_cannot_save() {
         let dir = tempfile::tempdir().unwrap();
-        let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
         let _g = rt.enter();
         let ctx = crate::state::AppState::for_tests(dir.path());
         let remote = Caller::Remote {

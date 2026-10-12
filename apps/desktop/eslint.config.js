@@ -18,6 +18,10 @@ export default tseslint.config(
     },
   },
   {
+    files: ["public/sw.js"],
+    languageOptions: { globals: { ...globals.serviceworker } },
+  },
+  {
     // Feature code goes through `src/lib/api.ts` (Transport facade), never `invoke` or the generated
     // `commands`/`events`: the same UI must run over Tauri and, later, the LAN Share WebSocket.
     files: ["src/**/*.{ts,tsx}"],

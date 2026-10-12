@@ -323,7 +323,9 @@ export function EditorPage() {
     if (allowed.includes(dirOf(p))) void doSave(p);
     else setConfirm(p);
   }, [doSave]);
-  saveRef.current = requestSave;
+  useEffect(() => {
+    saveRef.current = requestSave;
+  }, [requestSave]);
 
   const closeTab = useCallback((path: string) => {
     const tab = useEditor.getState().tabs.find((t) => t.path === path);

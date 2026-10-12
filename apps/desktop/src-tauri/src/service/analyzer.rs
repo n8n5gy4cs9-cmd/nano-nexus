@@ -64,7 +64,15 @@ pub struct ReportSummary {
 
 impl From<ReportRow> for ReportSummary {
     fn from(r: ReportRow) -> Self {
-        Self { id: r.id, kind: r.kind, target: r.target, title: r.title, summary: r.summary, has_narrative: r.ai_narrative.is_some(), created_at: r.created_at as f64 }
+        Self {
+            id: r.id,
+            kind: r.kind,
+            target: r.target,
+            title: r.title,
+            summary: r.summary,
+            has_narrative: r.ai_narrative.is_some(),
+            created_at: r.created_at as f64,
+        }
     }
 }
 
@@ -104,7 +112,9 @@ pub struct CleanupPlan {
 }
 
 fn row_of(ctx: &AppCtx, id: &str) -> Result<ReportRow, NexusError> {
-    ctx.store.get_report(id)?.ok_or_else(|| NexusError::NotFound(format!("report {id}")))
+    ctx.store
+        .get_report(id)?
+        .ok_or_else(|| NexusError::NotFound(format!("report {id}")))
 }
 
 fn read_json<T: serde::de::DeserializeOwned>(row: &ReportRow) -> Result<T, NexusError> {
@@ -137,7 +147,17 @@ pub async fn analyze_folder(
     ctx.analyses.add(job_id, job.token.clone());
     let jobs_progress = {
         let (ctx, id) = (Arc::clone(ctx), job.id.clone());
-        move |p: &ScanProgress| ctx.jobs.progress(&id, None, Some(format!("{} files · {}", nexus_analyze::fmt::count(p.files_seen), p.phase)))
+        move |p: &ScanProgress| {
+            ctx.jobs.progress(
+                &id,
+                None,
+                Some(format!(
+                    "{} files · {}",
+                    nexus_analyze::fmt::count(p.files_seen),
+                    p.phase
+                )),
+            )
+        }
     };
     let progress: Arc<dyn Fn(ScanProgress) + Send + Sync> = Arc::new(move |p| {
         jobs_progress(&p);
@@ -157,9 +177,15 @@ async fn scan_and_save(
     progress: Arc<dyn Fn(ScanProgress) + Send + Sync>,
 ) -> Result<String, NexusError> {
     let gate = gatekeeper(ctx, "user");
-    let canon = gate.authorize(Path::new(root), Access::Read, "to analyze this folder").await.map_err(tool_err)?;
+    let canon = gate
+        .authorize(Path::new(root), Access::Read, "to analyze this folder")
+        .await
+        .map_err(tool_err)?;
     if !canon.is_dir() {
-        return Err(NexusError::InvalidInput(format!("{} is not a folder", canon.display())));
+        return Err(NexusError::InvalidInput(format!(
+            "{} is not a folder",
+            canon.display()
+        )));
     }
     let mut opts = ScanOptions::new(&canon);
     opts.duplicates = duplicates;
@@ -172,8 +198,19 @@ async fn scan_and_save(
     };
     let shown = display_root(&canon, Some(&home_dir()));
     let json = render::json(&report).map_err(|e| NexusError::Internal(e.to_string()))?;
-    let summary = format!("{} files · {}", nexus_analyze::fmt::count(report.totals.files), nexus_analyze::fmt::bytes(report.totals.bytes));
-    save_report(ctx, "folder", &canon.display().to_string(), &format!("Folder report: {shown}"), Some(summary), &json)
+    let summary = format!(
+        "{} files · {}",
+        nexus_analyze::fmt::count(report.totals.files),
+        nexus_analyze::fmt::bytes(report.totals.bytes)
+    );
+    save_report(
+        ctx,
+        "folder",
+        &canon.display().to_string(),
+        &format!("Folder report: {shown}"),
+        Some(summary),
+        &json,
+    )
 }
 
 /// Stop a running analysis.
@@ -182,13 +219,22 @@ pub fn cancel(ctx: &AppCtx, job_id: &str) -> bool {
 }
 
 pub fn reports_list(ctx: &AppCtx, kind: Option<&str>, limit: u32) -> Result<Vec<ReportSummary>, NexusError> {
-    Ok(ctx.store.list_reports(kind, limit.clamp(1, 500))?.into_iter().map(Into::into).collect())
+    Ok(ctx
+        .store
+        .list_reports(kind, limit.clamp(1, 500))?
+        .into_iter()
+        .map(Into::into)
+        .collect())
 }
 
 pub fn report_folder(ctx: &AppCtx, id: &str) -> Result<FolderReportView, NexusError> {
     let (row, report) = load_folder(ctx, id)?;
     let shown_root = display_root(Path::new(&row.target), Some(&home_dir()));
-    Ok(FolderReportView { report, shown_root, narrative: row.ai_narrative })
+    Ok(FolderReportView {
+        report,
+        shown_root,
+        narrative: row.ai_narrative,
+    })
 }
 
 /// The stored body of a non-folder report (file, secrets, logs) as JSON text for the viewer.
@@ -197,7 +243,9 @@ pub fn report_body(ctx: &AppCtx, id: &str) -> Result<String, NexusError> {
 }
 
 pub fn report_delete(ctx: &AppCtx, id: &str) -> Result<bool, NexusError> {
-    let Some(row) = ctx.store.get_report(id)? else { return Ok(false) };
+    let Some(row) = ctx.store.get_report(id)? else {
+        return Ok(false);
+    };
     // Only ever remove a file inside our own reports folder.
     let p = PathBuf::from(&row.json_path);
     if p.starts_with(&ctx.paths.reports) {
@@ -215,27 +263,49 @@ pub fn report_narrative_save(ctx: &AppCtx, id: &str, text: &str) -> Result<(), N
 pub fn report_export(ctx: &AppCtx, id: &str, format: ExportFormat) -> Result<ExportFile, NexusError> {
     let (row, r) = load_folder(ctx, id)?;
     let shown = display_root(Path::new(&row.target), Some(&home_dir()));
-    let stem = format!("report-{}", &row.id.chars().take(8).collect::<String>());
+    let stem = format!("report-{}", row.id.chars().take(8).collect::<String>());
     let (suffix, mime, contents) = match format {
-        ExportFormat::Markdown => ("md", "text/markdown", render::markdown(&r, &shown, row.ai_narrative.as_deref())),
-        ExportFormat::Json => ("json", "application/json", render::json(&r).map_err(|e| NexusError::Internal(e.to_string()))?),
+        ExportFormat::Markdown => (
+            "md",
+            "text/markdown",
+            render::markdown(&r, &shown, row.ai_narrative.as_deref()),
+        ),
+        ExportFormat::Json => (
+            "json",
+            "application/json",
+            render::json(&r).map_err(|e| NexusError::Internal(e.to_string()))?,
+        ),
         ExportFormat::CsvLargest => ("largest.csv", "text/csv", render::csv_largest(&r)),
         ExportFormat::CsvDuplicates => ("duplicates.csv", "text/csv", render::csv_duplicates(&r)),
         ExportFormat::CsvJunk => ("junk.csv", "text/csv", render::csv_junk(&r)),
     };
-    Ok(ExportFile { file_name: format!("{stem}.{suffix}"), mime: mime.into(), contents })
+    Ok(ExportFile {
+        file_name: format!("{stem}.{suffix}"),
+        mime: mime.into(),
+        contents,
+    })
 }
 
 /// A report for one file (Read access required; asks when missing).
 pub async fn file_report_for(ctx: &Arc<AppCtx>, path: &str) -> Result<String, NexusError> {
     let gate = gatekeeper(ctx, "user");
-    let canon = gate.authorize(Path::new(path), Access::Read, "to look at this file").await.map_err(tool_err)?;
+    let canon = gate
+        .authorize(Path::new(path), Access::Read, "to look at this file")
+        .await
+        .map_err(tool_err)?;
     let report: FileReport = tokio::task::spawn_blocking(move || file_report(&canon))
         .await
         .map_err(|e| NexusError::Internal(e.to_string()))?
         .map_err(|e| NexusError::InvalidInput(e.to_string()))?;
     let json = serde_json::to_string(&report).map_err(|e| NexusError::Internal(e.to_string()))?;
-    save_report(ctx, "file", path, &format!("File report: {}", report.name), None, &json)
+    save_report(
+        ctx,
+        "file",
+        path,
+        &format!("File report: {}", report.name),
+        None,
+        &json,
+    )
 }
 
 fn modified_ms(p: &Path) -> i64 {
@@ -248,17 +318,27 @@ fn modified_ms(p: &Path) -> i64 {
 
 /// Plan a cleanup from a folder report: safe junk and extra copies of duplicates (the oldest copy of each
 /// group is kept) go to the Trash. Needs Write access to the folder; nothing happens until the plan is applied.
-pub async fn cleanup_plan(ctx: &Arc<AppCtx>, id: &str, include_duplicates: bool, include_junk: bool) -> Result<CleanupPlan, NexusError> {
+pub async fn cleanup_plan(
+    ctx: &Arc<AppCtx>,
+    id: &str,
+    include_duplicates: bool,
+    include_junk: bool,
+) -> Result<CleanupPlan, NexusError> {
     let (row, r) = load_folder(ctx, id)?;
     let gate = gatekeeper(ctx, "user");
-    let root = gate.authorize(Path::new(&row.target), Access::Write, "to plan a cleanup").await.map_err(tool_err)?;
+    let root = gate
+        .authorize(Path::new(&row.target), Access::Write, "to plan a cleanup")
+        .await
+        .map_err(tool_err)?;
     let mut ops: Vec<FileOp> = Vec::new();
     let mut seen = std::collections::HashSet::new();
     let (mut files, mut bytes) = (0u32, 0u64);
     let mut add = |rel: &str, size: u64, ops: &mut Vec<FileOp>| {
         let abs = root.join(rel);
         if seen.insert(abs.clone()) {
-            ops.push(FileOp::Trash { path: abs.display().to_string() });
+            ops.push(FileOp::Trash {
+                path: abs.display().to_string(),
+            });
             files += 1;
             bytes += size;
         }
@@ -270,15 +350,30 @@ pub async fn cleanup_plan(ctx: &Arc<AppCtx>, id: &str, include_duplicates: bool,
     }
     if include_duplicates {
         for g in r.duplicates.iter().filter(|g| g.confirmed) {
-            let keep = g.paths.iter().min_by_key(|p| (modified_ms(&root.join(p)), p.len())).cloned();
+            let keep = g
+                .paths
+                .iter()
+                .min_by_key(|p| (modified_ms(&root.join(p)), p.len()))
+                .cloned();
             for p in g.paths.iter().filter(|p| Some(*p) != keep.as_ref()) {
                 add(p, g.bytes_each, &mut ops);
             }
         }
     }
     if ops.is_empty() {
-        return Err(NexusError::InvalidInput("Nothing to clean up in this report.".into()));
+        return Err(NexusError::InvalidInput(
+            "Nothing to clean up in this report.".into(),
+        ));
     }
-    let cs: ChangeSetId = super::fs::changeset_plan(ctx, &format!("Clean up {}", display_root(&root, Some(&home_dir()))), "analyzer", ops)?;
-    Ok(CleanupPlan { changeset_id: cs.0, files, bytes: bytes as f64 })
+    let cs: ChangeSetId = super::fs::changeset_plan(
+        ctx,
+        &format!("Clean up {}", display_root(&root, Some(&home_dir()))),
+        "analyzer",
+        ops,
+    )?;
+    Ok(CleanupPlan {
+        changeset_id: cs.0,
+        files,
+        bytes: bytes as f64,
+    })
 }

@@ -46,7 +46,9 @@ struct WsSink {
 impl Sink<Value> for WsSink {
     fn send(&self, event: Value) -> bool {
         self.tx
-            .send(Message::Text(json!({ "id": self.id, "event": event }).to_string().into()))
+            .send(Message::Text(
+                json!({ "id": self.id, "event": event }).to_string().into(),
+            ))
             .is_ok()
     }
 }
@@ -99,20 +101,18 @@ pub async fn serve_socket(
                 break;
             }
             ev = auth_rx.recv() => {
-                if let Ok(AuthEvent::Revoked(id)) = ev {
-                    if id == device.id {
+                if let Ok(AuthEvent::Revoked(id)) = ev
+                    && id == device.id {
                         let _ = tx.send(text(json!({ "push": "share:session_ended", "data": null })));
                         let _ = tx.send(close(4401, "session ended"));
                         break;
                     }
-                }
             }
             push = push_rx.recv() => {
-                if let Ok(p) = push {
-                    if subs.contains(&p.event) {
+                if let Ok(p) = push
+                    && subs.contains(&p.event) {
                         let _ = tx.send(text(json!({ "push": p.event, "data": p.data })));
                     }
-                }
             }
             Some(id) = done_rx.recv() => { jobs.remove(&id); }
             frame = tokio::time::timeout(IDLE_TIMEOUT, read.next()) => {

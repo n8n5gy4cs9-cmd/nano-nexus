@@ -64,7 +64,9 @@ pub struct ShareServer {
 fn status_of(code: ErrorCode) -> StatusCode {
     match code {
         ErrorCode::Unauthorized => StatusCode::UNAUTHORIZED,
-        ErrorCode::ForbiddenRemote | ErrorCode::PermissionDenied | ErrorCode::PathDenied => StatusCode::FORBIDDEN,
+        ErrorCode::ForbiddenRemote | ErrorCode::PermissionDenied | ErrorCode::PathDenied => {
+            StatusCode::FORBIDDEN
+        }
         ErrorCode::NotFound => StatusCode::NOT_FOUND,
         ErrorCode::InvalidInput => StatusCode::BAD_REQUEST,
         ErrorCode::Conflict => StatusCode::CONFLICT,
@@ -76,9 +78,17 @@ fn status_of(code: ErrorCode) -> StatusCode {
 fn error_response(e: NexusError) -> Response {
     // Pairing failures say nothing beyond "no": no hint which part was wrong.
     let ipc = if matches!(e, NexusError::Unauthorized) {
-        IpcError { code: ErrorCode::Unauthorized, message: "unauthorized".into(), detail: None }
+        IpcError {
+            code: ErrorCode::Unauthorized,
+            message: "unauthorized".into(),
+            detail: None,
+        }
     } else {
-        IpcError { code: e.code(), message: e.to_string(), detail: None }
+        IpcError {
+            code: e.code(),
+            message: e.to_string(),
+            detail: None,
+        }
     };
     (status_of(ipc.code), Json(json!({ "err": ipc }))).into_response()
 }
@@ -98,7 +108,9 @@ fn cookie_token(headers: &HeaderMap) -> Option<String> {
 
 /// Same-origin check: when the browser sends `Origin`, its host must be the one it connected to.
 fn same_origin(headers: &HeaderMap) -> bool {
-    let Some(origin) = headers.get(header::ORIGIN) else { return true };
+    let Some(origin) = headers.get(header::ORIGIN) else {
+        return true;
+    };
     let host = headers.get(header::HOST).and_then(|h| h.to_str().ok());
     let origin_host = origin
         .to_str()
@@ -112,6 +124,8 @@ fn csrf_ok(token: &str, presented: Option<&str>) -> bool {
 }
 
 /// Authenticate a request: cookie → device; mutating requests also need the CSRF header.
+// The error is a ready-made HTTP response that the caller returns as is.
+#[allow(clippy::result_large_err)]
 fn authenticate(
     shared: &Shared,
     headers: &HeaderMap,
@@ -119,7 +133,10 @@ fn authenticate(
     require_csrf: bool,
 ) -> Result<(ShareDevice, String), Response> {
     let token = cookie_token(headers).ok_or_else(unauthorized)?;
-    let device = shared.auth.authenticate(&token, Some(ip)).ok_or_else(unauthorized)?;
+    let device = shared
+        .auth
+        .authenticate(&token, Some(ip))
+        .ok_or_else(unauthorized)?;
     if require_csrf {
         let presented = headers.get(SHARE_CSRF_HEADER).and_then(|h| h.to_str().ok());
         if !csrf_ok(&token, presented) || !same_origin(headers) {
@@ -147,14 +164,24 @@ async fn pair(
 ) -> Response {
     // A custom header forces a CORS preflight, so other sites cannot post here.
     if headers.get(SHARE_CSRF_HEADER).is_none() || !same_origin(&headers) {
-        return (StatusCode::FORBIDDEN, Json(json!({ "err": { "code": "forbidden_remote", "message": "bad request", "detail": null } }))).into_response();
+        return (
+            StatusCode::FORBIDDEN,
+            Json(json!({ "err": { "code": "forbidden_remote", "message": "bad request", "detail": null } })),
+        )
+            .into_response();
     }
     let ua = headers.get(header::USER_AGENT).and_then(|h| h.to_str().ok());
     match shared.auth.pair(&body.code, &body.name, peer.ip(), ua) {
         Ok((device, token)) => {
             let max_age = i64::from(shared.config.session_days) * 86_400;
-            let secure = if shared.config.secure_cookie { "; Secure" } else { "" };
-            let cookie = format!("{SHARE_COOKIE}={token}; HttpOnly; SameSite=Strict; Path=/; Max-Age={max_age}{secure}");
+            let secure = if shared.config.secure_cookie {
+                "; Secure"
+            } else {
+                ""
+            };
+            let cookie = format!(
+                "{SHARE_COOKIE}={token}; HttpOnly; SameSite=Strict; Path=/; Max-Age={max_age}{secure}"
+            );
             let mut res = Json(json!({ "device": device, "csrf": csrf_for(&token) })).into_response();
             if let Ok(v) = HeaderValue::from_str(&cookie) {
                 res.headers_mut().insert(header::SET_COOKIE, v);
@@ -204,12 +231,12 @@ struct SlotGuard {
 
 impl Drop for SlotGuard {
     fn drop(&mut self) {
-        if let Ok(mut m) = self.shared.sockets.lock() {
-            if let Some(n) = m.get_mut(&self.device_id) {
-                *n = n.saturating_sub(1);
-                if *n == 0 {
-                    m.remove(&self.device_id);
-                }
+        if let Ok(mut m) = self.shared.sockets.lock()
+            && let Some(n) = m.get_mut(&self.device_id)
+        {
+            *n = n.saturating_sub(1);
+            if *n == 0 {
+                m.remove(&self.device_id);
             }
         }
     }
@@ -241,18 +268,32 @@ async fn ws(
         }
         *n += 1;
     }
-    let guard = SlotGuard { shared: shared.clone(), device_id: device.id.clone() };
+    let guard = SlotGuard {
+        shared: shared.clone(),
+        device_id: device.id.clone(),
+    };
     upgrade
         .max_message_size(crate::rpc::MAX_FRAME)
         .on_upgrade(move |socket| async move {
             let _guard = guard;
-            crate::rpc::serve_socket(socket, device, shared.api.clone(), shared.auth.clone(), shared.shutdown.clone()).await;
+            crate::rpc::serve_socket(
+                socket,
+                device,
+                shared.api.clone(),
+                shared.auth.clone(),
+                shared.shutdown.clone(),
+            )
+            .await;
         })
 }
 
 async fn fallback(method: Method, uri: Uri) -> Response {
     if uri.path().starts_with("/api/") {
-        return (StatusCode::NOT_FOUND, Json(json!({ "err": { "code": "not_found", "message": "not found", "detail": null } }))).into_response();
+        return (
+            StatusCode::NOT_FOUND,
+            Json(json!({ "err": { "code": "not_found", "message": "not found", "detail": null } })),
+        )
+            .into_response();
     }
     assets::serve(&method, &uri)
 }
@@ -265,7 +306,10 @@ async fn headers_layer(req: axum::extract::Request, next: Next) -> Response {
     h.insert(header::CONTENT_SECURITY_POLICY, HeaderValue::from_static(CSP));
     h.insert(header::X_FRAME_OPTIONS, HeaderValue::from_static("DENY"));
     h.insert(header::REFERRER_POLICY, HeaderValue::from_static("no-referrer"));
-    h.insert(header::X_CONTENT_TYPE_OPTIONS, HeaderValue::from_static("nosniff"));
+    h.insert(
+        header::X_CONTENT_TYPE_OPTIONS,
+        HeaderValue::from_static("nosniff"),
+    );
     if api {
         h.insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
     }
@@ -287,7 +331,11 @@ fn router(shared: Arc<Shared>) -> Router {
 
 impl ShareServer {
     /// Bind and serve. `port_in_use` if the port is taken.
-    pub async fn start(config: ServerConfig, auth: Arc<Auth>, api: Arc<dyn ShareApi>) -> Result<Self, NexusError> {
+    pub async fn start(
+        config: ServerConfig,
+        auth: Arc<Auth>,
+        api: Arc<dyn ShareApi>,
+    ) -> Result<Self, NexusError> {
         let addr = SocketAddr::new(config.bind, config.port);
         let shutdown = CancellationToken::new();
         let tls = config.tls.clone();
@@ -303,7 +351,9 @@ impl ShareServer {
         let stop = shutdown.clone();
         let (bound, task) = match tls {
             None => {
-                let listener = TcpListener::bind(addr).await.map_err(|e| bind_error(e, addr.port()))?;
+                let listener = TcpListener::bind(addr)
+                    .await
+                    .map_err(|e| bind_error(e, addr.port()))?;
                 let bound = listener.local_addr()?;
                 let task = tokio::spawn(async move {
                     let served = axum::serve(listener, app)
@@ -335,7 +385,10 @@ impl ShareServer {
                     watcher.graceful_shutdown(Some(std::time::Duration::from_secs(3)));
                 });
                 let task = tokio::spawn(async move {
-                    let served = axum_server::bind_rustls(bound, rustls_config).handle(handle).serve(app).await;
+                    let served = axum_server::bind_rustls(bound, rustls_config)
+                        .handle(handle)
+                        .serve(app)
+                        .await;
                     if let Err(e) = served {
                         tracing::warn!("share server ended with an error: {e}");
                     }
@@ -343,15 +396,21 @@ impl ShareServer {
                 (bound, task)
             }
         };
-        let advertiser = mdns_name.and_then(|name| match crate::mdns::Advertiser::start(&name, bound.port()) {
-            Ok(a) => Some(a),
-            Err(e) => {
-                tracing::warn!("could not advertise over Bonjour: {e}");
-                None
-            }
-        });
+        let advertiser =
+            mdns_name.and_then(|name| match crate::mdns::Advertiser::start(&name, bound.port()) {
+                Ok(a) => Some(a),
+                Err(e) => {
+                    tracing::warn!("could not advertise over Bonjour: {e}");
+                    None
+                }
+            });
         tracing::info!(%bound, "LAN share started");
-        Ok(Self { addr: bound, shutdown, task, advertiser })
+        Ok(Self {
+            addr: bound,
+            shutdown,
+            task,
+            advertiser,
+        })
     }
 
     /// The bound address (useful when the port was 0 in tests).
@@ -365,7 +424,10 @@ impl ShareServer {
             a.stop();
         }
         self.shutdown.cancel();
-        if tokio::time::timeout(std::time::Duration::from_secs(5), self.task).await.is_err() {
+        if tokio::time::timeout(std::time::Duration::from_secs(5), self.task)
+            .await
+            .is_err()
+        {
             tracing::warn!("share server did not stop in time");
         }
         tracing::info!("LAN share stopped");

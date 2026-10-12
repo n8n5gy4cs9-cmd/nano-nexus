@@ -383,7 +383,10 @@ fn start_turn(
     let is_pipeline = spec.workflow.kind == "pipeline";
     let pipeline_attachments = user.attachments.clone();
     // `/nano-nexus` help questions are answered from the attached report; the model must not go looking for files.
-    let help_question = user.attachments.iter().any(|a| a.label == "NanoNexus diagnostics");
+    let help_question = user
+        .attachments
+        .iter()
+        .any(|a| a.label == "NanoNexus diagnostics");
     let routed = spec.workflow.kind == "router" && !tool_names.is_empty() && !help_question;
     let (max_hops, always_route) = (
         spec.workflow.max_hops.unwrap_or(3),
@@ -436,7 +439,8 @@ fn start_turn(
             assistant_message_id: assistant_id.clone(),
         });
         if let Some(id) = &duo_model {
-            let already = matches!(ctx.supervisor.state(), RuntimeState::Ready { model_id, .. } if &model_id == id);
+            let already =
+                matches!(ctx.supervisor.state(), RuntimeState::Ready { model_id, .. } if &model_id == id);
             if !already {
                 persisting.send(ChatEvent::Status {
                     text: "Duo: switching model…".into(),
@@ -447,7 +451,17 @@ fn start_turn(
         let mut early_text: Option<String> = None;
         let mut check_facts: Option<String> = None;
         if is_pipeline {
-            match super::pipelines::run_pipeline(&ctx, &input.assistant, &input.user_text, &pipeline_attachments, &persisting, &cancel, requested_by.clone()).await {
+            match super::pipelines::run_pipeline(
+                &ctx,
+                &input.assistant,
+                &input.user_text,
+                &pipeline_attachments,
+                &persisting,
+                &cancel,
+                requested_by.clone(),
+            )
+            .await
+            {
                 Ok(Some((out, target))) => {
                     super::pipelines::store_artifact(&ctx, &out.artifact, &target, &persisting);
                     for n in &out.notes {
@@ -486,7 +500,10 @@ fn start_turn(
             let gate = EngineGatekeeper::new(
                 ctx.perms.clone(),
                 assistant_slug.clone(),
-                Some(Arc::new(super::permissions::BrokerAsker { ctx: ctx.clone(), requested_by: requested_by.clone() })),
+                Some(Arc::new(super::permissions::BrokerAsker {
+                    ctx: ctx.clone(),
+                    requested_by: requested_by.clone(),
+                })),
             );
             let mut cx = ToolCx::new(Arc::new(gate));
             cx.docs = docs;
@@ -507,7 +524,12 @@ fn start_turn(
                 if !text.is_empty() {
                     persisting.send(ChatEvent::Content { delta: text.clone() });
                 }
-                persisting.send(ChatEvent::Done { finish_reason: "stop".into(), tokens_out: 0, tps: 0.0, ttft_ms: 0 });
+                persisting.send(ChatEvent::Done {
+                    finish_reason: "stop".into(),
+                    tokens_out: 0,
+                    tps: 0.0,
+                    ttft_ms: 0,
+                });
                 nexus_agent::TurnOutcome {
                     status: MessageStatus::Done,
                     content: text,
@@ -529,18 +551,26 @@ fn start_turn(
         if let Some(facts) = check_facts.filter(|_| outcome.status == MessageStatus::Done) {
             let bad = nexus_agent::pipelines::unsupported_numbers(&outcome.content, &facts);
             if !bad.is_empty() {
-                let note = format!("\n\n_Note: I could not verify these numbers against the scan: {}._", bad.join(", "));
+                let note = format!(
+                    "\n\n_Note: I could not verify these numbers against the scan: {}._",
+                    bad.join(", ")
+                );
                 persisting.send(ChatEvent::Content { delta: note.clone() });
                 outcome.content.push_str(&note);
             }
         }
         // Verified citations: invented `[n]` markers are dropped and the real ones get a Sources list.
-        if let Some(kb) = kb_source.as_ref().filter(|_| outcome.status == MessageStatus::Done) {
+        if let Some(kb) = kb_source
+            .as_ref()
+            .filter(|_| outcome.status == MessageStatus::Done)
+        {
             let verified = kb.finalize_answer(&outcome.content);
             if let Some(tail) = verified.strip_prefix(outcome.content.as_str())
                 && !tail.is_empty()
             {
-                persisting.send(ChatEvent::Content { delta: tail.to_owned() });
+                persisting.send(ChatEvent::Content {
+                    delta: tail.to_owned(),
+                });
             }
             outcome.content = verified;
         }
