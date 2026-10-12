@@ -381,7 +381,7 @@ node scripts/verify-payload.mjs path/to/NanoNexus.app  <span class="c"># re-hash
 <details><summary>"Not enough disk space"</summary><p>Building copies models into the app, so you need about 2× the total model size free plus 5 GB. <code>scripts/doctor.sh</code> shows free space.</p></details>
 <details><summary>A model repeats itself or rambles</summary><p>The MiniCPM5 models need <code>min_p = 0</code> (catalog presets set this). For other models, use the catalog's sampling preset or lower the temperature in the assistant settings.</p></details>
 
-<h2 id="libraries">10 · Offline libraries: ask your books and manuals <span class="badge b-plan">Planned · M17</span></h2>
+<h2 id="libraries">10 · Offline libraries: ask your books and manuals <span class="badge b-now">Available now</span></h2>
 <p>Add a folder (or files) of Markdown, text, JSON, HTML, PDF, EPUB, DOCX, CSV or source code in <b>Library</b>. NanoNexus indexes it on your computer (no model calls, no network) and the <b>Librarian</b> assistant answers from it with <code>[1]</code>-style citations that open the exact passage. If the books do not cover the question, it says <i>not in the library</i>.</p>
 <ul>
   <li><b>Try it:</b> add <code>docs/samples/knowledge/mixing-basics</code>, then ask the Librarian “how do I set up a send?”.</li>

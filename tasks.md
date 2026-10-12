@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 194/234 tasks done (82%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 195/234 tasks done (83%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -240,7 +240,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [ ] ⭐ **T13.13** Exit check: offline install works on x64; Task Manager kill → no orphan; no console flash; 3-model kit verified
 
 ## M14: LAN Share + mobile web UI · [spec](docs/milestones/M14-lan-share.md) · [contract](docs/architecture/LAN-SHARE.md)
-- [ ] **T14.01** Audit: every command delegates to `service::*` with `Caller`; no `invoke` in feature code
+- [x] **T14.01** Audit: every command delegates to `service::*` with `Caller`; no `invoke` in feature code (2026-10-12) — audit done and enforced: `apps/desktop/src-tauri/tests/command_audit.rs` (every command calls `service::*`, bodies ≤ 25 lines, no store/perms/fs access, only `Caller::Desktop`, the remote allow-list excludes management commands) and `scripts/frontend-audit.test.mjs` (no `invoke`/Tauri imports/`commands` outside the transport). Fix: the OS-permission probing moved from `commands/fs.rs` into `service::fs::os_permissions_status`
 - [x] **T14.02** `nexus-share` auth: pairing secrets (single-use, 5 min), PIN + rate limit/lockout, device sessions (hash-only), CSRF + tests (2026-10-11) — written; not compiled or tested (session was code-only)
 - [x] **T14.03** WebSocket RPC (protocol, allow-list, streaming, cancel, push events) + policy guard + tests (2026-10-11) — written; not compiled or tested (session was code-only)
 - [x] **T14.04** Static web UI embedding (`dist-web` via include_dir!, SPA fallback, security headers, cache rules) (2026-10-11) — written; not compiled or tested (session was code-only)

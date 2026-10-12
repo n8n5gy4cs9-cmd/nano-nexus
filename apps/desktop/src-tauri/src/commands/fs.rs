@@ -6,7 +6,7 @@ use nexus_core::changes::ChangePreview;
 use nexus_core::error::{IpcError, NexusError};
 use nexus_core::fs::{AuditRecord, Grant, GrantLevel};
 use nexus_core::ids::ChangeSetId;
-use nexus_fs::os::{self, OsAccess, PrivacyPane};
+use nexus_fs::os::{self, PrivacyPane};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 use tauri::{AppHandle, Manager, State};
@@ -14,7 +14,8 @@ use tauri_plugin_dialog::DialogExt;
 
 use super::CmdResult;
 use crate::service::fs::{
-    ChangeSetSummary, DenyRuleView, DirEntryInfo, FileStat, TextFile, UndoDecision, UndoOutcome,
+    ChangeSetSummary, DenyRuleView, DirEntryInfo, FileStat, OsPermissionsStatus, TextFile, UndoDecision,
+    UndoOutcome,
 };
 use crate::service::{self, Caller};
 use crate::state::AppState;
@@ -145,58 +146,12 @@ pub async fn fs_stat(ctx: Ctx<'_>, path: String) -> CmdResult<FileStat> {
 
 // ---- OS consent -----------------------------------------------------------------------------
 
-/// One protected macOS folder and whether the OS lets us in.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Type)]
-pub struct OsFolderStatus {
-    pub path: String,
-    /// `granted`, `denied`, `missing`, or `other`.
-    pub state: String,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Type)]
-pub struct OsPermissionsStatus {
-    /// `macos`, `windows`, or `linux`.
-    pub platform: String,
-    pub folders: Vec<OsFolderStatus>,
-    /// Full Disk Access (macOS only); `None` elsewhere.
-    pub full_disk_access: Option<String>,
-}
-
-fn state_name(a: OsAccess) -> &'static str {
-    match a {
-        OsAccess::Granted => "granted",
-        OsAccess::Denied => "denied",
-        OsAccess::Missing => "missing",
-        OsAccess::Other => "other",
-    }
-}
-
 /// Probe the OS-protected folders. Only runs when the Permissions page asks (macOS may prompt).
 #[tauri::command]
 #[specta::specta]
 pub async fn os_permissions_status(app: AppHandle) -> CmdResult<OsPermissionsStatus> {
     let home = app.path().home_dir().map_err(join_err)?;
-    tauri::async_runtime::spawn_blocking(move || {
-        let mac = cfg!(target_os = "macos");
-        let folders = if mac {
-            os::tcc_folder_paths(&home)
-                .into_iter()
-                .map(|p| OsFolderStatus {
-                    state: state_name(os::probe_folder(&p, &home)).into(),
-                    path: p.display().to_string(),
-                })
-                .collect()
-        } else {
-            Vec::new()
-        };
-        OsPermissionsStatus {
-            platform: std::env::consts::OS.to_owned(),
-            folders,
-            full_disk_access: mac.then(|| state_name(os::probe_full_disk_access(&home)).to_owned()),
-        }
-    })
-    .await
-    .map_err(join_err)
+    service::fs::os_permissions_status(home).await.map_err(ipc)
 }
 
 /// Open System Settings on the right Privacy pane (`files` or `full_disk`). No-op off macOS.

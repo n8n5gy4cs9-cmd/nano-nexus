@@ -9,6 +9,7 @@ use nexus_core::changes::{ChangePreview, ChangeSet, FileOp, Totals};
 use nexus_core::error::NexusError;
 use nexus_core::fs::{Access, AuditRecord, Grant, GrantLevel, GrantScope};
 use nexus_core::ids::ChangeSetId;
+use nexus_fs::os::{self, OsAccess};
 use nexus_fs::{ApplyError, ConflictDecision, NewGrant};
 use nexus_store::ChangeSetRow;
 use serde::{Deserialize, Serialize};
@@ -732,4 +733,58 @@ mod tests {
         assert_eq!(changesets_list(&ctx, 10).unwrap().len(), 2);
         assert!(changeset_plan(&ctx, "Empty", "editor", vec![]).is_err());
     }
+}
+
+// ---- OS consent -------------------------------------------------------------------------------
+
+/// One protected macOS folder and whether the OS lets us in.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Type)]
+pub struct OsFolderStatus {
+    pub path: String,
+    /// `granted`, `denied`, `missing`, or `other`.
+    pub state: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Type)]
+pub struct OsPermissionsStatus {
+    /// `macos`, `windows`, or `linux`.
+    pub platform: String,
+    pub folders: Vec<OsFolderStatus>,
+    /// Full Disk Access (macOS only); `None` elsewhere.
+    pub full_disk_access: Option<String>,
+}
+
+fn state_name(a: OsAccess) -> &'static str {
+    match a {
+        OsAccess::Granted => "granted",
+        OsAccess::Denied => "denied",
+        OsAccess::Missing => "missing",
+        OsAccess::Other => "other",
+    }
+}
+
+/// Probe the OS-protected folders (macOS TCC). May show the system prompt, so it runs on the blocking pool
+/// and only when the Permissions page asks.
+pub async fn os_permissions_status(home: std::path::PathBuf) -> Result<OsPermissionsStatus, NexusError> {
+    tokio::task::spawn_blocking(move || {
+        let mac = cfg!(target_os = "macos");
+        let folders = if mac {
+            os::tcc_folder_paths(&home)
+                .into_iter()
+                .map(|p| OsFolderStatus {
+                    state: state_name(os::probe_folder(&p, &home)).into(),
+                    path: p.display().to_string(),
+                })
+                .collect()
+        } else {
+            Vec::new()
+        };
+        OsPermissionsStatus {
+            platform: std::env::consts::OS.to_owned(),
+            folders,
+            full_disk_access: mac.then(|| state_name(os::probe_full_disk_access(&home)).to_owned()),
+        }
+    })
+    .await
+    .map_err(|e| NexusError::Internal(e.to_string()))
 }
