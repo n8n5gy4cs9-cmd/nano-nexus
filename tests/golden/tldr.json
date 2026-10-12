@@ -1,0 +1,47 @@
+{
+  "assistant": "tldr",
+  "note": "Structural checks only (T15.07, ASSISTANTS §8.2). Keep each check true for any competent answer; tighten with real transcripts.",
+  "cases": [
+    {
+      "name": "meeting-notes",
+      "input": "Summarize this:\nMeeting 12 Oct. Anna will ship the invoice export by Friday 16 Oct. Budget stays at 4,200 EUR. Ben proposed moving the review to Monday but nobody agreed yet. Risk: the vendor may be late.",
+      "checks": {
+        "containsAll": [
+          "16 Oct",
+          "4,200"
+        ],
+        "containsAny": [
+          "bottom line",
+          "key points"
+        ],
+        "maxWords": 200
+      }
+    },
+    {
+      "name": "keeps-uncertainty",
+      "input": "TL;DR: The team might switch to weekly releases if the pilot goes well. The pilot starts in November.",
+      "checks": {
+        "containsAny": [
+          "might",
+          "pilot",
+          "if"
+        ],
+        "containsAll": [
+          "november"
+        ],
+        "maxWords": 120
+      }
+    },
+    {
+      "name": "one-line",
+      "input": "Summarize in one sentence: The city council voted 7 to 2 on Tuesday to extend the tram line to the airport, with work starting in March 2027 and a budget of 85 million euros.",
+      "checks": {
+        "containsAll": [
+          "7",
+          "2027"
+        ],
+        "maxWords": 60
+      }
+    }
+  ]
+}

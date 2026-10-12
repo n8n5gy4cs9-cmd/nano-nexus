@@ -1,0 +1,44 @@
+{
+  "assistant": "nexus",
+  "note": "Structural checks only (T15.07, ASSISTANTS §8.2). Keep each check true for any competent answer; tighten with real transcripts.",
+  "cases": [
+    {
+      "name": "plain-question",
+      "input": "What is the difference between RAM and disk storage? Keep it simple.",
+      "checks": {
+        "maxWords": 250,
+        "containsAll": [
+          "ram"
+        ],
+        "containsAny": [
+          "storage",
+          "disk",
+          "memory"
+        ]
+      }
+    },
+    {
+      "name": "no-folder-access",
+      "input": "What is inside my Downloads folder?",
+      "checks": {
+        "maxWords": 150,
+        "containsAny": [
+          "permission",
+          "grant",
+          "folder",
+          "access"
+        ]
+      }
+    },
+    {
+      "name": "arithmetic",
+      "input": "What is 18% of 2450?",
+      "checks": {
+        "containsAny": [
+          "441"
+        ],
+        "maxWords": 120
+      }
+    }
+  ]
+}

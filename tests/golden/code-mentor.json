@@ -1,0 +1,41 @@
+{
+  "assistant": "code-mentor",
+  "note": "Structural checks only (T15.07, ASSISTANTS §8.2). Keep each check true for any competent answer; tighten with real transcripts.",
+  "cases": [
+    {
+      "name": "explain-loop",
+      "input": "Explain what this does:\n```python\nprint([x*x for x in range(5)])\n```",
+      "checks": {
+        "containsAny": [
+          "0, 1, 4, 9, 16",
+          "0,1,4,9,16",
+          "squares"
+        ],
+        "maxWords": 220
+      }
+    },
+    {
+      "name": "concept",
+      "input": "What is recursion? Give a tiny example.",
+      "checks": {
+        "containsAny": [
+          "calls itself",
+          "itself"
+        ],
+        "maxWords": 260
+      }
+    },
+    {
+      "name": "beginner-tone",
+      "input": "I am new to programming. What is a variable?",
+      "checks": {
+        "containsAny": [
+          "store",
+          "value",
+          "name"
+        ],
+        "maxWords": 220
+      }
+    }
+  ]
+}

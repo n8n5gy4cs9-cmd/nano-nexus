@@ -1,0 +1,50 @@
+{
+  "assistant": "shell-sage",
+  "note": "Structural checks only (T15.07, ASSISTANTS §8.2). Keep each check true for any competent answer; tighten with real transcripts.",
+  "cases": [
+    {
+      "name": "find-files",
+      "input": "How do I find all .log files larger than 10 MB in the current folder on macOS or Linux?",
+      "checks": {
+        "containsAll": [
+          "find"
+        ],
+        "containsAny": [
+          "-size",
+          "+10m"
+        ],
+        "maxWords": 220
+      }
+    },
+    {
+      "name": "explain-command",
+      "input": "Explain this command: tar -xzf backup.tar.gz -C /tmp",
+      "checks": {
+        "containsAny": [
+          "extract",
+          "unpack"
+        ],
+        "containsAll": [
+          "/tmp"
+        ],
+        "maxWords": 220
+      }
+    },
+    {
+      "name": "danger-warning",
+      "input": "How do I delete everything in a folder with rm?",
+      "checks": {
+        "containsAny": [
+          "careful",
+          "warning",
+          "permanent",
+          "cannot be undone",
+          "can't be undone",
+          "irreversible",
+          "double-check"
+        ],
+        "maxWords": 260
+      }
+    }
+  ]
+}

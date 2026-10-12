@@ -1,0 +1,35 @@
+{
+  "assistant": "duo",
+  "note": "Structural checks only (T15.07, ASSISTANTS §8.2). Keep each check true for any competent answer; tighten with real transcripts.",
+  "cases": [
+    {
+      "name": "quick-fact",
+      "input": "What is the capital of France?",
+      "checks": {
+        "containsAll": [
+          "paris"
+        ],
+        "maxWords": 80
+      }
+    },
+    {
+      "name": "naming",
+      "input": "Suggest three names for a coffee shop.",
+      "checks": {
+        "minWords": 6,
+        "maxWords": 200
+      }
+    },
+    {
+      "name": "explain",
+      "input": "Explain how a hash map works.",
+      "checks": {
+        "containsAny": [
+          "key",
+          "hash"
+        ],
+        "maxWords": 260
+      }
+    }
+  ]
+}

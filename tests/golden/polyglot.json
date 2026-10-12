@@ -1,0 +1,38 @@
+{
+  "assistant": "polyglot",
+  "note": "Structural checks only (T15.07, ASSISTANTS §8.2). Keep each check true for any competent answer; tighten with real transcripts.",
+  "cases": [
+    {
+      "name": "to-spanish",
+      "input": "Translate to Spanish: Where is the train station?",
+      "checks": {
+        "containsAny": [
+          "estación",
+          "estacion"
+        ],
+        "maxWords": 60
+      }
+    },
+    {
+      "name": "to-german",
+      "input": "Translate to German: Thank you very much for your help.",
+      "checks": {
+        "containsAny": [
+          "danke",
+          "vielen dank"
+        ],
+        "maxWords": 60
+      }
+    },
+    {
+      "name": "no-extra",
+      "input": "Translate to French: Good morning.",
+      "checks": {
+        "containsAny": [
+          "bonjour"
+        ],
+        "maxWords": 40
+      }
+    }
+  ]
+}

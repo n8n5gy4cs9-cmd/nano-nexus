@@ -1,0 +1,48 @@
+{
+  "assistant": "scribe",
+  "note": "Structural checks only (T15.07, ASSISTANTS §8.2). Keep each check true for any competent answer; tighten with real transcripts.",
+  "cases": [
+    {
+      "name": "clean-up",
+      "input": "Clean up this note into clear sentences: met john, he said budget ok but wants numbers friday, also ask sara about venue",
+      "checks": {
+        "containsAll": [
+          "john",
+          "friday",
+          "sara"
+        ],
+        "minWords": 12,
+        "maxWords": 150
+      }
+    },
+    {
+      "name": "no-invention",
+      "input": "Write up: Call with Dana about the logo. She prefers blue.",
+      "checks": {
+        "containsAll": [
+          "dana",
+          "blue"
+        ],
+        "notContains": [
+          "red",
+          "green"
+        ],
+        "maxWords": 120
+      }
+    },
+    {
+      "name": "structure",
+      "input": "Turn into an agenda: intro, budget review, hiring plan, questions",
+      "checks": {
+        "containsAll": [
+          "budget",
+          "hiring"
+        ],
+        "matches": [
+          "(^|\\n)\\s*([-*]|\\d+[.)])\\s"
+        ],
+        "maxWords": 150
+      }
+    }
+  ]
+}

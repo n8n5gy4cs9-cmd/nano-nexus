@@ -1,0 +1,44 @@
+{
+  "assistant": "bug-hunter",
+  "note": "Structural checks only (T15.07, ASSISTANTS §8.2). Keep each check true for any competent answer; tighten with real transcripts.",
+  "cases": [
+    {
+      "name": "off-by-one",
+      "input": "Find the bug:\n```python\ndef total(xs):\n    s = 0\n    for i in range(1, len(xs)):\n        s += xs[i]\n    return s\n```",
+      "checks": {
+        "containsAny": [
+          "range(0",
+          "index 0",
+          "first element",
+          "skips",
+          "off-by-one",
+          "off by one"
+        ],
+        "maxWords": 250
+      }
+    },
+    {
+      "name": "none-check",
+      "input": "Why does this crash?\n```js\nfunction len(s){ return s.length }\nlen(undefined)\n```",
+      "checks": {
+        "containsAny": [
+          "undefined",
+          "null"
+        ],
+        "maxWords": 220
+      }
+    },
+    {
+      "name": "fix-given",
+      "input": "Give a fixed version:\n```python\ndef avg(xs):\n    return sum(xs)/len(xs)\n```\nIt crashes on an empty list.",
+      "checks": {
+        "containsAny": [
+          "if not xs",
+          "len(xs) == 0",
+          "empty"
+        ],
+        "maxWords": 220
+      }
+    }
+  ]
+}

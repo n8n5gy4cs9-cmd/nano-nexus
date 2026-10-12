@@ -1,0 +1,36 @@
+{
+  "assistant": "prompt-architect",
+  "note": "Structural checks only (T15.07, ASSISTANTS §8.2). Keep each check true for any competent answer; tighten with real transcripts.",
+  "cases": [
+    {
+      "name": "make-prompt",
+      "input": "Help me write a system prompt for an assistant that checks my spelling.",
+      "checks": {
+        "containsAny": [
+          "spelling"
+        ],
+        "minWords": 40,
+        "maxWords": 320
+      }
+    },
+    {
+      "name": "asks-or-delivers",
+      "input": "I need an assistant for my recipes.",
+      "checks": {
+        "containsAny": [
+          "recipe"
+        ],
+        "minWords": 20,
+        "maxWords": 320
+      }
+    },
+    {
+      "name": "keeps-short",
+      "input": "Make this prompt shorter: You are a very helpful and friendly assistant who always helps the user with whatever they need in a polite and kind manner.",
+      "checks": {
+        "maxWords": 120,
+        "minWords": 5
+      }
+    }
+  ]
+}
