@@ -8,7 +8,9 @@ use nexus_agent::{PromptContext, render_system_prompt};
 use serde_json::json;
 
 fn main() {
-    let id = std::env::args().nth(1).expect("usage: render_prompt <assistant id>");
+    let id = std::env::args()
+        .nth(1)
+        .expect("usage: render_prompt <assistant id>");
     let (_, text) = builtin_sources()
         .into_iter()
         .find(|(file, _)| file.trim_end_matches(".toml") == id)

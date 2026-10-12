@@ -1058,6 +1058,15 @@ pub fn init(ctx: &AppCtx) {
             if !r.missing.is_empty() {
                 tracing::warn!(missing = ?r.missing, "bundled models are missing on disk");
             }
+            // Stale rows from an earlier bundle/dev run whose files are gone and that the current bundle does
+            // not list: drop the row (never a file), or the model shows twice ("File missing" + found in folder).
+            if let Ok(rows) = ctx.store.list_models() {
+                for m in rows {
+                    if m.source == "builtin" && !Path::new(&m.path).is_file() && !r.missing.contains(&m.id) {
+                        let _ = ctx.store.delete_model(&m.id);
+                    }
+                }
+            }
         }
         Err(e) => tracing::warn!("could not register bundled models: {e}"),
     }
