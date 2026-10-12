@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 192/234 tasks done (82%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 193/234 tasks done (82%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -233,7 +233,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T13.06** Portable format + `portable.flag` → data in `.\data\` (AppPaths portable mode) (2026-10-12) — portable format in `build-windows.mjs`: exe + runtime + models + `portable.flag` + README, zipped; the folder is verified with `verify-payload --windows`; the app switches to `.\data\` when `portable.flag` is next to the exe (`AppPaths::portable`, already in `resolve_paths`). Tested in `build-windows.test.mjs`
 - [x] **T13.07** Offline kit format (basic installer + `models-extra/` + WebView2 offline installer + INSTALL.txt), auto rule > 1.8 GB (2026-10-12) — offline kit in `build-windows.mjs`: setup.exe with the default model + WebView2 offline installer (`offlineInstaller` in the overlay), `models-extra/` as a model pack, `INSTALL.txt`; `auto` picks the kit above 1.8 GB (`chooseFormat`). First-launch import of `models-extra/pack.json` is T12.09. Tested in `build-windows.test.mjs`
 - [x] **T13.08** App Builder integration (Windows targets + formats) + SHA256SUMS (2026-10-12) — `bundle.mjs` now hands Windows targets to `build-windows.mjs` (installer, portable, kit, x64 and arm64, SHA256SUMS); App Builder page offers ARM64 and the offline kit; `scripts/app-builder.test.mjs`
-- [ ] **T13.09** Write `docs/WINDOWS-TESTING.md` checklist
+- [x] **T13.09** Write `docs/WINDOWS-TESTING.md` checklist (2026-10-12) — `docs/WINDOWS-TESTING.md`: install, no-orphan, portable, offline kit (incl. damaged-file test), model packs, files/CFA, Vulkan/CPU, firewall, ARM VM
 - [ ] **T13.10** 🪟🔬 **S8** Vulkan GPU on the studio PC; CPU fallback without vulkan-1.dll → SPIKES.md
 - [ ] **T13.11** 🪟 Run the checklist on the Win11 ARM VM (arm64 + x64 emulation) and the x64 PC (offline)
 - [ ] **T13.12** Update `guide.html` Windows sections to "available"
