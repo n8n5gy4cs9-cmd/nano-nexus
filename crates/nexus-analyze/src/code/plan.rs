@@ -138,6 +138,55 @@ pub fn plan_renames(
         accepted.push(it);
     }
 
+    // Java wants a top-level type in a file of the same name: the pair moves together or not at all.
+    let mut broken: Vec<SymbolId> = Vec::new();
+    for it in &accepted {
+        let Some(s) = index.symbol(it.symbol) else {
+            continue;
+        };
+        if s.lang != Some(super::lang::Lang::Java) {
+            continue;
+        }
+        let partner = match s.kind {
+            SymbolKind::File => index
+                .files
+                .iter()
+                .position(|f| f.path == s.signature)
+                .and_then(|fi| {
+                    index.symbols.iter().find(|t| {
+                        t.def.file == fi as u32
+                            && t.scope.is_empty()
+                            && t.name == s.name
+                            && matches!(
+                                t.kind,
+                                SymbolKind::Class | SymbolKind::Interface | SymbolKind::Enum
+                            )
+                    })
+                }),
+            SymbolKind::Class | SymbolKind::Interface | SymbolKind::Enum if s.scope.is_empty() => {
+                index.symbols.iter().find(|t| {
+                    t.kind == SymbolKind::File
+                        && t.name == s.name
+                        && index.path_of(s.def.file) == Some(t.signature.as_str())
+                })
+            }
+            _ => None,
+        };
+        if let Some(p) = partner
+            && taken.get(&p.id) != Some(&it.new_name)
+        {
+            broken.push(it.symbol);
+        }
+    }
+    for id in broken {
+        taken.remove(&id);
+        accepted.retain(|it| it.symbol != id);
+        skipped.push(Skipped {
+            symbol: Some(id),
+            reason: "a Java type and its file are renamed together; the other one was not included".into(),
+        });
+    }
+
     // Path renames.
     let mut file_new: HashMap<u32, String> = HashMap::new();
     let mut folder_new: HashMap<String, String> = HashMap::new();

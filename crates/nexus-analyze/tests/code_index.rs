@@ -291,11 +291,18 @@ fn imports_name_files_and_folders() {
     let go = index("go_app");
     assert_eq!(
         named(&go, "pricing", SymbolKind::Folder, "pricing"),
-        ["main.go:6", "main.go:11", "main.go:12", "main.go:13"]
+        // The `package pricing` clause moves with the folder.
+        [
+            "main.go:6",
+            "main.go:11",
+            "main.go:12",
+            "main.go:13",
+            "pricing/pricing.go:1"
+        ]
     );
     assert_eq!(
         named(&go, "util_funcs", SymbolKind::Folder, "util_funcs"),
-        ["main.go:7", "main.go:13"]
+        ["main.go:7", "main.go:13", "util_funcs/money.go:1"]
     );
 
     let java = index("java_app");

@@ -7,3 +7,8 @@ int calc_total(const cart_item *items, int n) {
     }
     return tmp;
 }
+
+int getItemCount(const cart_item *items, int n) {
+    (void)items;
+    return n;
+}

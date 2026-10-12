@@ -13,4 +13,6 @@ public:
     int calcTotal(const std::vector<cart_item> &items) const;
 };
 
+int Get_Total(int a);
+
 }  // namespace shop

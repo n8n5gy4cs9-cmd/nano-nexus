@@ -7,5 +7,6 @@ typedef struct cart_item {
 } cart_item;
 
 int calc_total(const cart_item *items, int n);
+int getItemCount(const cart_item *items, int n);
 
 #endif

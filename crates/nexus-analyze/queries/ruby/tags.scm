@@ -5,7 +5,6 @@
 (singleton_method name: (identifier) @name) @def.method
 (assignment left: (constant) @name) @def.constant
 (assignment left: (identifier) @name) @def.variable
-(assignment left: (instance_variable) @name) @def.field
 (operator_assignment left: (identifier) @name) @def.variable
 (method_parameters (identifier) @name @def.parameter)
 (optional_parameter name: (identifier) @name) @def.parameter
@@ -21,5 +20,5 @@
   arguments: (argument_list . (string) @import.module)
   (#match? @_f "^require(_relative)?$"))
 
-[(identifier) (constant) (instance_variable)] @ref
+[(identifier) (constant)] @ref
 (string) @string

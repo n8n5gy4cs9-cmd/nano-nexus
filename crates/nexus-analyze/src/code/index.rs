@@ -673,6 +673,30 @@ fn link(
         }
     }
 
+    // Go: `package util` in a folder called `util` is renamed with the folder.
+    for (fi, f) in files.iter().enumerate() {
+        if f.lang != Lang::Go {
+            continue;
+        }
+        let Some((dir, _)) = f.path.rsplit_once('/') else {
+            continue;
+        };
+        let (Some(pkg), Some(&id)) = (facts[fi].package.as_deref(), folder_syms.get(dir)) else {
+            continue;
+        };
+        if dir.rsplit('/').next() != Some(pkg) {
+            continue;
+        }
+        if let Some(r) = facts[fi].refs.iter().find(|r| r.name == pkg && !r.member) {
+            symbols[id.0 as usize].refs.push(Ref {
+                loc: loc(fi as u32, &r.span),
+                kind: RefKind::Code,
+                ambiguous: false,
+                is_def: false,
+            });
+        }
+    }
+
     // 4. Identifier occurrences.
     let lc = LinkCtx {
         files,
@@ -714,6 +738,14 @@ fn link(
                 }
             }
             for t in res.modules {
+                // A Go package is used under its package clause name; it only follows a folder
+                // rename when that name is the folder's own (the clause is renamed with it, below).
+                if files[fi as usize].lang == Lang::Go
+                    && let SegTarget::Folder(d) = t
+                    && d.rsplit('/').next() != Some(r.name.as_str())
+                {
+                    continue;
+                }
                 if let Some(id) = target_sym(t) {
                     symbols[id.0 as usize].refs.push(Ref {
                         loc: loc(fi, &r.span),

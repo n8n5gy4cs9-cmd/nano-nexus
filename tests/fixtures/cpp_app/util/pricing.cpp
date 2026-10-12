@@ -10,4 +10,6 @@ int Calc::calcTotal(const std::vector<cart_item> &items) const {
     return tmp;
 }
 
+int Get_Total(int a) { return a; }
+
 }  // namespace shop
