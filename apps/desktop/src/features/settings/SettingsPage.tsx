@@ -170,6 +170,16 @@ export function SettingsPage() {
       <Section title="Privacy">
         <ToggleRow label="Allow network downloads" hint="Needed to download models and read from Hugging Face. Chat never leaves your computer." checked={bool(s, "privacy.allow_network_downloads", true)} onChange={(v) => set("privacy.allow_network_downloads", v)} />
         <ToggleRow label="Use library passages in chats" hint="Adds matching passages from your offline libraries to ordinary chats." checked={bool(s, "knowledge.chat_context")} onChange={(v) => set("knowledge.chat_context", v)} />
+        <SelectRow
+          label="Library answer style"
+          hint="Strict: answers only from your books. Guide: books are the main reference, but the model may explain and write adapted code, marking what is its own. The Librarian assistant is always strict."
+          value={str(s, "knowledge.answer_style", "strict")}
+          options={[
+            { value: "strict", label: "Strict (only from the books)" },
+            { value: "guide", label: "Guide (books + own code, labelled)" },
+          ]}
+          onChange={(v) => set("knowledge.answer_style", v)}
+        />
         <TextRow label="Library passage budget (tokens)" type="number" value={String(num(s, "knowledge.max_tokens", 1200))} onCommit={(v) => setWhole("knowledge.max_tokens", v, 100)} />
       </Section>
 

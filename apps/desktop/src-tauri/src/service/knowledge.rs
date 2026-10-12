@@ -9,8 +9,8 @@ use nexus_agent::tools::{KnowledgeHits, KnowledgeSource};
 use nexus_core::error::NexusError;
 use nexus_knowledge::extract::{is_supported, list_files};
 use nexus_knowledge::{
-    DocumentRow, IndexOpts, KbError, Library, LibrarySource, Passage, SearchOpts, build_context,
-    index_library, repo, search,
+    AnswerStyle, DocumentRow, IndexOpts, KbError, Library, LibrarySource, Passage, SearchOpts,
+    build_context_styled, index_library, repo, search,
 };
 use serde::{Deserialize, Serialize};
 use specta::Type;
@@ -384,8 +384,8 @@ impl AppKnowledge {
     }
 
     /// Run retrieval for a chat turn. Returns the context block, or `None` when nothing relevant was found.
-    pub fn context_for(&self, query: &str, max_tokens: u32) -> Option<String> {
-        let hits = KnowledgeSource::search(self, query, None, max_tokens).ok()?;
+    pub fn context_for(&self, query: &str, max_tokens: u32, style: AnswerStyle) -> Option<String> {
+        let hits = self.search_styled(query, None, max_tokens, style).ok()?;
         (hits.passages > 0).then_some(hits.context)
     }
 
@@ -422,7 +422,20 @@ impl AppKnowledge {
 }
 
 impl KnowledgeSource for AppKnowledge {
+    /// The `kb_search` tool (Librarian, Nexus) always answers strictly from passages.
     fn search(&self, query: &str, library: Option<&str>, max_tokens: u32) -> Result<KnowledgeHits, String> {
+        self.search_styled(query, library, max_tokens, AnswerStyle::Strict)
+    }
+}
+
+impl AppKnowledge {
+    fn search_styled(
+        &self,
+        query: &str,
+        library: Option<&str>,
+        max_tokens: u32,
+        style: AnswerStyle,
+    ) -> Result<KnowledgeHits, String> {
         let libs = list(&self.ctx).map_err(|e| e.to_string())?;
         let library_ids = match library.map(str::trim).filter(|s| !s.is_empty()) {
             None => None,
@@ -444,7 +457,7 @@ impl KnowledgeSource for AppKnowledge {
             ..Default::default()
         };
         let passages = search(&self.ctx.store, query, &opts).map_err(|e| e.to_string())?;
-        let (context, kept) = build_context(&passages, max_tokens as usize);
+        let (context, kept) = build_context_styled(&passages, max_tokens as usize, style);
         let n = kept.len();
         if let Ok(mut last) = self.last.lock() {
             *last = kept;

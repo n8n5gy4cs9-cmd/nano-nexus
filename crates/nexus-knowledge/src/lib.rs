@@ -16,6 +16,8 @@ pub mod types;
 pub use chunk::{ChunkOpts, ChunkOut, chunk_document};
 pub use extract::{KbDoc, KbPage, extract_file, is_supported};
 pub use index::{IndexOpts, IndexProgress, IndexSummary, index_library};
-pub use prompt::{CitationReport, NOT_IN_LIBRARY, build_context, verify_citations};
+pub use prompt::{
+    AnswerStyle, CitationReport, NOT_IN_LIBRARY, build_context, build_context_styled, verify_citations,
+};
 pub use search::{SearchOpts, search};
 pub use types::{DocumentRow, KbError, Library, LibrarySource, Passage};

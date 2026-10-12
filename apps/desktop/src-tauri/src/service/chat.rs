@@ -489,7 +489,11 @@ fn start_turn(
             && early_text.is_none()
             && let Some(kb) = &kb_source
             && nexus_knowledge::prompt::looks_like_lookup(&input.user_text)
-            && let Some(block) = kb.context_for(&input.user_text, kb_tokens)
+            && let Some(block) = kb.context_for(
+                &input.user_text,
+                kb_tokens,
+                nexus_knowledge::AnswerStyle::from_setting(&settings.knowledge_answer_style),
+            )
         {
             input.attachments.push(AttachmentBlock {
                 label: "Libraries".into(),

@@ -104,6 +104,10 @@ pub struct Settings {
     /// Token budget of the injected passages (and of `kb_search` results).
     #[serde(rename = "knowledge.max_tokens")]
     pub knowledge_max_tokens: u32,
+    /// How ordinary chats use library passages: `strict` (answer only from them) or `guide` (use them
+    /// as the main reference but explain, adapt, and write new code, labelling what is not from them).
+    #[serde(rename = "knowledge.answer_style")]
+    pub knowledge_answer_style: String,
     /// The welcome tour was finished or skipped. Settings can show it again.
     #[serde(rename = "ui.onboarded")]
     pub ui_onboarded: bool,
@@ -160,6 +164,7 @@ impl Default for Settings {
             share_notify_pairing: true,
             knowledge_chat_context: false,
             knowledge_max_tokens: 1200,
+            knowledge_answer_style: "strict".into(),
             ui_onboarded: false,
             app_show_tray_icon: false,
             app_launch_at_login: false,

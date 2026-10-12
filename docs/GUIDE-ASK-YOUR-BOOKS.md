@@ -53,3 +53,10 @@ does not return, the model never sees. So **most wrong answers are search misses
 
 Use a 4B+ model for important lookups. Small models are fine for finding *where* to read; then read the
 cited page yourself.
+
+## When you want coding help, not a quote
+Use **Code Mentor** (or any chat assistant) with the **Libraries** chip on, and set
+Settings → Privacy → **Library answer style** to **Guide**. The books become the main reference, the
+model may explain and write adapted code, and it must mark what is from the books `[n]` and what is
+"my own suggestion". Switch back to **Strict**, or use the **Librarian**, when you need the book's
+exact words. The Librarian is always strict.
