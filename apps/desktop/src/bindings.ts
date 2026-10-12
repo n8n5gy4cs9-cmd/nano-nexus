@@ -272,6 +272,8 @@ export type AppInfo = {
 	arch: string,
 	data_dir: string,
 	log_dir: string,
+	/**  `None` in dev builds, which have no `bundle.json`. */
+	build: BuildInfo | null,
 };
 
 /**  What the gallery and switcher show. */
@@ -403,6 +405,17 @@ export type Badge =
 "tight" | 
 /**  Will not fit. */
 "too_big";
+
+/**  What `bundle.json` (written by `scripts/stage-bundle.mjs`) says about how this app was built. */
+export type BuildInfo = {
+	/**  The bundle profile (`basic`, `studio`, …). */
+	profile: string,
+	git_commit?: string | null,
+	/**  ISO-8601 build time. */
+	built_at?: string | null,
+	/**  Ids of the models inside the build. */
+	models?: string[],
+};
 
 export type CatalogCard = {
 	entry: CatalogEntry,

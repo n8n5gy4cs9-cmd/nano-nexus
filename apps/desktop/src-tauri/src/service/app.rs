@@ -1,9 +1,24 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use specta::Type;
 
 use crate::state::AppCtx;
 
 use super::Caller;
+
+/// What `bundle.json` (written by `scripts/stage-bundle.mjs`) says about how this app was built.
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Type)]
+pub struct BuildInfo {
+    /// The bundle profile (`basic`, `studio`, …).
+    pub profile: String,
+    #[serde(default)]
+    pub git_commit: Option<String>,
+    /// ISO-8601 build time.
+    #[serde(default)]
+    pub built_at: Option<String>,
+    /// Ids of the models inside the build.
+    #[serde(default)]
+    pub models: Vec<String>,
+}
 
 /// Static facts about this install.
 #[derive(Clone, Debug, Serialize, Type)]
@@ -13,6 +28,14 @@ pub struct AppInfo {
     pub arch: String,
     pub data_dir: String,
     pub log_dir: String,
+    /// `None` in dev builds, which have no `bundle.json`.
+    pub build: Option<BuildInfo>,
+}
+
+/// Read `<resource_dir>/bundle.json`; a missing or broken file is simply "no build info".
+pub fn read_build_info(resource_dir: &std::path::Path) -> Option<BuildInfo> {
+    let text = std::fs::read_to_string(resource_dir.join("bundle.json")).ok()?;
+    serde_json::from_str(&text).ok()
 }
 
 /// Only plain web links may be handed to the OS browser.
@@ -45,6 +68,7 @@ pub fn info(ctx: &AppCtx, caller: &Caller) -> AppInfo {
         arch: std::env::consts::ARCH.to_owned(),
         data_dir,
         log_dir,
+        build: read_build_info(&ctx.resource_dir),
     }
 }
 
@@ -67,6 +91,30 @@ mod tests {
         ] {
             assert!(validate_external_url(bad).is_err(), "{bad}");
         }
+    }
+
+    #[tokio::test]
+    async fn build_info_comes_from_bundle_json() {
+        let dir = tempfile::tempdir().unwrap();
+        assert_eq!(read_build_info(dir.path()), None);
+        std::fs::write(dir.path().join("bundle.json"), "not json").unwrap();
+        assert_eq!(read_build_info(dir.path()), None);
+        std::fs::write(
+            dir.path().join("bundle.json"),
+            r#"{"profile":"studio","git_commit":"abc123def456","built_at":"2026-10-20T12:00:00Z","app_version":"0.1.0","target":"macos-arm64","models":["a","b"],"knowledge":[]}"#,
+        )
+        .unwrap();
+        let b = read_build_info(dir.path()).unwrap();
+        assert_eq!(
+            (b.profile.as_str(), b.git_commit.as_deref(), b.models.len()),
+            ("studio", Some("abc123def456"), 2)
+        );
+        // The app context points at a resources folder; without a bundle there is no build info.
+        let ctx = AppCtx::for_tests(dir.path());
+        assert_eq!(info(&ctx, &Caller::Desktop).build, None);
+        std::fs::create_dir_all(&ctx.resource_dir).unwrap();
+        std::fs::write(ctx.resource_dir.join("bundle.json"), r#"{"profile":"basic"}"#).unwrap();
+        assert_eq!(info(&ctx, &Caller::Desktop).build.unwrap().profile, "basic");
     }
 
     #[tokio::test]
