@@ -145,6 +145,9 @@ export function CommandPalette() {
                 {dark ? <Sun className="size-4 text-muted" /> : <Moon className="size-4 text-muted" />}
                 <span>{dark ? "Switch to the light theme" : "Switch to the dark theme"}</span>
               </CommandItem>
+              <CommandItem value="action welcome tour onboarding help" onSelect={run(() => ui().setOnboardingOpen(true))}>
+                <span>Show the welcome tour</span>
+              </CommandItem>
               <CommandItem value="action toggle sidebar" onSelect={run(() => ui().toggleSidebar())}>
                 <PanelLeft className="size-4 text-muted" />
                 <span>Show or hide the sidebar</span>

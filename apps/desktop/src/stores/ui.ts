@@ -12,11 +12,14 @@ interface UiState {
   sidebarOpen: boolean;
   inspectorOpen: boolean;
   paletteOpen: boolean;
+  /** The welcome tour is showing. */
+  onboardingOpen: boolean;
   setTheme: (t: ThemePreference) => void;
   setAccent: (a: Accent) => void;
   toggleSidebar: () => void;
   toggleInspector: () => void;
   setPaletteOpen: (open: boolean) => void;
+  setOnboardingOpen: (open: boolean) => void;
 }
 
 function initialTheme(): ThemePreference {
@@ -35,6 +38,7 @@ export const useUi = create<UiState>((set) => ({
   sidebarOpen: typeof window === "undefined" || window.innerWidth >= 768,
   inspectorOpen: false,
   paletteOpen: false,
+  onboardingOpen: false,
   setTheme: (theme) => {
     writeStored(THEME_KEY, theme);
     set({ theme });
@@ -46,4 +50,5 @@ export const useUi = create<UiState>((set) => ({
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
   toggleInspector: () => set((s) => ({ inspectorOpen: !s.inspectorOpen })),
   setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
+  setOnboardingOpen: (onboardingOpen) => set({ onboardingOpen }),
 }));

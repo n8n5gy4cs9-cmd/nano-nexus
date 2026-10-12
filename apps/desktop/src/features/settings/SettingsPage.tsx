@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
 import type { Settings } from "@/bindings";
-import { Skeleton } from "@/components/ui";
+import { Button, Skeleton } from "@/components/ui";
 import { api, type SettingValue } from "@/lib/api";
 import { toIpcException } from "@/lib/ipc";
 import { IS_WEB } from "@/lib/target";
@@ -153,6 +153,14 @@ export function SettingsPage() {
           <ToggleRow label="Start NanoNexus when I log in" checked={bool(s, "app.launch_at_login")} onChange={(v) => set("app.launch_at_login", v)} />
         </Section>
       )}
+
+      <Section title="Welcome">
+        <Row label="Show the welcome tour again" hint="Four short steps: your model, a folder, and your first assistant.">
+          <Button size="sm" onClick={() => useUi.getState().setOnboardingOpen(true)}>
+            Start the tour
+          </Button>
+        </Row>
+      </Section>
 
       <Section title="Model tuning">
         <ToggleRow label="Add short model-specific tips to the prompt" hint="For models that have them (for example MiniCPM5): a few plain sentences such as “answer in the user’s language”. Turn off to compare." checked={bool(s, "models.use_prompt_hints", true)} onChange={(v) => set("models.use_prompt_hints", v)} />

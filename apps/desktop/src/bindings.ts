@@ -1401,6 +1401,8 @@ export type Settings = {
 	"knowledge.chat_context"?: boolean,
 	/**  Token budget of the injected passages (and of `kb_search` results). */
 	"knowledge.max_tokens"?: number,
+	/**  The welcome tour was finished or skipped. Settings can show it again. */
+	"ui.onboarded"?: boolean,
 	/**  Show a tray / menu-bar icon with "Open", the sharing status and "Quit". Off by default. */
 	"app.show_tray_icon"?: boolean,
 	/**  Start NanoNexus when the user logs in. Off by default. */

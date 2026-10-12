@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Outlet } from "react-router-dom";
 
+import { OnboardingGate } from "@/features/onboarding/Onboarding";
 import { CommandPalette } from "@/features/palette/CommandPalette";
 import { AssistantSwitcher } from "@/features/assistants/AssistantSwitcher";
 import { PermissionModal } from "@/features/permissions/PermissionModal";
@@ -77,6 +78,7 @@ export function AppShell() {
       {IS_WEB ? null : <PermissionModal />}
       <AssistantSwitcher />
       <CommandPalette />
+      {IS_WEB ? null : <OnboardingGate />}
     </div>
   );
 }

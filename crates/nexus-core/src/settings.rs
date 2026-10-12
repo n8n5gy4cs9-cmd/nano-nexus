@@ -104,6 +104,9 @@ pub struct Settings {
     /// Token budget of the injected passages (and of `kb_search` results).
     #[serde(rename = "knowledge.max_tokens")]
     pub knowledge_max_tokens: u32,
+    /// The welcome tour was finished or skipped. Settings can show it again.
+    #[serde(rename = "ui.onboarded")]
+    pub ui_onboarded: bool,
     /// Show a tray / menu-bar icon with "Open", the sharing status and "Quit". Off by default.
     #[serde(rename = "app.show_tray_icon")]
     pub app_show_tray_icon: bool,
@@ -157,6 +160,7 @@ impl Default for Settings {
             share_notify_pairing: true,
             knowledge_chat_context: false,
             knowledge_max_tokens: 1200,
+            ui_onboarded: false,
             app_show_tray_icon: false,
             app_launch_at_login: false,
             models_use_prompt_hints: true,
