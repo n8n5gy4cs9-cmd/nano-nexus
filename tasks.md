@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 179/234 tasks done (76%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 180/234 tasks done (76%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -214,7 +214,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T12.01** Validate `bundles/*.json` against `schemas/bundle-profile.schema.json` in a test (node or Rust) (2026-10-12) — `scripts/schemas.test.mjs` with a small dependency-free checker `scripts/lib/jsonschema.mjs`; also covers the manifest and model-pack schemas
 - [ ] **T12.02** 🍎 Harden `fetch-model.mjs` multi-model (`--profile`, `--repo`, `--local`, `--verify --all`) on the Mac
 - [x] **T12.03** `scripts/stage-bundle.mjs` (hardlinks, manifest.json, licenses, generated overlay) + test with fake 10 MB models (2026-10-12) — `scripts/stage-bundle.mjs` (CLI + `stage()`; `bundle.mjs` now uses it), test `scripts/stage-bundle.test.mjs` with fake 10 MB models; the manifest is validated against its schema; adds sampling/capabilities from the catalog, `licenses/models.txt`, and git commit/app version in `bundle.json`
-- [ ] **T12.04** `scripts/verify-payload.mjs` (re-hash models + runtime, lipo/otool, Info.plist keys; `--windows` PE arch check)
+- [x] **T12.04** `scripts/verify-payload.mjs` (re-hash models + runtime, lipo/otool, Info.plist keys; `--windows` PE arch check) (2026-10-12) — `scripts/verify-payload.mjs` + `verify-payload.test.mjs`: models (size + SHA-256, unlisted files), expected manifest, knowledge, bundle.json, runtime lock, macOS Info.plist/lipo/otool (skipped where the tools are missing), Windows PE machine type. Tamper test included
 - [ ] **T12.05** `scripts/build-app.sh --profile <p>` (doctor → verify → stage → build:web → tauri build → verify → codesign → zip + SHA256SUMS)
 - [x] **T12.06** `scripts/app-builder.mjs` server (127.0.0.1 + token, profile CRUD, size calc, build runner, SSE logs, idle exit, CLI mode) (2026-10-11) — simplified: `scripts/app-builder.mjs` (127.0.0.1 + token, idle exit, SSE log) runs `scripts/bundle.mjs`; no profile CRUD or size calc yet
 - [x] **T12.07** `scripts/app-builder/index.html` UI (models checklist, HF/local add, default radio, targets, Windows format, size summary, results) (2026-10-11) — `scripts/app-builder/index.html`: Downloads .gguf picker, folder browser, catalog, books, targets
