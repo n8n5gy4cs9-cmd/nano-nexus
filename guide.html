@@ -267,7 +267,7 @@ scripts/build-windows.sh --profile basic --arch arm64                  <span cla
 <h2 id="choose-models">4 · Choose which models are bundled <span class="badge b-now">Available now</span></h2>
 <h3>The easy way: App Builder</h3>
 <pre><code>node scripts/app-builder.mjs</code></pre>
-<div class="note"><strong>Today</strong>The App Builder lets you pick your own <code>.gguf</code> files and catalog models, add book folders, and choose the target. For a Hugging Face repo or a saved profile, use the same choices on the command line: <code>node scripts/bundle.mjs --hf owner/repo:Q4_K_M --profile studio</code> (see <code>--help</code>). The illustration below shows the finished design.</div>
+<div class="note"><strong>Today</strong>The App Builder lets you pick your own <code>.gguf</code> files and catalog models, add book folders, and choose the target. For a Hugging Face repo or a saved profile, use the same choices on the command line: <code>node scripts/bundle.mjs --hf owner/repo:Q4_K_M</code> or <code>node scripts/bundle.mjs --profile studio</code> (see <code>--help</code>). The illustration below shows the finished design.</div>
 <p>Your browser opens a private page on <code>127.0.0.1</code> (protected by a one-time token):</p>
 <figure class="mock" aria-label="App Builder preview (illustration)">
   <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span>&nbsp; NanoNexus App Builder · 127.0.0.1</div>
