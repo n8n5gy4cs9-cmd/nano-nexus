@@ -43,7 +43,8 @@
         "isDefault": { "type": "boolean" },
         "verified": { "type": "boolean", "description": "repo/file confirmed to exist at catalog time" },
         "why": { "type": "string", "description": "one line shown on the card" },
-        "notes": { "type": "string" }
+        "notes": { "type": "string" },
+        "prompt_hint": { "type": "string", "maxLength": 600, "description": "appended to the system prompt while this model runs (optional)" }
       }
     }
   }

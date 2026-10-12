@@ -379,6 +379,7 @@ fn start_turn(
         tracing::warn!("prompt rendering failed, using the raw prompt: {e}");
         spec.prompt.system.clone()
     });
+    let system_prompt = with_model_hint(&ctx.store, &settings, model_id.as_deref(), system_prompt);
     let docs = attached_docs(&user.attachments);
     let is_pipeline = spec.workflow.kind == "pipeline";
     let pipeline_attachments = user.attachments.clone();
@@ -707,6 +708,35 @@ fn maybe_summarize(ctx: &Ctx, conv_id: &ConversationId, dropped: Vec<MessageId>)
 
 fn spec_id(spec: &nexus_agent::AssistantSpec) -> AssistantId {
     AssistantId(spec.id.clone())
+}
+
+/// Append the catalog's short hint for the running model (if it has one and hints are on). The hint is
+/// plain guidance such as "answer in the user's language"; it never changes tools, sampling or permissions.
+fn with_model_hint(
+    store: &nexus_store::Store,
+    settings: &nexus_core::settings::Settings,
+    model_id: Option<&str>,
+    system_prompt: String,
+) -> String {
+    if !settings.models_use_prompt_hints {
+        return system_prompt;
+    }
+    let Some(id) = model_id else { return system_prompt };
+    let catalog_id = store
+        .get_model(id)
+        .ok()
+        .flatten()
+        .and_then(|m| m.catalog_id)
+        .unwrap_or_else(|| id.to_owned());
+    match nexus_models::catalog::Catalog::embedded()
+        .get(&catalog_id)
+        .and_then(|e| e.prompt_hint.as_deref())
+    {
+        Some(hint) if !hint.trim().is_empty() => {
+            format!("{system_prompt}\n\n## Notes for this model\n{}", hint.trim())
+        }
+        _ => system_prompt,
+    }
 }
 
 #[cfg(test)]
@@ -1146,5 +1176,78 @@ mod tests {
             (v[0]["summary"].as_str(), v[0]["ok"].as_bool()),
             (Some("Read b.md"), Some(true))
         );
+    }
+}
+
+#[cfg(test)]
+mod hint_tests {
+    use super::*;
+    use nexus_core::settings::Settings;
+    use nexus_store::{ModelRow, Store};
+
+    fn row(id: &str, catalog_id: Option<&str>) -> ModelRow {
+        ModelRow {
+            id: id.into(),
+            source: "download".into(),
+            name: id.into(),
+            repo: None,
+            revision: None,
+            file: None,
+            path: "/x.gguf".into(),
+            sha256: None,
+            bytes: 1,
+            quant: None,
+            catalog_id: catalog_id.map(str::to_owned),
+            gguf_meta: None,
+            license: None,
+            extra: None,
+            added_at: 1,
+        }
+    }
+
+    #[test]
+    fn the_default_model_gets_its_hint_others_do_not_and_the_setting_turns_it_off() {
+        let store = Store::open_in_memory().unwrap();
+        store
+            .upsert_model(&row("bundled", Some("minicpm5-1b-fable5-v2-q8")))
+            .unwrap();
+        store.upsert_model(&row("other", Some("qwen3-1.7b-q4"))).unwrap();
+        let on = Settings::default();
+        assert!(on.models_use_prompt_hints);
+        let with = with_model_hint(&store, &on, Some("bundled"), "SYSTEM".into());
+        assert!(with.starts_with("SYSTEM\n\n## Notes for this model\n"));
+        assert!(with.contains("same language as the user"));
+        // Same result when the row id is the catalog id itself.
+        assert_eq!(
+            with_model_hint(&store, &on, Some("minicpm5-1b-fable5-v2-q8"), "SYSTEM".into()),
+            with
+        );
+        assert_eq!(
+            with_model_hint(&store, &on, Some("other"), "SYSTEM".into()),
+            "SYSTEM"
+        );
+        assert_eq!(with_model_hint(&store, &on, None, "SYSTEM".into()), "SYSTEM");
+        let off = Settings {
+            models_use_prompt_hints: false,
+            ..Settings::default()
+        };
+        assert_eq!(
+            with_model_hint(&store, &off, Some("bundled"), "SYSTEM".into()),
+            "SYSTEM"
+        );
+    }
+
+    #[test]
+    fn hints_are_short() {
+        for e in &nexus_models::catalog::Catalog::embedded().models {
+            if let Some(h) = &e.prompt_hint {
+                assert!(
+                    h.len() <= 400,
+                    "{}: a hint of {} chars costs too many tokens",
+                    e.id,
+                    h.len()
+                );
+            }
+        }
     }
 }

@@ -89,6 +89,7 @@ export function SearchTab({ onStarted }: { onStarted: () => void }) {
           <div>
             <p className="text-body font-medium">You appear to be offline</p>
             <p className="text-small text-muted">Search needs the internet. The catalog and your installed models still work.</p>
+            <p className="mt-1 text-small break-all text-faint">{toIpcException(results.error).message}</p>
           </div>
         </div>
       ) : results.error ? (

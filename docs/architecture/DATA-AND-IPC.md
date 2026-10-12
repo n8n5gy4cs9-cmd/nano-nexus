@@ -239,5 +239,5 @@ Tables (`0006_knowledge.sql`): `kb_libraries`, `kb_documents`, `kb_chunks`, and 
 `kb_chunks_fts(heading_path, text)` (porter + unicode61, `bm25(…, 3.0, 1.0)`).
 Commands: `kb_list`, `kb_detail`, `kb_add(name?, paths, reference)`, `kb_reindex(jobId, libraryId, onEvent: KbProgress) -> KbIndexResult`,
 `kb_cancel(jobId)`, `kb_set_enabled`, `kb_remove`, `kb_search(query, libraryIds?, k)`, `kb_passage(chunkId)`.
-Settings: `knowledge.chat_context` (bool, default false), `knowledge.max_tokens` (default 1200).
+Settings: `models.use_prompt_hints` (bool, default true: the catalog's optional `prompt_hint` is appended to the system prompt for that model), `knowledge.chat_context` (bool, default false), `knowledge.max_tokens` (default 1200).
 Citation links in answers use `https://nanonexus.local/passage/<chunk_id>`; the chat opens them as a passage dialog.

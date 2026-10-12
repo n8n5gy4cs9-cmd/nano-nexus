@@ -449,6 +449,11 @@ export type CatalogEntry = {
 	verified: boolean,
 	why?: string | null,
 	notes?: string | null,
+	/**
+	 *  A few plain sentences appended to the system prompt while this model runs (model quirks that a
+	 *  small model benefits from hearing). Optional; users can turn the hints off in Settings.
+	 */
+	prompt_hint?: string | null,
 };
 
 export type Category = "image" | "video" | "audio" | "document" | "pdf" | "spreadsheet" | "presentation" | "code" | "data" | "archive" | "installer" | "font" | "model3d" | "game_asset" | "executable" | "system" | "other";
@@ -1396,6 +1401,8 @@ export type Settings = {
 	"knowledge.chat_context"?: boolean,
 	/**  Token budget of the injected passages (and of `kb_search` results). */
 	"knowledge.max_tokens"?: number,
+	/**  Add the catalog's short, model-specific hint (for example for MiniCPM5) to the system prompt. */
+	"models.use_prompt_hints"?: boolean,
 	/**  Duo assistant: model id used for easy questions. Empty = the active model. */
 	"duo.light_model_id"?: string,
 	/**  Duo assistant: model id used for hard questions. Empty = the active model. */

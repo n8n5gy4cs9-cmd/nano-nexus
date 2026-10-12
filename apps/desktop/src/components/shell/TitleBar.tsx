@@ -24,6 +24,8 @@ export function TitleBar({ platform, right }: { platform: Platform; right?: Reac
       </IconButton>
       <button
         type="button"
+        aria-label="Search and commands"
+        onClick={() => useUi.getState().setPaletteOpen(true)}
         className="mx-auto flex h-7 w-full max-w-sm items-center gap-2 rounded-button border border-border bg-surface-2 px-2.5 text-small text-faint hover:text-muted"
       >
         <Search className="size-3.5" />

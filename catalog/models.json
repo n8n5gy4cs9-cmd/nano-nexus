@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "updated": "2026-10-11",
+  "updated": "2026-10-12",
   "notes": "Curated for small local use. 'verified' = repo and quant confirmed to exist when this was written; exact file names are resolved from the repo tree via file_pattern at download time and pinned (commit + sha256) in the lock. Sampling presets follow each model card; MiniCPM5 needs min_p=0 (llama.cpp default 0.05 causes repetition).",
   "models": [
     {
@@ -17,19 +17,38 @@
       "license": "Apache-2.0 (base MiniCPM5-1B); fine-tune data licensing unclear: personal use",
       "context_max": 131072,
       "context_default": 8192,
-      "capabilities": ["chat", "code", "thinking", "tools-xml", "long-context"],
+      "capabilities": [
+        "chat",
+        "code",
+        "thinking",
+        "tools-xml",
+        "long-context"
+      ],
       "supports_thinking_toggle": true,
       "sampling": {
-        "no_think": { "temperature": 0.7, "top_p": 0.95, "min_p": 0.0 },
-        "think": { "temperature": 0.9, "top_p": 0.95, "min_p": 0.0 }
+        "no_think": {
+          "temperature": 0.7,
+          "top_p": 0.95,
+          "min_p": 0.0
+        },
+        "think": {
+          "temperature": 0.9,
+          "top_p": 0.95,
+          "min_p": 0.0
+        }
       },
       "min_ram_gb": 8,
       "tier": "tiny",
-      "tags": ["default", "fast", "thinking"],
+      "tags": [
+        "default",
+        "fast",
+        "thinking"
+      ],
       "isDefault": true,
       "verified": true,
       "why": "Default: tiny and fast, with better tool calling than V1. Community fine-tune of MiniCPM5-1B on Fable 5 traces.",
-      "notes": "Community model by GnLOLot; the 'Claude-Opus-Fable5' name is the uploader's label, not an Anthropic release. V2 ships only Q8_0 and F16."
+      "notes": "Community model by GnLOLot; the 'Claude-Opus-Fable5' name is the uploader's label, not an Anthropic release. V2 ships only Q8_0 and F16.",
+      "prompt_hint": "Answer in the same language as the user. Give the answer first, then only the details that matter. Do not repeat the question. If you are not sure, say so instead of guessing. Never copy tags such as <file> or <tool_result> into your answer."
     },
     {
       "id": "minicpm5-1b-fable5-v1-q4",
@@ -45,17 +64,34 @@
       "license": "Apache-2.0 (base); fine-tune data licensing unclear: personal use",
       "context_max": 131072,
       "context_default": 8192,
-      "capabilities": ["chat", "code", "thinking", "long-context"],
+      "capabilities": [
+        "chat",
+        "code",
+        "thinking",
+        "long-context"
+      ],
       "supports_thinking_toggle": true,
       "sampling": {
-        "no_think": { "temperature": 0.7, "top_p": 0.95, "min_p": 0.0 },
-        "think": { "temperature": 0.9, "top_p": 0.95, "min_p": 0.0 }
+        "no_think": {
+          "temperature": 0.7,
+          "top_p": 0.95,
+          "min_p": 0.0
+        },
+        "think": {
+          "temperature": 0.9,
+          "top_p": 0.95,
+          "min_p": 0.0
+        }
       },
       "min_ram_gb": 4,
       "tier": "tiny",
-      "tags": ["smallest", "thinking"],
+      "tags": [
+        "smallest",
+        "thinking"
+      ],
       "verified": true,
-      "why": "Smallest footprint (657 MB). Good for old or 8 GB machines."
+      "why": "Smallest footprint (657 MB). Good for old or 8 GB machines.",
+      "prompt_hint": "Answer in the same language as the user. Give the answer first, then only the details that matter. Do not repeat the question. If you are not sure, say so instead of guessing. Never copy tags such as <file> or <tool_result> into your answer."
     },
     {
       "id": "minicpm5-1b-fable5-v1-q8",
@@ -71,17 +107,33 @@
       "license": "Apache-2.0 (base); fine-tune data licensing unclear: personal use",
       "context_max": 131072,
       "context_default": 8192,
-      "capabilities": ["chat", "code", "thinking", "long-context"],
+      "capabilities": [
+        "chat",
+        "code",
+        "thinking",
+        "long-context"
+      ],
       "supports_thinking_toggle": true,
       "sampling": {
-        "no_think": { "temperature": 0.7, "top_p": 0.95, "min_p": 0.0 },
-        "think": { "temperature": 0.9, "top_p": 0.95, "min_p": 0.0 }
+        "no_think": {
+          "temperature": 0.7,
+          "top_p": 0.95,
+          "min_p": 0.0
+        },
+        "think": {
+          "temperature": 0.9,
+          "top_p": 0.95,
+          "min_p": 0.0
+        }
       },
       "min_ram_gb": 8,
       "tier": "tiny",
-      "tags": ["thinking"],
+      "tags": [
+        "thinking"
+      ],
       "verified": true,
-      "why": "V1 at near-lossless quality (Q8_0), for comparison with V2."
+      "why": "V1 at near-lossless quality (Q8_0), for comparison with V2.",
+      "prompt_hint": "Answer in the same language as the user. Give the answer first, then only the details that matter. Do not repeat the question. If you are not sure, say so instead of guessing. Never copy tags such as <file> or <tool_result> into your answer."
     },
     {
       "id": "minicpm5-1b-q8",
@@ -97,15 +149,32 @@
       "license": "Apache-2.0",
       "context_max": 131072,
       "context_default": 8192,
-      "capabilities": ["chat", "code", "thinking", "tools-xml", "long-context"],
+      "capabilities": [
+        "chat",
+        "code",
+        "thinking",
+        "tools-xml",
+        "long-context"
+      ],
       "supports_thinking_toggle": true,
       "sampling": {
-        "no_think": { "temperature": 0.7, "top_p": 0.95, "min_p": 0.0 },
-        "think": { "temperature": 0.9, "top_p": 0.95, "min_p": 0.0 }
+        "no_think": {
+          "temperature": 0.7,
+          "top_p": 0.95,
+          "min_p": 0.0
+        },
+        "think": {
+          "temperature": 0.9,
+          "top_p": 0.95,
+          "min_p": 0.0
+        }
       },
       "min_ram_gb": 8,
       "tier": "tiny",
-      "tags": ["official", "clean-license"],
+      "tags": [
+        "official",
+        "clean-license"
+      ],
       "verified": true,
       "why": "The official OpenBMB base, with a clean Apache-2.0 license. The safest fallback."
     },
@@ -123,15 +192,31 @@
       "license": "Apache-2.0",
       "context_max": 131072,
       "context_default": 8192,
-      "capabilities": ["chat", "code", "thinking", "long-context"],
+      "capabilities": [
+        "chat",
+        "code",
+        "thinking",
+        "long-context"
+      ],
       "supports_thinking_toggle": true,
       "sampling": {
-        "no_think": { "temperature": 0.7, "top_p": 0.95, "min_p": 0.0 },
-        "think": { "temperature": 0.9, "top_p": 0.95, "min_p": 0.0 }
+        "no_think": {
+          "temperature": 0.7,
+          "top_p": 0.95,
+          "min_p": 0.0
+        },
+        "think": {
+          "temperature": 0.9,
+          "top_p": 0.95,
+          "min_p": 0.0
+        }
       },
       "min_ram_gb": 4,
       "tier": "tiny",
-      "tags": ["official", "smallest"],
+      "tags": [
+        "official",
+        "smallest"
+      ],
       "verified": true,
       "why": "Official 1B at 657 MB."
     },
@@ -149,15 +234,34 @@
       "license": "Apache-2.0",
       "context_max": 131072,
       "context_default": 8192,
-      "capabilities": ["chat", "code", "thinking", "tools-xml", "long-context"],
+      "capabilities": [
+        "chat",
+        "code",
+        "thinking",
+        "tools-xml",
+        "long-context"
+      ],
       "supports_thinking_toggle": true,
       "sampling": {
-        "no_think": { "temperature": 0.8, "top_p": 0.95, "min_p": 0.0, "repeat_penalty": 1.05 },
-        "think": { "temperature": 1.0, "top_p": 0.95, "min_p": 0.0 }
+        "no_think": {
+          "temperature": 0.8,
+          "top_p": 0.95,
+          "min_p": 0.0,
+          "repeat_penalty": 1.05
+        },
+        "think": {
+          "temperature": 1.0,
+          "top_p": 0.95,
+          "min_p": 0.0
+        }
       },
       "min_ram_gb": 8,
       "tier": "small",
-      "tags": ["official", "tools", "step-up"],
+      "tags": [
+        "official",
+        "tools",
+        "step-up"
+      ],
       "verified": true,
       "why": "The step-up for Rename Forge proposals and tool use. Designed for tool-use workflows.",
       "notes": "OpenBMB recommends temperature 1.0, top_p 0.95, min_p 0.0 (+ repetition_penalty 1.05 if repeating). The no_think preset is our conservative choice; verify with spike S1."
@@ -176,15 +280,33 @@
       "license": "Apache-2.0",
       "context_max": 131072,
       "context_default": 8192,
-      "capabilities": ["chat", "code", "thinking", "tools-xml", "long-context"],
+      "capabilities": [
+        "chat",
+        "code",
+        "thinking",
+        "tools-xml",
+        "long-context"
+      ],
       "supports_thinking_toggle": true,
       "sampling": {
-        "no_think": { "temperature": 0.8, "top_p": 0.95, "min_p": 0.0, "repeat_penalty": 1.05 },
-        "think": { "temperature": 1.0, "top_p": 0.95, "min_p": 0.0 }
+        "no_think": {
+          "temperature": 0.8,
+          "top_p": 0.95,
+          "min_p": 0.0,
+          "repeat_penalty": 1.05
+        },
+        "think": {
+          "temperature": 1.0,
+          "top_p": 0.95,
+          "min_p": 0.0
+        }
       },
       "min_ram_gb": 16,
       "tier": "small",
-      "tags": ["official", "quality"],
+      "tags": [
+        "official",
+        "quality"
+      ],
       "verified": true,
       "why": "Near-lossless 2B for machines with 16 GB or more."
     },
@@ -201,15 +323,36 @@
       "license": "Apache-2.0",
       "context_max": 262144,
       "context_default": 8192,
-      "capabilities": ["chat", "code", "thinking", "tools-native", "multilingual", "long-context"],
+      "capabilities": [
+        "chat",
+        "code",
+        "thinking",
+        "tools-native",
+        "multilingual",
+        "long-context"
+      ],
       "supports_thinking_toggle": true,
       "sampling": {
-        "no_think": { "temperature": 0.7, "top_p": 0.8, "top_k": 20, "min_p": 0.0 },
-        "think": { "temperature": 0.6, "top_p": 0.95, "top_k": 20, "min_p": 0.0 }
+        "no_think": {
+          "temperature": 0.7,
+          "top_p": 0.8,
+          "top_k": 20,
+          "min_p": 0.0
+        },
+        "think": {
+          "temperature": 0.6,
+          "top_p": 0.95,
+          "top_k": 20,
+          "min_p": 0.0
+        }
       },
       "min_ram_gb": 8,
       "tier": "small",
-      "tags": ["tools", "best-small", "multilingual"],
+      "tags": [
+        "tools",
+        "best-small",
+        "multilingual"
+      ],
       "verified": true,
       "why": "The strongest small tool-caller (BFCL/TAU2-leading at 4B). Pick it for router-heavy work.",
       "notes": "Community imatrix quants by bartowski. Sampling follows Qwen3 guidance; check the Qwen3.5 card. Requires a 2026 llama.cpp (b11552 is fine). Thinking is on by default."
@@ -227,15 +370,34 @@
       "license": "Apache-2.0",
       "context_max": 262144,
       "context_default": 8192,
-      "capabilities": ["chat", "code", "thinking", "tools-native", "multilingual"],
+      "capabilities": [
+        "chat",
+        "code",
+        "thinking",
+        "tools-native",
+        "multilingual"
+      ],
       "supports_thinking_toggle": true,
       "sampling": {
-        "no_think": { "temperature": 0.7, "top_p": 0.8, "top_k": 20, "min_p": 0.0 },
-        "think": { "temperature": 0.6, "top_p": 0.95, "top_k": 20, "min_p": 0.0 }
+        "no_think": {
+          "temperature": 0.7,
+          "top_p": 0.8,
+          "top_k": 20,
+          "min_p": 0.0
+        },
+        "think": {
+          "temperature": 0.6,
+          "top_p": 0.95,
+          "top_k": 20,
+          "min_p": 0.0
+        }
       },
       "min_ram_gb": 8,
       "tier": "small",
-      "tags": ["tools", "multilingual"],
+      "tags": [
+        "tools",
+        "multilingual"
+      ],
       "verified": false,
       "why": "A balanced 2B with native tool calling.",
       "notes": "Repo name assumed from bartowski's naming. Use Search HF in the app to find the current uploader if it fails."
@@ -253,14 +415,28 @@
       "license": "Gemma Terms of Use",
       "context_max": 131072,
       "context_default": 8192,
-      "capabilities": ["chat", "code", "tools-native", "multilingual", "long-context"],
+      "capabilities": [
+        "chat",
+        "code",
+        "tools-native",
+        "multilingual",
+        "long-context"
+      ],
       "supports_thinking_toggle": false,
       "sampling": {
-        "no_think": { "temperature": 1.0, "top_p": 0.95, "top_k": 64, "min_p": 0.0 }
+        "no_think": {
+          "temperature": 1.0,
+          "top_p": 0.95,
+          "top_k": 64,
+          "min_p": 0.0
+        }
       },
       "min_ram_gb": 8,
       "tier": "small",
-      "tags": ["writing", "multilingual"],
+      "tags": [
+        "writing",
+        "multilingual"
+      ],
       "verified": true,
       "why": "Strong writing and translation (Scribe, Polyglot) at 4B.",
       "notes": "Static quants by mradermacher of google/gemma-4-E4B-it. Sampling follows Gemma family guidance. Gemma license terms apply."
@@ -277,14 +453,25 @@
       "approx_bytes": 1300000000,
       "license": "LFM Open License v1.0",
       "context_default": 8192,
-      "capabilities": ["chat", "tools-native"],
+      "capabilities": [
+        "chat",
+        "tools-native"
+      ],
       "supports_thinking_toggle": false,
       "sampling": {
-        "no_think": { "temperature": 0.3, "top_p": 0.9, "min_p": 0.15, "repeat_penalty": 1.05 }
+        "no_think": {
+          "temperature": 0.3,
+          "top_p": 0.9,
+          "min_p": 0.15,
+          "repeat_penalty": 1.05
+        }
       },
       "min_ram_gb": 4,
       "tier": "tiny",
-      "tags": ["fast", "cpu-friendly"],
+      "tags": [
+        "fast",
+        "cpu-friendly"
+      ],
       "verified": false,
       "why": "Very fast on CPU-only Windows PCs. Pythonic function calls.",
       "notes": "Repo name assumed. Liquid AI usually publishes official GGUF repos under LiquidAI/. Sampling per the LFM2 card; check it."
@@ -303,17 +490,364 @@
       "license": "Apache-2.0",
       "context_max": 32768,
       "context_default": 8192,
-      "capabilities": ["chat", "code"],
+      "capabilities": [
+        "chat",
+        "code"
+      ],
       "supports_thinking_toggle": false,
       "sampling": {
-        "no_think": { "temperature": 0.3, "top_p": 0.8, "top_k": 20, "min_p": 0.0, "repeat_penalty": 1.05 }
+        "no_think": {
+          "temperature": 0.3,
+          "top_p": 0.8,
+          "top_k": 20,
+          "min_p": 0.0,
+          "repeat_penalty": 1.05
+        }
       },
       "min_ram_gb": 8,
       "tier": "tiny",
-      "tags": ["code", "official"],
+      "tags": [
+        "code",
+        "official"
+      ],
       "verified": true,
       "why": "Code-specialized and tiny. A good partner for Code Mentor and the editor.",
       "notes": "Older (2024) but proven. Official Qwen GGUF repo."
+    },
+    {
+      "id": "qwen3-1.7b-q4",
+      "name": "Qwen3 1.7B",
+      "family": "Qwen3",
+      "params_b": 1.7,
+      "quant": "Q4_K_M",
+      "repo": "unsloth/Qwen3-1.7B-GGUF",
+      "revision": "main",
+      "file_pattern": "(?i)Qwen3-1\\.7B-Q4_K_M\\.gguf$",
+      "approx_bytes": 1110000000,
+      "license": "Apache-2.0",
+      "context_max": 32768,
+      "context_default": 8192,
+      "capabilities": [
+        "chat",
+        "code",
+        "thinking",
+        "multilingual"
+      ],
+      "supports_thinking_toggle": true,
+      "sampling": {
+        "no_think": {
+          "temperature": 0.7,
+          "top_p": 0.8,
+          "top_k": 20,
+          "min_p": 0
+        },
+        "think": {
+          "temperature": 0.6,
+          "top_p": 0.95,
+          "top_k": 20,
+          "min_p": 0
+        }
+      },
+      "min_ram_gb": 6,
+      "tier": "tiny",
+      "tags": [
+        "thinking",
+        "multilingual",
+        "small"
+      ],
+      "verified": false,
+      "why": "A strong all-rounder at about 1 GB, with an optional thinking mode.",
+      "notes": "Added without network access: the repository and file name are checked when you press Download (the exact file and its SHA-256 are read from the repo at that moment)."
+    },
+    {
+      "id": "qwen3-0.6b-q8",
+      "name": "Qwen3 0.6B",
+      "family": "Qwen3",
+      "params_b": 0.6,
+      "quant": "Q8_0",
+      "repo": "unsloth/Qwen3-0.6B-GGUF",
+      "revision": "main",
+      "file_pattern": "(?i)Qwen3-0\\.6B-Q8_0\\.gguf$",
+      "approx_bytes": 640000000,
+      "license": "Apache-2.0",
+      "context_max": 32768,
+      "context_default": 8192,
+      "capabilities": [
+        "chat",
+        "thinking",
+        "multilingual"
+      ],
+      "supports_thinking_toggle": true,
+      "sampling": {
+        "no_think": {
+          "temperature": 0.7,
+          "top_p": 0.8,
+          "top_k": 20,
+          "min_p": 0
+        },
+        "think": {
+          "temperature": 0.6,
+          "top_p": 0.95,
+          "top_k": 20,
+          "min_p": 0
+        }
+      },
+      "min_ram_gb": 4,
+      "tier": "tiny",
+      "tags": [
+        "fast",
+        "thinking",
+        "small"
+      ],
+      "verified": false,
+      "why": "The smallest useful chat model here (about 0.6 GB): quick answers on any computer.",
+      "notes": "Added without network access: the repository and file name are checked when you press Download (the exact file and its SHA-256 are read from the repo at that moment)."
+    },
+    {
+      "id": "qwen2.5-1.5b-q4",
+      "name": "Qwen2.5 1.5B Instruct",
+      "family": "Qwen2.5",
+      "params_b": 1.5,
+      "quant": "Q4_K_M",
+      "repo": "Qwen/Qwen2.5-1.5B-Instruct-GGUF",
+      "revision": "main",
+      "file_pattern": "(?i)qwen2\\.5-1\\.5b-instruct-q4_k_m\\.gguf$",
+      "approx_bytes": 1120000000,
+      "license": "Apache-2.0",
+      "context_max": 32768,
+      "context_default": 8192,
+      "capabilities": [
+        "chat",
+        "code",
+        "multilingual"
+      ],
+      "supports_thinking_toggle": false,
+      "sampling": {
+        "no_think": {
+          "temperature": 0.7,
+          "top_p": 0.8,
+          "top_k": 20,
+          "repeat_penalty": 1.05
+        }
+      },
+      "min_ram_gb": 6,
+      "tier": "tiny",
+      "tags": [
+        "small",
+        "multilingual"
+      ],
+      "verified": false,
+      "why": "Dependable general chat and light coding in about 1.1 GB.",
+      "notes": "Added without network access: the repository and file name are checked when you press Download (the exact file and its SHA-256 are read from the repo at that moment)."
+    },
+    {
+      "id": "qwen2.5-0.5b-q8",
+      "name": "Qwen2.5 0.5B Instruct",
+      "family": "Qwen2.5",
+      "params_b": 0.5,
+      "quant": "Q8_0",
+      "repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+      "revision": "main",
+      "file_pattern": "(?i)qwen2\\.5-0\\.5b-instruct-q8_0\\.gguf$",
+      "approx_bytes": 530000000,
+      "license": "Apache-2.0",
+      "context_max": 32768,
+      "context_default": 8192,
+      "capabilities": [
+        "chat",
+        "multilingual"
+      ],
+      "supports_thinking_toggle": false,
+      "sampling": {
+        "no_think": {
+          "temperature": 0.7,
+          "top_p": 0.8,
+          "top_k": 20,
+          "repeat_penalty": 1.05
+        }
+      },
+      "min_ram_gb": 4,
+      "tier": "tiny",
+      "tags": [
+        "fast",
+        "small"
+      ],
+      "verified": false,
+      "why": "Tiny and very fast (about 0.5 GB). Good for short answers and quick edits.",
+      "notes": "Added without network access: the repository and file name are checked when you press Download (the exact file and its SHA-256 are read from the repo at that moment)."
+    },
+    {
+      "id": "llama3.2-1b-q4",
+      "name": "Llama 3.2 1B Instruct",
+      "family": "Llama 3.2",
+      "params_b": 1.24,
+      "quant": "Q4_K_M",
+      "repo": "bartowski/Llama-3.2-1B-Instruct-GGUF",
+      "revision": "main",
+      "file_pattern": "(?i)Llama-3\\.2-1B-Instruct-Q4_K_M\\.gguf$",
+      "approx_bytes": 810000000,
+      "license": "Llama 3.2 Community License",
+      "context_max": 131072,
+      "context_default": 8192,
+      "capabilities": [
+        "chat",
+        "multilingual",
+        "long-context"
+      ],
+      "supports_thinking_toggle": false,
+      "sampling": {
+        "no_think": {
+          "temperature": 0.6,
+          "top_p": 0.9
+        }
+      },
+      "min_ram_gb": 6,
+      "tier": "tiny",
+      "tags": [
+        "small",
+        "fast"
+      ],
+      "verified": false,
+      "why": "Meta's small model (about 0.8 GB) with a very long context window.",
+      "notes": "Added without network access: the repository and file name are checked when you press Download (the exact file and its SHA-256 are read from the repo at that moment)."
+    },
+    {
+      "id": "llama3.2-3b-q4",
+      "name": "Llama 3.2 3B Instruct",
+      "family": "Llama 3.2",
+      "params_b": 3.21,
+      "quant": "Q4_K_M",
+      "repo": "bartowski/Llama-3.2-3B-Instruct-GGUF",
+      "revision": "main",
+      "file_pattern": "(?i)Llama-3\\.2-3B-Instruct-Q4_K_M\\.gguf$",
+      "approx_bytes": 2020000000,
+      "license": "Llama 3.2 Community License",
+      "context_max": 131072,
+      "context_default": 8192,
+      "capabilities": [
+        "chat",
+        "code",
+        "multilingual",
+        "long-context"
+      ],
+      "supports_thinking_toggle": false,
+      "sampling": {
+        "no_think": {
+          "temperature": 0.6,
+          "top_p": 0.9
+        }
+      },
+      "min_ram_gb": 8,
+      "tier": "small",
+      "tags": [
+        "small"
+      ],
+      "verified": false,
+      "why": "The step up in quality at about 2 GB, still comfortable on an 8 GB computer.",
+      "notes": "Added without network access: the repository and file name are checked when you press Download (the exact file and its SHA-256 are read from the repo at that moment)."
+    },
+    {
+      "id": "gemma-3-1b-q4",
+      "name": "Gemma 3 1B Instruct",
+      "family": "Gemma 3",
+      "params_b": 1.0,
+      "quant": "Q4_K_M",
+      "repo": "bartowski/google_gemma-3-1b-it-GGUF",
+      "revision": "main",
+      "file_pattern": "(?i)google_gemma-3-1b-it-Q4_K_M\\.gguf$",
+      "approx_bytes": 810000000,
+      "license": "Gemma Terms of Use",
+      "context_max": 32768,
+      "context_default": 8192,
+      "capabilities": [
+        "chat",
+        "multilingual"
+      ],
+      "supports_thinking_toggle": false,
+      "sampling": {
+        "no_think": {
+          "temperature": 1.0,
+          "top_p": 0.95,
+          "top_k": 64,
+          "min_p": 0
+        }
+      },
+      "min_ram_gb": 6,
+      "tier": "tiny",
+      "tags": [
+        "small",
+        "multilingual"
+      ],
+      "verified": false,
+      "why": "Google's compact model (about 0.8 GB), good at writing and many languages.",
+      "notes": "Added without network access: the repository and file name are checked when you press Download (the exact file and its SHA-256 are read from the repo at that moment)."
+    },
+    {
+      "id": "smollm2-1.7b-q4",
+      "name": "SmolLM2 1.7B Instruct",
+      "family": "SmolLM2",
+      "params_b": 1.7,
+      "quant": "Q4_K_M",
+      "repo": "HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF",
+      "revision": "main",
+      "file_pattern": "(?i)smollm2-1\\.7b-instruct-q4_k_m\\.gguf$",
+      "approx_bytes": 1060000000,
+      "license": "Apache-2.0",
+      "context_max": 8192,
+      "context_default": 8192,
+      "capabilities": [
+        "chat",
+        "code"
+      ],
+      "supports_thinking_toggle": false,
+      "sampling": {
+        "no_think": {
+          "temperature": 0.2,
+          "top_p": 0.9
+        }
+      },
+      "min_ram_gb": 6,
+      "tier": "tiny",
+      "tags": [
+        "small",
+        "fast"
+      ],
+      "verified": false,
+      "why": "Hugging Face's own small model (about 1 GB): short, careful answers.",
+      "notes": "Added without network access: the repository and file name are checked when you press Download (the exact file and its SHA-256 are read from the repo at that moment)."
+    },
+    {
+      "id": "smollm2-360m-q8",
+      "name": "SmolLM2 360M Instruct",
+      "family": "SmolLM2",
+      "params_b": 0.36,
+      "quant": "Q8_0",
+      "repo": "HuggingFaceTB/SmolLM2-360M-Instruct-GGUF",
+      "revision": "main",
+      "file_pattern": "(?i)smollm2-360m-instruct-q8_0\\.gguf$",
+      "approx_bytes": 390000000,
+      "license": "Apache-2.0",
+      "context_max": 8192,
+      "context_default": 8192,
+      "capabilities": [
+        "chat"
+      ],
+      "supports_thinking_toggle": false,
+      "sampling": {
+        "no_think": {
+          "temperature": 0.2,
+          "top_p": 0.9
+        }
+      },
+      "min_ram_gb": 4,
+      "tier": "tiny",
+      "tags": [
+        "fast",
+        "small"
+      ],
+      "verified": false,
+      "why": "Under 0.4 GB. For very old computers, or just to see how small a model can be.",
+      "notes": "Added without network access: the repository and file name are checked when you press Download (the exact file and its SHA-256 are read from the repo at that moment)."
     }
   ]
 }

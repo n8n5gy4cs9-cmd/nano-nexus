@@ -8,7 +8,7 @@ import { useActivity } from "@/stores/activity";
 import { useAssistantChoice } from "@/stores/assistant";
 import { useUi } from "@/stores/ui";
 
-/** Global shortcuts: ⌘N new chat, ⌘1…⌘8 sections, ⌘, settings, ⌘/ assistants, ⌘\ sidebar, ⌘I inspector (Ctrl on Windows/Linux). */
+/** Global shortcuts: ⌘K palette, ⌘N new chat, ⌘1…⌘8 sections, ⌘, settings, ⌘/ assistants, ⌘\ sidebar, ⌘I inspector (Ctrl on Windows/Linux). */
 export function useShortcuts(platform: Platform) {
   const navigate = useNavigate();
   useEffect(() => {
@@ -21,6 +21,11 @@ export function useShortcuts(platform: Platform) {
         return;
       }
       const ui = useUi.getState();
+      if (e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        ui.setPaletteOpen(!ui.paletteOpen);
+        return;
+      }
       const section = NAV.find((s) => s.digit !== undefined && String(s.digit) === e.key);
       if (section) {
         e.preventDefault();

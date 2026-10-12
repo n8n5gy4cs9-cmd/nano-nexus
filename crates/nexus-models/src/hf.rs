@@ -29,8 +29,21 @@ pub enum HfError {
     Parse(String),
 }
 
+/// The whole cause chain ("error sending request … : connection closed … : certificate …"), because
+/// reqwest's own message hides the part that tells a TLS or proxy problem from a missing network.
 fn net(e: reqwest::Error) -> HfError {
-    HfError::Offline(e.to_string())
+    use std::error::Error;
+    let mut msg = e.to_string();
+    let mut src = e.source();
+    while let Some(s) = src {
+        let part = s.to_string();
+        if !msg.contains(&part) {
+            msg.push_str(": ");
+            msg.push_str(&part);
+        }
+        src = s.source();
+    }
+    HfError::Offline(msg)
 }
 
 /// A repo revision resolved to a commit.

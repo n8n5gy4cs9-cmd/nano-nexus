@@ -62,6 +62,10 @@ pub struct CatalogEntry {
     pub why: Option<String>,
     #[serde(default)]
     pub notes: Option<String>,
+    /// A few plain sentences appended to the system prompt while this model runs (model quirks that a
+    /// small model benefits from hearing). Optional; users can turn the hints off in Settings.
+    #[serde(default)]
+    pub prompt_hint: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -183,7 +187,7 @@ mod tests {
     #[test]
     fn the_embedded_catalog_is_valid() {
         let c = Catalog::parse(CATALOG_JSON).unwrap();
-        assert_eq!(c.models.len(), 12);
+        assert_eq!(c.models.len(), 21);
         assert_eq!(
             c.default_entry().map(|d| d.id.as_str()),
             Some("minicpm5-1b-fable5-v2-q8")

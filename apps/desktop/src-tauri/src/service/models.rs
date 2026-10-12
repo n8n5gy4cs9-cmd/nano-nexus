@@ -142,7 +142,8 @@ fn hf_err(e: HfError) -> NexusError {
         HfError::Gated => NexusError::PermissionDenied(
             "this repository is gated: accept its terms on huggingface.co, then set HF_TOKEN".into(),
         ),
-        other => NexusError::Network(other.to_string()),
+        // Only real connection failures are "offline"; a bad status or an unexpected answer is not.
+        other => NexusError::Internal(other.to_string()),
     }
 }
 
@@ -1284,7 +1285,7 @@ mod tests {
             ErrorCode::Network
         );
         let cards = catalog(&ctx).unwrap();
-        assert_eq!(cards.len(), 12);
+        assert_eq!(cards.len(), 21);
         assert!(
             cards
                 .iter()

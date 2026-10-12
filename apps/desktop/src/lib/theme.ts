@@ -24,5 +24,5 @@ export function applyTheme(root: HTMLElement, theme: ResolvedTheme, accent: Acce
 }
 
 export function systemPrefersDark(): boolean {
-  return typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  return typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(prefers-color-scheme: dark)").matches;
 }

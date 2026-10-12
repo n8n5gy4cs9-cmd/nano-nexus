@@ -104,6 +104,9 @@ pub struct Settings {
     /// Token budget of the injected passages (and of `kb_search` results).
     #[serde(rename = "knowledge.max_tokens")]
     pub knowledge_max_tokens: u32,
+    /// Add the catalog's short, model-specific hint (for example for MiniCPM5) to the system prompt.
+    #[serde(rename = "models.use_prompt_hints")]
+    pub models_use_prompt_hints: bool,
     /// Duo assistant: model id used for easy questions. Empty = the active model.
     #[serde(rename = "duo.light_model_id")]
     pub duo_light_model_id: String,
@@ -148,6 +151,7 @@ impl Default for Settings {
             share_notify_pairing: true,
             knowledge_chat_context: false,
             knowledge_max_tokens: 1200,
+            models_use_prompt_hints: true,
             duo_light_model_id: String::new(),
             duo_strong_model_id: String::new(),
         }

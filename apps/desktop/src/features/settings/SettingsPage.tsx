@@ -147,6 +147,10 @@ export function SettingsPage() {
         )}
       </Section>
 
+      <Section title="Model tuning">
+        <ToggleRow label="Add short model-specific tips to the prompt" hint="For models that have them (for example MiniCPM5): a few plain sentences such as “answer in the user’s language”. Turn off to compare." checked={bool(s, "models.use_prompt_hints", true)} onChange={(v) => set("models.use_prompt_hints", v)} />
+      </Section>
+
       <Section title="Privacy">
         <ToggleRow label="Allow network downloads" hint="Needed to download models and read from Hugging Face. Chat never leaves your computer." checked={bool(s, "privacy.allow_network_downloads", true)} onChange={(v) => set("privacy.allow_network_downloads", v)} />
         <ToggleRow label="Use library passages in chats" hint="Adds matching passages from your offline libraries to ordinary chats." checked={bool(s, "knowledge.chat_context")} onChange={(v) => set("knowledge.chat_context", v)} />

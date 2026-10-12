@@ -48,3 +48,18 @@ export const CommandItem = forwardRef<
   />
 ));
 CommandItem.displayName = "CommandItem";
+
+export const CommandGroup = forwardRef<
+  ElementRef<typeof CommandPrimitive.Group>,
+  ComponentPropsWithoutRef<typeof CommandPrimitive.Group>
+>(({ className, ...props }, ref) => (
+  <CommandPrimitive.Group
+    ref={ref}
+    className={cn(
+      "px-1 py-1 [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-small [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:text-muted",
+      className,
+    )}
+    {...props}
+  />
+));
+CommandGroup.displayName = "CommandGroup";

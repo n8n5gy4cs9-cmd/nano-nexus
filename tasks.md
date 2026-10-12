@@ -259,7 +259,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [ ] ⭐ **T14.17** Exit check: real phone demo; security tests; `lsof` shows only :9889 exposed; works on the Windows build
 
 ## M15: Polish · [spec](docs/milestones/M15-polish.md)
-- [ ] **T15.01** Command palette (⌘K / Ctrl+K) with all groups
+- [x] **T15.01** Command palette (⌘K / Ctrl+K) with all groups (2026-10-12) — ⌘K/Ctrl+K command palette (`features/palette/CommandPalette.tsx`): pages, new chat with an assistant, conversation search (FTS), model switch, actions (theme, sidebar, console, scan, analyze, Rename Forge, restart runtime). The top-bar search button now opens it
 - [ ] **T15.02** Onboarding (4 steps, animated hexagon), re-runnable
 - [ ] **T15.03** (optional) Quick Ask window (⌥Space / Alt+Space)
 - [ ] **T15.04** Shortcuts complete + Settings → Shortcuts viewer

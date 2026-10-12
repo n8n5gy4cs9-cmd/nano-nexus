@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Outlet } from "react-router-dom";
 
+import { CommandPalette } from "@/features/palette/CommandPalette";
 import { AssistantSwitcher } from "@/features/assistants/AssistantSwitcher";
 import { PermissionModal } from "@/features/permissions/PermissionModal";
 import { useShortcuts } from "@/hooks/useShortcuts";
@@ -75,6 +76,7 @@ export function AppShell() {
       {inspectorOpen ? <Inspector /> : null}
       {IS_WEB ? null : <PermissionModal />}
       <AssistantSwitcher />
+      <CommandPalette />
     </div>
   );
 }
