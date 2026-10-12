@@ -788,3 +788,20 @@ pub async fn os_permissions_status(home: std::path::PathBuf) -> Result<OsPermiss
     .await
     .map_err(|e| NexusError::Internal(e.to_string()))
 }
+
+#[cfg(test)]
+mod os_status_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn os_status_reports_the_platform_and_probes_only_on_macos() {
+        let dir = tempfile::tempdir().unwrap();
+        let s = os_permissions_status(dir.path().to_path_buf()).await.unwrap();
+        assert_eq!(s.platform, std::env::consts::OS);
+        if cfg!(target_os = "macos") {
+            assert!(s.full_disk_access.is_some());
+        } else {
+            assert!(s.folders.is_empty() && s.full_disk_access.is_none());
+        }
+    }
+}
