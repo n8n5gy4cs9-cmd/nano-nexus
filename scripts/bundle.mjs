@@ -23,16 +23,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { ROOT, VENDOR_MODELS, ensureProfileEntry, loadCatalog, resolveProfile } from './fetch-model.mjs';
-import { stageKnowledge } from './knowledge-manifest.mjs';
+import { TARGETS, stage } from './stage-bundle.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const NSIS_LIMIT = 1.8 * 1024 ** 3;
-const TARGETS = {
-  mac: { triple: 'aarch64-apple-darwin', dir: 'macos-arm64', win: false, label: 'macOS (Apple Silicon)' },
-  windows: { triple: 'x86_64-pc-windows-msvc', dir: 'windows-x64', win: true, label: 'Windows x64' },
-  'windows-arm64': { triple: 'aarch64-pc-windows-msvc', dir: 'windows-arm64', win: true, label: 'Windows ARM64' },
-};
-
 const say = (m) => console.log(m);
 const step = (m) => console.log(`\n\x1b[1m▶ ${m}\x1b[0m`);
 const fail = (m) => {
@@ -113,74 +107,6 @@ function run(cmd, args, opts = {}) {
   say(`$ ${cmd} ${args.join(' ')}`);
   const r = spawnSync(cmd, args, { stdio: 'inherit', cwd: ROOT, shell: process.platform === 'win32', ...opts });
   if (r.status !== 0) fail(`${cmd} failed (exit ${r.status ?? 'signal'})`);
-}
-
-function link(src, dest) {
-  fs.mkdirSync(path.dirname(dest), { recursive: true });
-  fs.rmSync(dest, { force: true });
-  try {
-    fs.linkSync(src, dest);
-  } catch {
-    fs.copyFileSync(src, dest);
-  }
-}
-
-/** Stage models, knowledge, licenses (and the Windows runtime) for one target. Returns { dir, bytes }. */
-export async function stage(profile, key, models) {
-  const t = TARGETS[key];
-  const dir = path.join(ROOT, 'vendor', 'bundle', profile.name, t.dir);
-  fs.rmSync(dir, { recursive: true, force: true });
-  fs.mkdirSync(dir, { recursive: true });
-  const manifest = {
-    schema: 1,
-    profile: profile.name,
-    built_at: new Date().toISOString(),
-    default: profile.default,
-    models: [],
-  };
-  let bytes = 0;
-  for (const lock of models) {
-    link(path.join(VENDOR_MODELS, lock.id, lock.file), path.join(dir, 'models', lock.id, lock.file));
-    manifest.models.push({
-      id: lock.id,
-      name: lock.name ?? lock.id,
-      path: `${lock.id}/${lock.file}`,
-      sha256: lock.sha256,
-      bytes: lock.bytes,
-      ...(lock.repo ? { repo: lock.repo } : {}),
-      ...(lock.revision ? { revision: lock.revision } : {}),
-      ...(lock.license ? { license: lock.license } : {}),
-      catalog_id: lock.catalog_id ?? null,
-    });
-    bytes += lock.bytes;
-  }
-  fs.writeFileSync(path.join(dir, 'models', 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
-
-  const kb = stageKnowledge(profile, ROOT, path.join(dir, 'knowledge'));
-  if (kb) bytes += kb.libraries.reduce((n, l) => n + l.bytes, 0);
-
-  const rt = path.join(ROOT, 'vendor', 'runtime', t.dir);
-  fs.mkdirSync(path.join(dir, 'licenses'), { recursive: true });
-  if (fs.existsSync(path.join(rt, 'licenses'))) fs.cpSync(path.join(rt, 'licenses'), path.join(dir, 'licenses'), { recursive: true });
-  if (t.win) {
-    if (!fs.existsSync(path.join(rt, 'llama-server.exe'))) {
-      step(`Fetching the ${t.label} runtime`);
-      run('node', [path.join(HERE, 'fetch-runtime-windows.mjs'), '--arch', t.dir.replace('windows-', '')]);
-    }
-    fs.cpSync(rt, path.join(dir, 'runtime'), { recursive: true, filter: (s) => !s.endsWith('runtime.lock.json') });
-    bytes += fs.readdirSync(path.join(dir, 'runtime')).reduce((n, f) => n + fs.statSync(path.join(dir, 'runtime', f)).size, 0);
-  }
-  fs.writeFileSync(path.join(dir, 'bundle.json'), JSON.stringify({ profile: profile.name, built_at: manifest.built_at, models: models.map((m) => m.id), knowledge: kb ? kb.libraries.map((l) => l.id) : [] }, null, 2));
-
-  // Tauri overlay: paths are relative to apps/desktop/src-tauri.
-  const rel = path.relative(path.join(ROOT, 'apps', 'desktop', 'src-tauri'), dir).split(path.sep).join('/');
-  const resources = { [`${rel}/models/`]: 'models/', [`${rel}/licenses/`]: 'licenses/', [`${rel}/bundle.json`]: 'bundle.json' };
-  if (kb) resources[`${rel}/knowledge/`] = 'knowledge/';
-  if (t.win) resources[`${rel}/runtime/`] = 'runtime/';
-  const overlay = path.join(ROOT, 'apps', 'desktop', 'src-tauri', 'gen', `tauri.bundle.${profile.name}.${t.dir}.json`);
-  fs.mkdirSync(path.dirname(overlay), { recursive: true });
-  fs.writeFileSync(overlay, JSON.stringify({ bundle: { resources } }, null, 2));
-  return { dir, bytes, overlay, kb };
 }
 
 function build(key, st, format, outDir) {
