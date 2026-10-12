@@ -93,5 +93,12 @@ tree-sitter-rust = "0.24"
 tree-sitter-c-sharp = "0.23"
 tree-sitter-go = "0.25"
 tree-sitter-java = "0.23"
+tree-sitter-kotlin-ng = "1.1"
+tree-sitter-swift = "0.7"
+tree-sitter-php = "0.25"
+tree-sitter-ruby = "0.23"
+tree-sitter-c = "0.24"
+tree-sitter-cpp = "0.23"
+tree-sitter-lua = "0.5"
 postcard = { version = "1.1", default-features = false, features = ["use-std"] } # compact on-disk code index (M09 index.bin)
 heck = "0.5" # case conversion for Rename Forge naming rules (M09)

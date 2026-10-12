@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 176/234 tasks done (75%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 177/234 tasks done (75%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -188,7 +188,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T09.15** UI stepper + issues grid (Symbols / Files & folders tabs, virtualized, filters, inline edit w/ live validation, bulk accept, re-propose) (2026-10-11) — `features/rename/RenamePage.tsx` + `ItemsTable`: start view (pick folder with progress/stop, recent projects), per-project view with Suggest names (job, progress, stop), filter, inline edit with server-side validation errors, accept/reject/try again, per-item usages, Names and Files-and-folders tabs, 200-row paging instead of virtualization. **Frontend not linted/typechecked/tested**
 - [x] **T09.16** UI occurrence drawer (code previews) + Plan & preview (Changes) + git banner + Verify panel + Strings tab + Find tab (2026-10-11) — `UsagesList` (occurrence drawer as an inline expander), plan options + Preview → Changes page with git-dirty banner and skipped list, `VerifyPanel` (checker buttons, streamed output, stop), `FindPanel`. **Not done: Strings tab (no strings commands exist yet).** Also fixed channel arg names (`on_event`) in the rename commands and mark items `applied`/`accepted` on change set apply/undo. **Not compiled or tested**
 - [ ] **T09.17** 🍎 Real run on a COPY of your own project → fix issues → notes in SPIKES.md §rename-real-run
-- [ ] **T09.18** (P1) More languages: Kotlin, Swift, PHP, Ruby, C/C++, Lua (one tags query + reserved list + fixture each)
+- [x] **T09.18** (P1) More languages: Kotlin, Swift, PHP, Ruby, C/C++, Lua (one tags query + reserved list + fixture each) (2026-10-12) — grammars pinned in the workspace (`tree-sitter-kotlin-ng/swift/php/ruby/c/cpp/lua`); `Lang::{Kotlin,Swift,Php,Ruby,C,Cpp,Lua}` with tags, keywords/globals, conventions, include/require/`require()` resolution (file renames rewrite them), fixtures `kt_app` … `lua_app`, `tests/code_langs.rs`. The Kotlin grammar (kotlin-ng) mis-parses `object`/`companion object`; those declarations are skipped, not mis-renamed
 - [ ] ⭐ **T09.19** Exit check: fixtures pass, reserved names never proposed, folder renames update imports, undo byte-identical, project still builds
 
 ## M10: Code editor · [spec](docs/milestones/M10-editor.md)

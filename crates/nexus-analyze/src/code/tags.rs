@@ -19,6 +19,13 @@ const RS: &str = include_str!("../../queries/rust/tags.scm");
 const CS: &str = include_str!("../../queries/csharp/tags.scm");
 const GO: &str = include_str!("../../queries/go/tags.scm");
 const JAVA: &str = include_str!("../../queries/java/tags.scm");
+const KOTLIN: &str = include_str!("../../queries/kotlin/tags.scm");
+const SWIFT: &str = include_str!("../../queries/swift/tags.scm");
+const PHP: &str = include_str!("../../queries/php/tags.scm");
+const RUBY: &str = include_str!("../../queries/ruby/tags.scm");
+const C: &str = include_str!("../../queries/c/tags.scm");
+const CPP: &str = include_str!("../../queries/cpp/tags.scm");
+const LUA: &str = include_str!("../../queries/lua/tags.scm");
 
 fn source(lang: Lang) -> &'static str {
     match lang {
@@ -29,6 +36,13 @@ fn source(lang: Lang) -> &'static str {
         Lang::CSharp => CS,
         Lang::Go => GO,
         Lang::Java => JAVA,
+        Lang::Kotlin => KOTLIN,
+        Lang::Swift => SWIFT,
+        Lang::Php => PHP,
+        Lang::Ruby => RUBY,
+        Lang::C => C,
+        Lang::Cpp => CPP,
+        Lang::Lua => LUA,
     }
 }
 

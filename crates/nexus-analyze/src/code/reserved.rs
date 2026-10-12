@@ -25,6 +25,13 @@ fn keywords_text(lang: Lang) -> &'static str {
         Lang::CSharp => include_str!("../../queries/csharp/keywords.txt"),
         Lang::Go => include_str!("../../queries/go/keywords.txt"),
         Lang::Java => include_str!("../../queries/java/keywords.txt"),
+        Lang::Kotlin => include_str!("../../queries/kotlin/keywords.txt"),
+        Lang::Swift => include_str!("../../queries/swift/keywords.txt"),
+        Lang::Php => include_str!("../../queries/php/keywords.txt"),
+        Lang::Ruby => include_str!("../../queries/ruby/keywords.txt"),
+        Lang::C => include_str!("../../queries/c/keywords.txt"),
+        Lang::Cpp => include_str!("../../queries/cpp/keywords.txt"),
+        Lang::Lua => include_str!("../../queries/lua/keywords.txt"),
     }
 }
 
@@ -37,6 +44,13 @@ fn globals_text(lang: Lang) -> &'static str {
         Lang::CSharp => include_str!("../../queries/csharp/globals.txt"),
         Lang::Go => include_str!("../../queries/go/globals.txt"),
         Lang::Java => include_str!("../../queries/java/globals.txt"),
+        Lang::Kotlin => include_str!("../../queries/kotlin/globals.txt"),
+        Lang::Swift => include_str!("../../queries/swift/globals.txt"),
+        Lang::Php => include_str!("../../queries/php/globals.txt"),
+        Lang::Ruby => include_str!("../../queries/ruby/globals.txt"),
+        Lang::C => include_str!("../../queries/c/globals.txt"),
+        Lang::Cpp => include_str!("../../queries/cpp/globals.txt"),
+        Lang::Lua => include_str!("../../queries/lua/globals.txt"),
     }
 }
 
@@ -138,6 +152,145 @@ fn special_names(lang: Lang) -> &'static [&'static str] {
             "UnmarshalJSON",
             "Unwrap",
         ],
+        Lang::Kotlin => &[
+            "toString",
+            "equals",
+            "hashCode",
+            "compareTo",
+            "iterator",
+            "invoke",
+            "get",
+            "set",
+            "getValue",
+            "setValue",
+            "contains",
+            "plus",
+            "minus",
+            "times",
+            "div",
+            "rem",
+            "not",
+            "close",
+            "run",
+            "next",
+            "hasNext",
+        ],
+        Lang::Swift => &[
+            "description",
+            "debugDescription",
+            "hash",
+            "encode",
+            "body",
+            "makeBody",
+            "viewDidLoad",
+            "viewWillAppear",
+            "viewDidAppear",
+            "applicationDidFinishLaunching",
+            "next",
+            "makeIterator",
+            "callAsFunction",
+            "init",
+            "deinit",
+        ],
+        Lang::Php => &[
+            "__construct",
+            "__destruct",
+            "__call",
+            "__callStatic",
+            "__get",
+            "__set",
+            "__isset",
+            "__unset",
+            "__sleep",
+            "__wakeup",
+            "__serialize",
+            "__unserialize",
+            "__toString",
+            "__invoke",
+            "__set_state",
+            "__clone",
+            "__debugInfo",
+            "jsonSerialize",
+            "getIterator",
+            "count",
+            "current",
+            "key",
+            "next",
+            "rewind",
+            "valid",
+            "offsetGet",
+            "offsetSet",
+            "offsetExists",
+            "offsetUnset",
+        ],
+        Lang::Ruby => &[
+            "initialize",
+            "to_s",
+            "to_str",
+            "to_a",
+            "to_h",
+            "to_i",
+            "to_proc",
+            "inspect",
+            "each",
+            "call",
+            "method_missing",
+            "respond_to_missing?",
+            "hash",
+            "eql?",
+            "equal?",
+            "coerce",
+            "included",
+            "extended",
+            "inherited",
+            "prepended",
+            "setup",
+            "teardown",
+            "<=>",
+            "==",
+            "===",
+            "[]",
+            "[]=",
+            "<<",
+            "+",
+            "-",
+            "*",
+            "/",
+        ],
+        Lang::C => &[],
+        Lang::Cpp => &[
+            "begin",
+            "end",
+            "size",
+            "swap",
+            "what",
+            "operator()",
+            "operator[]",
+            "operator==",
+            "operator<",
+            "operator<<",
+            "operator>>",
+        ],
+        Lang::Lua => &[
+            "__index",
+            "__newindex",
+            "__call",
+            "__tostring",
+            "__eq",
+            "__lt",
+            "__le",
+            "__len",
+            "__concat",
+            "__gc",
+            "__close",
+            "__add",
+            "__sub",
+            "__mul",
+            "__div",
+            "__mod",
+            "__unm",
+            "new",
+        ],
         Lang::Java => &[
             "toString",
             "equals",
@@ -169,6 +322,8 @@ fn entry_names(lang: Lang) -> &'static [&'static str] {
         Lang::CSharp => &["Main"],
         Lang::Go => &["main", "init"],
         Lang::Java => &["main"],
+        Lang::Kotlin | Lang::C | Lang::Cpp => &["main"],
+        Lang::Swift | Lang::Php | Lang::Ruby | Lang::Lua => &[],
     }
 }
 
@@ -251,7 +406,14 @@ fn bases(lang: Lang, sig: &str) -> Vec<String> {
                 !w.is_empty()
                     && !matches!(
                         w.as_str(),
-                        "extends" | "implements" | "public" | "class" | "where"
+                        "extends"
+                            | "implements"
+                            | "public"
+                            | "class"
+                            | "where"
+                            | "private"
+                            | "protected"
+                            | "virtual"
                     )
             })
             .collect()
@@ -275,7 +437,22 @@ fn bases(lang: Lang, sig: &str) -> Vec<String> {
             }
             out
         }
-        Lang::CSharp => sig.split_once(':').map(|(_, t)| words(t)).unwrap_or_default(),
+        Lang::CSharp | Lang::Kotlin | Lang::Swift | Lang::Cpp => {
+            sig.split_once(':').map(|(_, t)| words(t)).unwrap_or_default()
+        }
+        Lang::Ruby => sig.split_once('<').map(|(_, t)| words(t)).unwrap_or_default(),
+        Lang::Php => {
+            let mut out = Vec::new();
+            for kw in ["extends ", "implements "] {
+                if let Some(i) = sig.find(kw) {
+                    out.extend(words(
+                        sig[i + kw.len()..].split(" implements ").next().unwrap_or(""),
+                    ));
+                }
+            }
+            out
+        }
+        Lang::C | Lang::Lua => Vec::new(),
         Lang::Rust | Lang::Go => Vec::new(),
     }
 }

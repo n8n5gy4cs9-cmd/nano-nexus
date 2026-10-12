@@ -245,8 +245,13 @@ pub fn resolve_all(
                     Lang::JavaScript | Lang::TypeScript | Lang::Tsx => js(&ctx, f, imp),
                     Lang::Rust => rust(&ctx, f, imp),
                     Lang::Go => go(&ctx, f, imp),
-                    Lang::Java => java(&ctx, f, imp),
-                    Lang::CSharp => edge(&imp.module),
+                    Lang::Java => java(&ctx, imp, &["java"]),
+                    Lang::Kotlin => java(&ctx, imp, &["kt", "kts", "java"]),
+                    Lang::CSharp | Lang::Swift => edge(&imp.module),
+                    Lang::Php => path_import(&ctx, f, imp, PHP_EXTS, &["", "src", "lib"]),
+                    Lang::Ruby => path_import(&ctx, f, imp, &["rb"], &["", "lib"]),
+                    Lang::C | Lang::Cpp => path_import(&ctx, f, imp, C_EXTS, &["", "include", "src", "inc"]),
+                    Lang::Lua => lua(&ctx, imp),
                 })
                 .collect()
         })
@@ -406,6 +411,7 @@ fn js_segs(
     rel: &str,
     start_dir: &str,
     hit: &JsHit,
+    exts: &[&str],
 ) -> Vec<SegRef> {
     let mut out = Vec::new();
     let mut cur = start_dir.to_owned();
@@ -425,7 +431,7 @@ fn js_segs(
         if last && let JsHit::File(fi) = hit {
             // Keep a written extension out of the span so a rename keeps it.
             let stem_end = match seg.rsplit_once('.') {
-                Some((stem, ext)) if JS_EXTS.contains(&ext) => a + stem.len(),
+                Some((stem, ext)) if exts.contains(&ext) => a + stem.len(),
                 _ => *b,
             };
             out.push(SegRef {
@@ -459,7 +465,7 @@ fn js(ctx: &Ctx<'_>, from: &IndexedFile, imp: &ImportFact) -> ImportEdge {
         if let Some(path) = join(base, spec)
             && let Some(hit) = resolve_js(ctx, &path)
         {
-            e.segs = js_segs(ctx, &imp.module.span, off, spec, base, &hit);
+            e.segs = js_segs(ctx, &imp.module.span, off, spec, base, &hit, &JS_EXTS);
             finish(&mut e, &hit);
         }
         return e;
@@ -498,7 +504,15 @@ fn js(ctx: &Ctx<'_>, from: &IndexedFile, imp: &ImportFact) -> ImportEdge {
             if let Some((a, b)) = star {
                 let prefix_dir = t.split('*').next().unwrap_or("").trim_end_matches('/');
                 let start = join(&base, prefix_dir).unwrap_or_default();
-                e.segs = js_segs(ctx, &imp.module.span, off + a, &spec[a..b], &start, &hit);
+                e.segs = js_segs(
+                    ctx,
+                    &imp.module.span,
+                    off + a,
+                    &spec[a..b],
+                    &start,
+                    &hit,
+                    &JS_EXTS,
+                );
             }
             finish(&mut e, &hit);
             return e;
@@ -508,7 +522,7 @@ fn js(ctx: &Ctx<'_>, from: &IndexedFile, imp: &ImportFact) -> ImportEdge {
         && let Some(path) = join(&base, spec)
         && let Some(hit) = resolve_js(ctx, &path)
     {
-        e.segs = js_segs(ctx, &imp.module.span, off, spec, &base, &hit);
+        e.segs = js_segs(ctx, &imp.module.span, off, spec, &base, &hit, &JS_EXTS);
         finish(&mut e, &hit);
     }
     e
@@ -713,7 +727,7 @@ fn go(ctx: &Ctx<'_>, from: &IndexedFile, imp: &ImportFact) -> ImportEdge {
 
 // ---------------------------------------------------------------- Java
 
-fn java(ctx: &Ctx<'_>, _from: &IndexedFile, imp: &ImportFact) -> ImportEdge {
+fn java(ctx: &Ctx<'_>, imp: &ImportFact, exts: &[&str]) -> ImportEdge {
     let mut e = edge(&imp.module);
     let spec = imp.module.text.as_str();
     let segs = parts(spec, ".");
@@ -724,11 +738,19 @@ fn java(ctx: &Ctx<'_>, _from: &IndexedFile, imp: &ImportFact) -> ImportEdge {
             .map(|(a, b)| &spec[*a..*b])
             .collect::<Vec<_>>()
             .join("/");
-        let file_suffix = format!("{path}.java");
-        let file = ctx
-            .files
-            .iter()
-            .position(|f| f.path == file_suffix || f.path.ends_with(&format!("/{file_suffix}")));
+        let mut file_suffix = format!("{path}.{}", exts[0]);
+        let mut file = None;
+        for ext in exts {
+            let suffix = format!("{path}.{ext}");
+            file = ctx
+                .files
+                .iter()
+                .position(|f| f.path == suffix || f.path.ends_with(&format!("/{suffix}")));
+            if file.is_some() {
+                file_suffix = suffix;
+                break;
+            }
+        }
         let folder = ctx
             .folders
             .iter()
@@ -765,6 +787,93 @@ fn java(ctx: &Ctx<'_>, _from: &IndexedFile, imp: &ImportFact) -> ImportEdge {
             }
             cur = p;
         }
+        return e;
+    }
+    e
+}
+
+// ---------------------------------------------------------------- C / C++, PHP, Ruby, Lua
+
+const C_EXTS: &[&str] = &["h", "hh", "hpp", "hxx", "c", "cc", "cpp", "cxx"];
+const PHP_EXTS: &[&str] = &["php", "phtml", "inc"];
+
+/// An include/require of a quoted path: relative to the importing file first, then to each base
+/// folder (project root, `include`, `lib`, …). A written extension stays out of the segment spans.
+fn path_import(
+    ctx: &Ctx<'_>,
+    from: &IndexedFile,
+    imp: &ImportFact,
+    exts: &[&str],
+    bases: &[&str],
+) -> ImportEdge {
+    let mut e = edge(&imp.module);
+    let raw = imp.module.text.as_str();
+    let quoted = raw.starts_with(['"', '\'']);
+    let spec = raw.trim_matches(['"', '\'']);
+    if spec.is_empty() {
+        return e;
+    }
+    let off = usize::from(quoted);
+    let own_dir = dir_of(&from.path).to_owned();
+    let starts = std::iter::once(own_dir.as_str()).chain(bases.iter().copied());
+    for start in starts {
+        let Some(path) = join(start, spec) else { continue };
+        let found = if let Some(&fi) = ctx.by_path.get(path.as_str()) {
+            Some(fi)
+        } else {
+            exts.iter()
+                .find_map(|x| ctx.by_path.get(format!("{path}.{x}").as_str()).copied())
+        };
+        if let Some(fi) = found {
+            e.segs = js_segs(ctx, &imp.module.span, off, spec, start, &JsHit::File(fi), exts);
+            e.files.push(fi);
+            return e;
+        }
+    }
+    e
+}
+
+/// `require("a.b")`: dots are folder separators; the last segment is a `.lua` file or an `init.lua` folder.
+fn lua(ctx: &Ctx<'_>, imp: &ImportFact) -> ImportEdge {
+    let mut e = edge(&imp.module);
+    let spec = imp.module.text.as_str();
+    let segs = parts(spec, ".");
+    for base in ["", "src", "lib"] {
+        let mut cur = base.to_owned();
+        let mut out: Vec<SegRef> = Vec::new();
+        let mut file = None;
+        for (i, (a, b)) in segs.iter().enumerate() {
+            let Some(path) = join(&cur, &spec[*a..*b]) else {
+                break;
+            };
+            let last = i + 1 == segs.len();
+            let lua_file = format!("{path}.lua");
+            let init = format!("{path}/init.lua");
+            if let Some(&fi) = ctx.by_path.get(lua_file.as_str()) {
+                out.push(SegRef {
+                    span: sp(&imp.module.span, *a, *b),
+                    target: SegTarget::File(fi),
+                });
+                file = Some(fi);
+                break;
+            } else if ctx.folders.contains(path.as_str()) {
+                out.push(SegRef {
+                    span: sp(&imp.module.span, *a, *b),
+                    target: SegTarget::Folder(path.clone()),
+                });
+                if last {
+                    file = ctx.by_path.get(init.as_str()).copied();
+                }
+                cur = path;
+            } else {
+                break;
+            }
+        }
+        if out.is_empty() {
+            continue;
+        }
+        e.segs = out;
+        e.files.extend(file);
         return e;
     }
     e

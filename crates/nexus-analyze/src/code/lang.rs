@@ -17,10 +17,17 @@ pub enum Lang {
     CSharp,
     Go,
     Java,
+    Kotlin,
+    Swift,
+    Php,
+    Ruby,
+    C,
+    Cpp,
+    Lua,
 }
 
 impl Lang {
-    pub const ALL: [Lang; 8] = [
+    pub const ALL: [Lang; 15] = [
         Lang::Python,
         Lang::JavaScript,
         Lang::TypeScript,
@@ -29,6 +36,13 @@ impl Lang {
         Lang::CSharp,
         Lang::Go,
         Lang::Java,
+        Lang::Kotlin,
+        Lang::Swift,
+        Lang::Php,
+        Lang::Ruby,
+        Lang::C,
+        Lang::Cpp,
+        Lang::Lua,
     ];
 
     /// Language of a file by its extension (`jsx` parses with the JavaScript grammar, which includes JSX).
@@ -43,6 +57,14 @@ impl Lang {
             "cs" => Lang::CSharp,
             "go" => Lang::Go,
             "java" => Lang::Java,
+            "kt" | "kts" => Lang::Kotlin,
+            "swift" => Lang::Swift,
+            "php" | "phtml" => Lang::Php,
+            "rb" | "rake" | "gemspec" => Lang::Ruby,
+            "c" => Lang::C,
+            "cc" | "cpp" | "cxx" | "hpp" | "hh" | "hxx" => Lang::Cpp,
+            "h" => Lang::Cpp,
+            "lua" => Lang::Lua,
             _ => return None,
         })
     }
@@ -58,6 +80,13 @@ impl Lang {
             Lang::CSharp => "csharp",
             Lang::Go => "go",
             Lang::Java => "java",
+            Lang::Kotlin => "kotlin",
+            Lang::Swift => "swift",
+            Lang::Php => "php",
+            Lang::Ruby => "ruby",
+            Lang::C => "c",
+            Lang::Cpp => "cpp",
+            Lang::Lua => "lua",
         }
     }
 
@@ -72,6 +101,13 @@ impl Lang {
             Lang::CSharp => tree_sitter_c_sharp::LANGUAGE.into(),
             Lang::Go => tree_sitter_go::LANGUAGE.into(),
             Lang::Java => tree_sitter_java::LANGUAGE.into(),
+            Lang::Kotlin => tree_sitter_kotlin_ng::LANGUAGE.into(),
+            Lang::Swift => tree_sitter_swift::LANGUAGE.into(),
+            Lang::Php => tree_sitter_php::LANGUAGE_PHP.into(),
+            Lang::Ruby => tree_sitter_ruby::LANGUAGE.into(),
+            Lang::C => tree_sitter_c::LANGUAGE.into(),
+            Lang::Cpp => tree_sitter_cpp::LANGUAGE.into(),
+            Lang::Lua => tree_sitter_lua::LANGUAGE.into(),
         }
     }
 
@@ -87,7 +123,7 @@ impl Lang {
 mod tests {
     use super::*;
 
-    const SAMPLES: [(Lang, &str); 8] = [
+    const SAMPLES: [(Lang, &str); 15] = [
         (
             Lang::Python,
             "import os\nclass A:\n    def f(self, x):\n        return x + 1\n",
@@ -116,6 +152,34 @@ mod tests {
         (
             Lang::Java,
             "package p;\nimport java.util.List;\npublic class C { int f(int x) { return x; } }\n",
+        ),
+        (
+            Lang::Kotlin,
+            "package p\nimport a.b.C\nclass K(val n: Int) {\n    fun f(x: Int): Int {\n        return x + n\n    }\n}\n",
+        ),
+        (
+            Lang::Swift,
+            "import Foundation\nstruct S { var n: Int\n func f(_ x: Int) -> Int { return x + n } }\n",
+        ),
+        (
+            Lang::Php,
+            "<?php\nnamespace A;\nuse B\\C;\nclass K { public function f($x) { return $x; } }\n",
+        ),
+        (
+            Lang::Ruby,
+            "require 'json'\nmodule M\n  class K\n    def f(x)\n      x + 1\n    end\n  end\nend\n",
+        ),
+        (
+            Lang::C,
+            "#include <stdio.h>\nstruct S { int n; };\nint f(int x) { return x + 1; }\n",
+        ),
+        (
+            Lang::Cpp,
+            "#include <vector>\nnamespace n { class K { public: int f(int x) { return x; } }; }\n",
+        ),
+        (
+            Lang::Lua,
+            "local m = require('mod')\nlocal function f(x) return x + 1 end\nreturn { f = f }\n",
         ),
     ];
 

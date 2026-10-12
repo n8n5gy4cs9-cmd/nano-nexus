@@ -458,6 +458,12 @@ fn family(lang: Lang) -> u8 {
         Lang::CSharp => 3,
         Lang::Go => 4,
         Lang::Java => 5,
+        Lang::Kotlin => 6,
+        Lang::Swift => 7,
+        Lang::Php => 8,
+        Lang::Ruby => 9,
+        Lang::C | Lang::Cpp => 10,
+        Lang::Lua => 11,
     }
 }
 
@@ -750,6 +756,11 @@ impl<'a> LinkCtx<'a> {
         &self.metas[id.0 as usize]
     }
 
+    fn stem(&self, file: u32) -> &str {
+        let name = self.files[file as usize].path.rsplit('/').next().unwrap_or("");
+        name.rsplit_once('.').map_or(name, |(s, _)| s)
+    }
+
     fn dir(&self, file: u32) -> &str {
         self.files[file as usize]
             .path
@@ -939,11 +950,18 @@ impl<'a> LinkCtx<'a> {
                 let seen = visible.contains(&x.file);
                 match lang {
                     Lang::Go => seen || self.dir(x.file) == my_dir,
-                    Lang::Java => {
+                    Lang::Java | Lang::Kotlin | Lang::Php => {
                         seen || (package.is_some()
                             && package == self.facts[x.file as usize].package.as_deref())
                     }
-                    Lang::CSharp => true,
+                    // Swift modules and C# namespaces are visible as a whole (one module per project here).
+                    Lang::CSharp | Lang::Swift => true,
+                    // A C/C++ header's functions are defined in the source file next to it.
+                    Lang::C | Lang::Cpp => {
+                        let pair =
+                            |a: u32, b: u32| self.dir(a) == self.dir(b) && self.stem(a) == self.stem(b);
+                        seen || pair(fi, x.file) || visible.iter().any(|&v| pair(v, x.file))
+                    }
                     _ => seen,
                 }
             })

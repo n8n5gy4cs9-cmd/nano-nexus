@@ -118,6 +118,28 @@ fn func_kinds(lang: Lang) -> &'static [&'static str] {
             "constructor_declaration",
             "lambda_expression",
         ],
+        Lang::Kotlin => &[
+            "function_declaration",
+            "secondary_constructor",
+            "anonymous_function",
+            "lambda_literal",
+        ],
+        Lang::Swift => &[
+            "function_declaration",
+            "init_declaration",
+            "protocol_function_declaration",
+            "lambda_literal",
+        ],
+        Lang::Php => &[
+            "function_definition",
+            "method_declaration",
+            "anonymous_function",
+            "arrow_function",
+        ],
+        Lang::Ruby => &["method", "singleton_method", "lambda", "block", "do_block"],
+        Lang::C => &["function_definition"],
+        Lang::Cpp => &["function_definition", "lambda_expression"],
+        Lang::Lua => &["function_declaration", "function_definition"],
     }
 }
 
@@ -153,6 +175,18 @@ fn class_kinds(lang: Lang) -> &'static [&'static str] {
             "enum_declaration",
             "record_declaration",
         ],
+        Lang::Kotlin => &["class_declaration", "object_declaration", "companion_object"],
+        Lang::Swift => &["class_declaration", "protocol_declaration"],
+        Lang::Php => &[
+            "class_declaration",
+            "interface_declaration",
+            "trait_declaration",
+            "enum_declaration",
+        ],
+        Lang::Ruby => &["class", "module", "singleton_class"],
+        Lang::C => &["struct_specifier", "enum_specifier"],
+        Lang::Cpp => &["class_specifier", "struct_specifier", "enum_specifier"],
+        Lang::Lua => &[],
     }
 }
 
@@ -160,6 +194,8 @@ fn ns_kinds(lang: Lang) -> &'static [&'static str] {
     match lang {
         Lang::Rust => &["mod_item"],
         Lang::CSharp => &["namespace_declaration", "file_scoped_namespace_declaration"],
+        Lang::Php => &["namespace_definition"],
+        Lang::Cpp => &["namespace_definition"],
         _ => &[],
     }
 }
@@ -691,6 +727,19 @@ fn group_imports(lang: Lang, root: Node<'_>, modules: &[TextFact], names: &[Text
         Lang::Go => &["import_spec"],
         Lang::Java => &["import_declaration", "package_declaration"],
         Lang::CSharp => &["using_directive"],
+        Lang::Kotlin => &["import"],
+        Lang::Swift => &["import_declaration"],
+        Lang::Php => &[
+            "namespace_use_declaration",
+            "namespace_definition",
+            "require_expression",
+            "require_once_expression",
+            "include_expression",
+            "include_once_expression",
+        ],
+        Lang::Ruby => &["call"],
+        Lang::C | Lang::Cpp => &["preproc_include"],
+        Lang::Lua => &["function_call"],
     };
     modules
         .iter()
@@ -735,6 +784,12 @@ fn package_of(lang: Lang, root: Node<'_>, src: &[u8]) -> Option<String> {
             }
             (Lang::Go, "package_clause") => {
                 return Some(text(ch, src).trim_start_matches("package").trim().to_owned());
+            }
+            (Lang::Kotlin, "package_header") => {
+                return Some(text(ch, src).trim_start_matches("package").trim().to_owned());
+            }
+            (Lang::Php, "namespace_definition") => {
+                return ch.child_by_field_name("name").map(|n| text(n, src).to_owned());
             }
             (Lang::CSharp, "namespace_declaration" | "file_scoped_namespace_declaration") => {
                 return ch.child_by_field_name("name").map(|n| text(n, src).to_owned());

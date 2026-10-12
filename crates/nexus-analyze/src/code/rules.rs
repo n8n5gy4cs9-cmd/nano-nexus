@@ -260,6 +260,35 @@ pub fn convention(c: &NameCtx<'_>) -> Convention {
         (Lang::Java, K::Class | K::Interface | K::Enum) => Convention::of(&[Pascal]),
         (Lang::Java, K::Constant | K::EnumMember) => Convention::of(&[Screaming]),
         (Lang::Java, _) => Convention::of(&[Camel]),
+
+        (Lang::Kotlin, K::Class | K::Interface | K::Enum) => Convention::of(&[Pascal]),
+        (Lang::Kotlin, K::Constant | K::EnumMember) => Convention::of(&[Screaming, Pascal]),
+        (Lang::Kotlin, _) => Convention::of(&[Camel]),
+
+        (Lang::Swift, K::Class | K::Interface | K::Enum) => Convention::of(&[Pascal]),
+        (Lang::Swift, _) => Convention::of(&[Camel]),
+
+        (Lang::Php, K::Class | K::Interface | K::Enum) => Convention::of(&[Pascal]),
+        (Lang::Php, K::Constant) => Convention::of(&[Screaming]),
+        (Lang::Php, K::EnumMember) => Convention::of(&[Pascal, Screaming]),
+        (Lang::Php, K::Function | K::Method) => Convention::of(&[Camel, Snake]),
+        (Lang::Php, _) => Convention::of(&[Camel, Snake]),
+
+        (Lang::Ruby, K::Class | K::Interface | K::Enum | K::Module) => Convention::of(&[Pascal]),
+        (Lang::Ruby, K::Constant | K::EnumMember) => Convention::of(&[Screaming, Pascal]),
+        (Lang::Ruby, _) => Convention::of(&[Snake]),
+
+        (Lang::C, K::Constant | K::EnumMember) => Convention::of(&[Screaming]),
+        (Lang::C, _) => Convention::of(&[Snake]),
+
+        (Lang::Cpp, K::Class | K::Interface | K::Enum) => Convention::of(&[Pascal, Snake]),
+        (Lang::Cpp, K::Constant | K::EnumMember) => Convention::of(&[Screaming, Pascal, Camel]),
+        (Lang::Cpp, K::Field) => Convention::of(&[Snake, Camel, UnderscoreCamel]),
+        (Lang::Cpp, _) => Convention::of(&[Snake, Camel]),
+
+        (Lang::Lua, K::Class | K::Interface | K::Enum) => Convention::of(&[Pascal, Snake]),
+        (Lang::Lua, K::Constant) => Convention::of(&[Screaming, Snake]),
+        (Lang::Lua, _) => Convention::of(&[Snake, Camel]),
     }
 }
 
@@ -545,7 +574,23 @@ pub fn file_convention(lang: Lang, folder: bool, style: &ProjectStyle, jsx: bool
                 Convention::of(&[Pascal])
             }
         }
-        Lang::CSharp => Convention::of(&[Pascal]),
+        Lang::CSharp | Lang::Swift => Convention::of(&[Pascal]),
+        Lang::Kotlin => {
+            if folder {
+                Convention::of(&[Flat])
+            } else {
+                Convention::of(&[Pascal])
+            }
+        }
+        Lang::Php => {
+            if folder {
+                Convention::of(&[Pascal, Flat, Snake])
+            } else {
+                Convention::of(&[Pascal, Snake])
+            }
+        }
+        Lang::Ruby | Lang::C | Lang::Lua => Convention::of(&[Snake]),
+        Lang::Cpp => Convention::of(&[Snake, Pascal]),
         Lang::JavaScript | Lang::TypeScript | Lang::Tsx => {
             let base = if folder { style.js_folders } else { style.js_files };
             if jsx && !folder {
