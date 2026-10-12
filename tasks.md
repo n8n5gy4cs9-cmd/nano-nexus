@@ -211,7 +211,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [ ] ⭐ **T11.08** 🍎 Exit check: 3 parallel jobs + cancel; OS notifications in background; watch delta notification
 
 ## M12: Bundling, profiles, App Builder (macOS) · [spec](docs/milestones/M12-bundling-app-builder.md) · [guide](guide.html)
-- [ ] **T12.01** Validate `bundles/*.json` against `schemas/bundle-profile.schema.json` in a test (node or Rust)
+- [x] **T12.01** Validate `bundles/*.json` against `schemas/bundle-profile.schema.json` in a test (node or Rust) (2026-10-12) — `scripts/schemas.test.mjs` with a small dependency-free checker `scripts/lib/jsonschema.mjs`; also covers the manifest and model-pack schemas
 - [ ] **T12.02** 🍎 Harden `fetch-model.mjs` multi-model (`--profile`, `--repo`, `--local`, `--verify --all`) on the Mac
 - [ ] **T12.03** `scripts/stage-bundle.mjs` (hardlinks, manifest.json, licenses, generated overlay) + test with fake 10 MB models
 - [ ] **T12.04** `scripts/verify-payload.mjs` (re-hash models + runtime, lipo/otool, Info.plist keys; `--windows` PE arch check)
