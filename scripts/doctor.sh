@@ -139,7 +139,10 @@ if [ "$WINDOWS" = "1" ]; then
   if [ "$NONSIS" = "1" ]; then ok "NSIS not needed (no installer in this build)";
   elif have makensis; then ok "NSIS $(makensis -VERSION 2>/dev/null)"; else bad "makensis missing: run: brew install nsis"; fi
   for t in clang-cl lld-link llvm-rc; do
-    if have "$t"; then ok "$t"; else bad "$t missing: run: brew install llvm, then add \"\$(brew --prefix llvm)/bin\" to PATH"; fi
+    if have "$t"; then
+      # Run it: a Homebrew lld/llvm version mismatch makes the binary exist but abort (dyld: Symbol not found).
+      if "$t" --version >/dev/null 2>&1; then ok "$t"; else bad "$t is installed but crashes when run (usually mismatched Homebrew lld/llvm versions). Fix: brew update && brew upgrade llvm lld (or: brew reinstall lld llvm), then check: $t --version"; fi
+    else bad "$t missing: run: brew install llvm, then add \"\$(brew --prefix llvm)/bin\" to PATH"; fi
   done
   if [ -n "${XWIN_CACHE_DIR:-}" ]; then ok "XWIN_CACHE_DIR=$XWIN_CACHE_DIR"; else warn "XWIN_CACHE_DIR not set (recommended: export XWIN_CACHE_DIR=~/.cache/xwin)"; fi
   for a in x64 arm64; do
