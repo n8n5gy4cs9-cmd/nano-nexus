@@ -113,7 +113,9 @@
     NanoNexus Guide
   </div>
   <ol>
-    <li><a href="#overview">Overview</a></li>
+    <li><a href="#dummies">★ For beginners: start here</a></li>
+    <li><a href="#duo">★ Duo: two models in one chat</a></li>
+    <li><a href="#overview">Overview (building the app)</a></li>
     <li><a href="#quick">★ Quick start: bundle my model + books</a></li>
     <li><a href="#setup">1 · One-time setup (Mac)</a></li>
     <li><a href="#basic-mac">2 · Basic build: macOS</a></li>
@@ -142,6 +144,137 @@
     <code>tasks.md</code> is done. Commands stay the same.
   </p>
 </header>
+
+
+<h2 id="dummies">★ For beginners: start here <span class="badge b-now">Available now</span></h2>
+<p>You do not need to know anything about AI to use NanoNexus. This part is written for someone who has never run an AI model before. The sections after it (building apps, Windows, USB packs) are for when you want to <i>make</i> a NanoNexus app for yourself or someone else.</p>
+
+<h3>What is it, in one minute?</h3>
+<p>NanoNexus is a chat app like ChatGPT, but the "brain" runs <b>on your own computer</b>. Nothing you type is sent to the internet. It can also read folders you choose (for example, your Downloads folder) and tell you what is inside, write summaries, explain code, or help you rename files. It never changes your files by itself: it shows a preview first, and you can undo.</p>
+<table>
+  <tr><th>Word</th><th>What it means here</th></tr>
+  <tr><td><b>Model</b></td><td>The "brain" file (ends in <code>.gguf</code>, 0.4 to 3 GB). Bigger models are smarter but slower and need more memory.</td></tr>
+  <tr><td><b>Assistant</b></td><td>A job description for the model: "Folder Scout" checks folders, "Code Mentor" explains code, "Nexus" is the everyday one. Same model, different instructions.</td></tr>
+  <tr><td><b>Runtime</b></td><td>The small program that runs the model. The coloured pill at the top right shows its state. <b>Ready</b> means you can chat.</td></tr>
+  <tr><td><b>RAM</b></td><td>Your computer's memory. A model has to fit in it. 8 GB is enough for the small models; 16 GB is comfortable.</td></tr>
+  <tr><td><b>Token</b></td><td>A piece of a word. "tok/s" under an answer is how fast it was written.</td></tr>
+  <tr><td><b>Think harder</b></td><td>A switch under the message box: the model reasons for longer before answering. Slower, often better for puzzles, maths and code.</td></tr>
+</table>
+
+<h3>Your first chat (2 minutes)</h3>
+<ol class="steps">
+  <li><b>Open NanoNexus.</b> Look at the pill at the top right. Wait until it says <b>Ready</b> (the first start loads the model, usually under 10 seconds).</li>
+  <li><b>Type in the box at the bottom</b> and press <b>Enter</b>, for example <i>"Explain what a router does, in simple words."</i> The answer appears word by word. Press <b>Stop</b> if you have seen enough.</li>
+  <li><b>Start a new topic</b> with <b>⌘N</b> (Mac) or <b>Ctrl+N</b> (Windows). Your earlier chats stay in the list on the left, and you can search them.</li>
+  <li><b>Try "Think harder"</b> on a tricky question, for example <i>"A train leaves at 9:40 and arrives at 13:05. How long is the trip?"</i></li>
+</ol>
+
+<h3>Let it look at a folder</h3>
+<ol class="steps">
+  <li>Ask: <i>"What's inside my Downloads folder?"</i></li>
+  <li>A box pops up: <b>"Nexus wants to read ~/Downloads"</b>. Choose <b>Allow once</b> (just this time), <b>Allow folder</b> (remember it) or <b>Deny</b>. On a Mac, macOS may ask a second time: click <b>Allow</b>.</li>
+  <li>You get a short summary of the folder. To see or remove what you have allowed, open <b>Permissions</b> in the left menu. <b>Nothing is readable until you allow it</b>, and the assistant can only <i>read</i>; it cannot write.</li>
+</ol>
+
+<h3>Changing things safely</h3>
+<p>When an assistant wants to rename or move files, it makes a <b>plan</b>. Open <b>Changes</b> in the left menu: you see exactly what would happen, press <b>Apply</b> to do it, and <b>Undo</b> to go back, byte for byte. Rename Forge, for example, can rename a messy function name across a whole project and then lets you run the project's own checker before you keep the result.</p>
+
+<h3>Switching assistant, model and page</h3>
+<table>
+  <tr><th>I want to…</th><th>Do this</th></tr>
+  <tr><td>Use another assistant</td><td>Press <b>⌘/</b> or <b>Ctrl+/</b>, type a few letters, Enter. Or open <b>Assistants</b> in the left menu.</td></tr>
+  <tr><td>Jump anywhere or run an action</td><td>Press <b>⌘K</b> or <b>Ctrl+K</b> (or click the <b>Search…</b> bar at the top). Type "models", "rename", "dark theme", the name of an old chat, or "Use model".</td></tr>
+  <tr><td>Get another model</td><td><b>Models → Discover</b> lists good small models (some under 1 GB). Press <b>Download</b>, wait for the bar, then <b>Use it</b>.</td></tr>
+  <tr><td>Find any model on the internet</td><td><b>Models → Search</b> searches Hugging Face (needs internet; if it says "offline" it shows the technical reason underneath).</td></tr>
+  <tr><td>Use two models automatically</td><td>See <a href="#duo">Duo</a> below.</td></tr>
+  <tr><td>Change the look or the language-model settings</td><td><b>Settings</b> (⌘, or Ctrl+,): theme, colours, notifications, privacy, "Model tuning".</td></tr>
+  <tr><td>Chat from my phone</td><td>Click the <b>📡 Share</b> pill, switch it on and scan the QR code with the phone (same Wi-Fi). See <a href="#share">section 7</a>.</td></tr>
+</table>
+
+<h3>Which model should a beginner pick?</h3>
+<table>
+  <tr><th>Your computer</th><th>Start with</th><th>Why</th></tr>
+  <tr><td>Older laptop, 4 to 8 GB RAM</td><td>The built-in MiniCPM5 1B, or Qwen3 0.6B from Discover</td><td>Fast and small (0.6 to 1.1 GB).</td></tr>
+  <tr><td>Any recent Mac or PC, 8 to 16 GB</td><td>MiniCPM5 2B, Llama 3.2 3B or Qwen3 1.7B</td><td>A clear step up in answer quality (1 to 2 GB).</td></tr>
+  <tr><td>16 GB or more</td><td>Qwen3.5 4B or Gemma 4 E4B</td><td>The best quality in this app (about 3 GB), slower to start.</td></tr>
+</table>
+<div class="note ok"><strong>Not sure?</strong>Keep the model that came with the app. It was chosen to be good on almost every computer. You can always add a second one later and let <a href="#duo">Duo</a> choose between them.</div>
+
+<h3>If something looks wrong</h3>
+<table>
+  <tr><th>What you see</th><th>What to do</th></tr>
+  <tr><td>The pill says <b>Starting…</b> for a long time</td><td>Wait 30 seconds. Then press <b>⌘K</b> and choose <b>Restart the model runtime</b>.</td></tr>
+  <tr><td>The pill shows a problem, or says there is no model</td><td>Open <b>Models</b>; if the list is empty, download one from <b>Discover</b>.</td></tr>
+  <tr><td>The answers are very slow</td><td>Close big programs, or pick a smaller model. The tok/s under an answer shows the speed.</td></tr>
+  <tr><td>"I can't see that folder"</td><td>Open <b>Permissions</b> and add the folder, or ask again and press <b>Allow folder</b>.</td></tr>
+  <tr><td>Models → Search says "offline"</td><td>Check your internet. The text under the message names the exact problem (for example a company proxy or firewall). Discover and your installed models still work offline.</td></tr>
+  <tr><td>Something else</td><td>Press <b>⌘J</b> / <b>Ctrl+J</b> to open the activity console. It lists what the app did, without your private text.</td></tr>
+</table>
+
+<h2 id="duo">★ Duo: two models in one chat <span class="badge b-now">Available now</span></h2>
+<p><b>Duo</b> is an assistant that owns <b>two</b> models: a small, fast one (the <b>light</b> model) for easy questions and a bigger, smarter one (the <b>strong</b> model) for hard ones. You just chat; NanoNexus decides, for every message, which of the two answers. Small models are quick but make more mistakes on hard questions; big models are better but slower. Duo gives you the quick one most of the time and the smart one when it matters.</p>
+
+<h3>Step by step</h3>
+<ol class="steps">
+  <li><b>Install two models.</b> Open <b>Models → Discover</b> and download one small and one bigger model (suggestions below). Wait until both show under <b>Installed</b>.</li>
+  <li><b>Tell Duo which is which.</b> Still on the <b>Models</b> page, find the <b>Duo assistant</b> box. Choose a <b>Light model (easy)</b> and a <b>Strong model (hard)</b>. The choice is saved at once. (The box only appears when at least one model is installed.)</li>
+  <li><b>Choose the Duo assistant.</b> Press <b>⌘/</b> / <b>Ctrl+/</b> and pick <b>Duo</b> (or press <b>⌘K</b> and choose <i>New chat with Duo</i>).</li>
+  <li><b>Chat normally.</b> Ask something quick: you get a fast answer from the light model. Ask something hard: the status line shows <b>"Duo: switching model…"</b> and the strong model answers.</li>
+</ol>
+
+<h3>Which models go together?</h3>
+<table>
+  <tr><th>Your RAM</th><th>Light (easy)</th><th>Strong (hard)</th></tr>
+  <tr><td>8 GB</td><td>Qwen3 0.6B (0.6 GB) or MiniCPM5 1B (0.7 to 1.1 GB)</td><td>MiniCPM5 2B Q4 (1.6 GB) or Llama 3.2 3B (2 GB)</td></tr>
+  <tr><td>16 GB</td><td>MiniCPM5 1B (the built-in one)</td><td>Qwen3.5 4B or Gemma 4 E4B (about 3 GB)</td></tr>
+  <tr><td>32 GB or more</td><td>Qwen3 1.7B</td><td>Any 7 to 12B model you add yourself (<b>Models → Search</b> or a <a href="#packs">model pack</a>)</td></tr>
+</table>
+<p>Pick models from the same "generation" if you can, and a strong model that is at least about twice the size of the light one, otherwise you will not notice a difference.</p>
+
+<h3>How Duo decides (no hidden magic)</h3>
+<p>The rule is fixed and runs on your computer in a fraction of a millisecond. It does <b>not</b> ask a model. A message goes to the <b>strong</b> model if <i>any</i> of these is true; otherwise to the <b>light</b> one:</p>
+<ul>
+  <li>The <b>Think harder</b> switch is on.</li>
+  <li>The attached files are big (about 1500 tokens, roughly three pages, or more).</li>
+  <li>The message is long (600 characters or more).</li>
+  <li>The message contains a <b>code block</b> (three backticks).</li>
+  <li>The message contains a <b>hard word</b>: <i>debug, refactor, architecture, design, optimi(ze), prove, algorithm, analy(ze), compare, trade-off, step by step, why does, root cause, implement, migrate, review, security, regex, sql, concurren(cy), race condition, complexity, explain in depth</i>.</li>
+</ul>
+<table>
+  <tr><th>You type</th><th>Who answers</th><th>Why</th></tr>
+  <tr><td>"What's the capital of France?"</td><td>Light</td><td>Short, no hard word.</td></tr>
+  <tr><td>"Give me a name for a coffee shop"</td><td>Light</td><td>Short and creative.</td></tr>
+  <tr><td>"Explain how a hash map works"</td><td>Light</td><td>No hard word, short.</td></tr>
+  <tr><td>"Help me debug this error: …"</td><td>Strong</td><td>"debug".</td></tr>
+  <tr><td>"Compare REST and GraphQL for a small app"</td><td>Strong</td><td>"compare".</td></tr>
+  <tr><td>A pasted function in a code block</td><td>Strong</td><td>Code block.</td></tr>
+  <tr><td>Any question with <b>Think harder</b> on</td><td>Strong</td><td>You asked for it.</td></tr>
+</table>
+<div class="note ok"><strong>You are always in control</strong>If the light model gave a weak answer, switch on <b>Think harder</b> and press <b>Regenerate</b>: that message is answered by the strong model. If Duo picked the strong model but you wanted speed, just ask a shorter question.</div>
+
+<h3>What you will notice</h3>
+<ul>
+  <li><b>Only one model runs at a time.</b> Your memory needs are those of the <i>bigger</i> of the two, not the sum.</li>
+  <li><b>The first answer after a switch is slower</b> (the other model has to load: a few seconds for small models, 10 to 20 s for large ones). Later answers from the same model are fast again. Chats that stay on easy questions never switch.</li>
+  <li>The <b>Models</b> page shows the currently loaded model as <b>Active</b>; it changes as Duo works. The pill at the top right shows <i>Loading</i> during a switch.</li>
+  <li>Your chat history is shared, so the strong model sees the same conversation as the light one.</li>
+  <li>If you leave a box on <b>Active model</b>: that tier uses whatever model is loaded now. If only one box is set, Duo uses that model for both tiers, so Duo always works.</li>
+</ul>
+
+<h3>Good habits</h3>
+<ol class="steps">
+  <li>Use Duo for <b>mixed</b> work: quick questions and the occasional hard one. For one long coding session, pick the strong model as a normal model instead (no switching).</li>
+  <li>If you notice the app switching a lot, put a hard word in only when you mean it, or write the question shorter.</li>
+  <li>Compare honestly: ask the same hard question once with the light model alone (the <b>Nexus</b> assistant) and once with Duo to see what the strong model adds.</li>
+  <li>Under <b>Settings → Model tuning</b> you can turn the short model-specific tips off, which helps if you want to compare answers with and without them.</li>
+</ol>
+
+<h3>Limits of this version</h3>
+<ul>
+  <li>The choice is made by the fixed rules above, not by an AI judge. It is simple and predictable, but it will sometimes send an easy question with a "hard word" to the strong model.</li>
+  <li>Both models cannot run at the same time yet (that needs more memory and is planned), so a switch always costs a load time.</li>
+  <li>Duo does not use tools (it cannot read your folders). For folders use <b>Nexus</b> or <b>Folder Scout</b>.</li>
+</ul>
 
 <h2 id="overview">Overview</h2>
 <div class="cards">
