@@ -176,7 +176,7 @@ Naming: `domain_action`. All are `async` and return `Result<T, IpcError>`.
 | jobs | `jobs_list` / `job_cancel` | … |
 | notify | `notifications_list` / `notifications_mark_read` / `notifications_clear` | … |
 | watches | `watches_list` / `watch_add` / `watch_update` / `watch_delete` / `watch_run_now` | … |
-| models | `models_pack_export` / `models_pack_import` | `{model_ids, dest, on_progress}` / `{folder, mode: copy|reference, on_progress}` |
+| models | `models_pack_export` / `models_pack_import` / `models_pack_cancel` / `models_pick_folder` | `{job_id, ids, dest, name?, on_event: Channel<PackProgress>}` → `PackExport` / `{job_id, path, copy, on_event}` → `PackImport` (one bad file does not stop the others) / `{job_id}` / `()`. Event `models:list_changed` when models are added in the background (offline kit). Desktop caller only. |
 | models | `models_extra_dirs_set` / `models_verify_bundled` | … |
 | share | `share_status` / `share_start` / `share_stop` / `share_settings_set` / `share_pairing_code` / `share_devices_list` / `share_device_update` / `share_device_revoke` | see LAN-SHARE §6 (desktop caller only) |
 

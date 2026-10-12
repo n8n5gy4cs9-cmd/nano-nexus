@@ -42,6 +42,7 @@ export function useModels() {
       }),
     );
     void keep(api.models.onChanged(refresh));
+    void keep(api.models.onListChanged(refresh));
     return () => {
       cancelled = true;
       offs.forEach((o) => o());

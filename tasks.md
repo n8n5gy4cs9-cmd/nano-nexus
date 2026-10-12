@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 182/234 tasks done (77%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 183/234 tasks done (78%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -219,7 +219,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T12.06** `scripts/app-builder.mjs` server (127.0.0.1 + token, profile CRUD, size calc, build runner, SSE logs, idle exit, CLI mode) (2026-10-11) — simplified: `scripts/app-builder.mjs` (127.0.0.1 + token, idle exit, SSE log) runs `scripts/bundle.mjs`; no profile CRUD or size calc yet
 - [x] **T12.07** `scripts/app-builder/index.html` UI (models checklist, HF/local add, default radio, targets, Windows format, size summary, results) (2026-10-11) — `scripts/app-builder/index.html`: Downloads .gguf picker, folder browser, catalog, books, targets
 - [x] **T12.08** `scripts/make-model-pack.mjs` + `schemas/model-pack.schema.json` usage + test (2026-10-12) — `scripts/make-model-pack.mjs` (`--profile`/`--id`, `--out`, `--verify <pack>`) + test; the pack is validated against `schemas/model-pack.schema.json`
-- [ ] **T12.09** In-app model packs: export + import (verify, copy/reference, progress) + `models-extra/` first-launch import
+- [x] **T12.09** In-app model packs: export + import (verify, copy/reference, progress) + `models-extra/` first-launch import (2026-10-12) — `nexus-models::pack` (export, import with copy/reference, SHA-256 on every file, cancel cleans up, `models-extra/pack.json` registered in the background as bundled), commands `models_pack_*` + `models_pick_folder`, Models page dialogs. The Windows kit end-to-end needs the Windows build (M13)
 - [ ] **T12.10** Settings → About shows `bundle.json` (profile, commit, date)
 - [ ] **T12.11** Update `guide.html` macOS sections from "planned" to "available"
 - [ ] ⭐ **T12.12** 🍎 Exit check: App Builder 3-model build → works offline on a 2nd Mac; tamper test fails verify; model pack import offline

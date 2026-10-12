@@ -74,6 +74,11 @@ fn bridge_app_events(app: &tauri::AppHandle) {
                         tracing::warn!("could not emit model:changed: {e}");
                     }
                 }
+                state::AppEvent::ModelsListChanged => {
+                    if let Err(e) = commands::models::ModelsListChanged.emit(&app) {
+                        tracing::warn!("could not emit models:list_changed: {e}");
+                    }
+                }
                 state::AppEvent::ShareStatus(st) => {
                     if let Err(e) = commands::share::ShareStatusChanged(st).emit(&app) {
                         tracing::warn!("could not emit share:status: {e}");

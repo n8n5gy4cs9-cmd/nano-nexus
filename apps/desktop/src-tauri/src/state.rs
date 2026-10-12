@@ -77,6 +77,8 @@ pub enum AppEvent {
     DownloadProgress(crate::service::models::DownloadView),
     /// The active model changed (the runtime is restarting on it).
     ModelChanged(String),
+    /// The set of installed models changed (a pack was imported, an offline kit was registered).
+    ModelsListChanged,
     /// Show an in-app (and maybe OS) notification.
     Notify(nexus_store::NewNotification),
     /// LAN Share started, stopped, or its devices changed.

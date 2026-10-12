@@ -16,6 +16,7 @@ use nexus_models::download::{self, DownloadError, DownloadProgress, DownloadSpec
 use nexus_models::fit::{self, Fit, MemoryInfo};
 use nexus_models::gguf::{self, GgufMeta};
 use nexus_models::hf::{self, GgufFile, HfError, SearchHit};
+use nexus_models::pack::{self, ImportMode, PackExport, PackImport, PackProgress, PackSource};
 use nexus_store::{DownloadRow, ModelRow, NewNotification};
 use serde::{Deserialize, Serialize};
 use specta::Type;
@@ -896,6 +897,157 @@ pub async fn import_local(
         .ok_or_else(|| NexusError::NotFound("model".into()))
 }
 
+// ---- model packs ------------------------------------------------------------------------------
+
+fn pack_jobs() -> &'static Mutex<HashMap<String, CancellationToken>> {
+    static JOBS: std::sync::OnceLock<Mutex<HashMap<String, CancellationToken>>> = std::sync::OnceLock::new();
+    JOBS.get_or_init(Default::default)
+}
+
+fn models_err(e: bundled::ModelsError) -> NexusError {
+    match e {
+        bundled::ModelsError::Cancelled => NexusError::Cancelled,
+        bundled::ModelsError::Manifest(m) => NexusError::InvalidInput(m),
+        other => NexusError::Internal(other.to_string()),
+    }
+}
+
+/// Stop a running pack export or import.
+pub fn cancel_pack(job_id: &str) -> bool {
+    match pack_jobs().lock().ok().and_then(|m| m.get(job_id).cloned()) {
+        Some(t) => {
+            t.cancel();
+            true
+        }
+        None => false,
+    }
+}
+
+/// Run `work` on the blocking pool as pack job `job_id` (cancellable through [`cancel_pack`]).
+async fn run_pack_job<T: Send + 'static>(
+    job_id: &str,
+    work: impl FnOnce(CancellationToken) -> Result<T, bundled::ModelsError> + Send + 'static,
+) -> Result<T, NexusError> {
+    let cancel = CancellationToken::new();
+    if let Ok(mut m) = pack_jobs().lock() {
+        m.insert(job_id.to_owned(), cancel.clone());
+    }
+    let res = tokio::task::spawn_blocking(move || work(cancel)).await;
+    if let Ok(mut m) = pack_jobs().lock() {
+        m.remove(job_id);
+    }
+    res.map_err(|e| NexusError::Internal(e.to_string()))?
+        .map_err(models_err)
+}
+
+/// Copy installed models into `<dest>/NanoNexus-ModelPack-<name>/` (to carry them to an offline machine).
+pub async fn export_pack(
+    ctx: &Ctx,
+    caller: &Caller,
+    ids: Vec<String>,
+    dest: &str,
+    name: Option<String>,
+    job_id: &str,
+    progress: Arc<dyn Fn(PackProgress) + Send + Sync>,
+) -> Result<PackExport, NexusError> {
+    desktop_only(caller)?;
+    let dest = PathBuf::from(dest);
+    let ctx2 = Arc::clone(ctx);
+    let name = name
+        .filter(|n| !n.trim().is_empty())
+        .unwrap_or_else(|| "models".into());
+    let r = run_pack_job(job_id, move |cancel| {
+        pack::export_pack(&ctx2.store, &ids, &dest, &name, &cancel, |p| progress(p))
+    })
+    .await;
+    match &r {
+        Ok(ex) => notify(
+            ctx,
+            NotificationLevel::Success,
+            format!(
+                "Model pack written ({} model{})",
+                ex.models,
+                if ex.models == 1 { "" } else { "s" }
+            ),
+            Some(ex.dir.clone()),
+            None,
+        ),
+        Err(NexusError::Cancelled) => {}
+        Err(e) => notify(
+            ctx,
+            NotificationLevel::Error,
+            "Could not write the model pack".into(),
+            Some(e.to_string()),
+            None,
+        ),
+    }
+    r
+}
+
+/// Verify and install the models of a pack folder. Fully offline; every file is checked by SHA-256.
+pub async fn import_pack(
+    ctx: &Ctx,
+    caller: &Caller,
+    path: &str,
+    copy: bool,
+    job_id: &str,
+    progress: Arc<dyn Fn(PackProgress) + Send + Sync>,
+) -> Result<PackImport, NexusError> {
+    desktop_only(caller)?;
+    let dir = PathBuf::from(path);
+    if !copy {
+        // Using the files where they are is a read of that folder: it needs the same grant as any other read.
+        ctx.perms.check("user", &dir, Access::Read)?;
+    }
+    let ctx2 = Arc::clone(ctx);
+    let models_dir = ctx.paths.models.clone();
+    let mode = if copy {
+        ImportMode::Copy
+    } else {
+        ImportMode::Reference
+    };
+    let r = run_pack_job(job_id, move |cancel| {
+        pack::import_pack(
+            &ctx2.store,
+            &dir,
+            &models_dir,
+            mode,
+            PackSource::Import,
+            &cancel,
+            |p| progress(p),
+        )
+    })
+    .await;
+    match &r {
+        Ok(rep) => {
+            let _ = ctx.bus.send(AppEvent::ModelsListChanged);
+            let (level, title) = match (rep.imported.len(), rep.failed.len()) {
+                (n, 0) => (
+                    NotificationLevel::Success,
+                    format!("{n} model{} imported", if n == 1 { "" } else { "s" }),
+                ),
+                (n, f) => (NotificationLevel::Warning, format!("{n} imported, {f} failed")),
+            };
+            let body = rep
+                .failed
+                .iter()
+                .map(|f| format!("{}: {}", f.id, f.reason))
+                .collect::<Vec<_>>()
+                .join("\n");
+            notify(ctx, level, title, (!body.is_empty()).then_some(body), None);
+        }
+        Err(NexusError::Cancelled) => {}
+        Err(e) => notify(
+            ctx,
+            NotificationLevel::Error,
+            "Could not import the model pack".into(),
+            Some(e.to_string()),
+            None,
+        ),
+    }
+    r
+}
+
 // ---- startup, folders, verify -----------------------------------------------------------------
 
 /// Register the bundle, scan extra folders, and pause downloads that were running at shutdown.
@@ -907,6 +1059,27 @@ pub fn init(ctx: &AppCtx) {
             }
         }
         Err(e) => tracing::warn!("could not register bundled models: {e}"),
+    }
+    // Windows offline kit: `<exe_dir>/models-extra/pack.json`. Checking gigabytes can take a while, so
+    // it runs in the background and the Models page is told when it is done.
+    let extra = ctx.exe_dir.join("models-extra");
+    if extra.join("pack.json").is_file() {
+        let store = ctx.store.clone();
+        let bus = ctx.bus.clone();
+        std::thread::spawn(move || {
+            match pack::register_models_extra(&store, &extra, &CancellationToken::new(), |_| {}) {
+                Ok(r) if !r.imported.is_empty() => {
+                    tracing::info!(n = r.imported.len(), "registered the offline kit models");
+                    let _ = bus.send(AppEvent::ModelsListChanged);
+                }
+                Ok(r) => {
+                    if !r.failed.is_empty() {
+                        tracing::warn!(failed = ?r.failed, "some offline kit models could not be verified");
+                    }
+                }
+                Err(e) => tracing::warn!("could not register models-extra: {e}"),
+            }
+        });
     }
     if let Err(e) = rescan(ctx) {
         tracing::warn!("could not scan extra model folders: {e}");
@@ -922,6 +1095,8 @@ pub fn init(ctx: &AppCtx) {
 pub fn rescan(ctx: &AppCtx) -> Result<usize, NexusError> {
     let mut dirs =
         crate::runtime_paths::extra_model_dirs(&ctx.exe_dir, &ctx.settings_snapshot().models_extra_dirs);
+    // An offline kit's `models-extra` with a `pack.json` is registered as bundled models (see `init`).
+    dirs.retain(|d| !(d.file_name().is_some_and(|n| n == "models-extra") && d.join("pack.json").is_file()));
     // Dev builds list whatever `scripts/fetch-model.mjs` put in `<repo>/vendor/models`.
     if cfg!(debug_assertions) {
         dirs.push(std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../vendor/models"));

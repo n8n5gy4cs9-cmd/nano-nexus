@@ -174,3 +174,35 @@ test("live progress frames merge into the cached download list", () => {
   expect(mergeProgress(list, dl({ id: "zzz" }))).toBe(list);
   expect(mergeProgress(undefined, dl({}))).toBeUndefined();
 });
+
+test("Import model pack: picks a folder, shows progress, then the result", async () => {
+  const t = mount({
+    models_pick_folder: () => "/Volumes/USB/NanoNexus-ModelPack-studio",
+    models_pack_import: (_args, emit) => {
+      emit({ phase: "copying", model_id: "a", model_index: 1, model_total: 2, bytes_done: 50, bytes_total: 100 });
+      return { imported: ["a"], already_installed: [], failed: [{ id: "b", reason: "checksum mismatch: the file was damaged" }] };
+    },
+  });
+  fireEvent.click(await screen.findByRole("button", { name: /Import model pack/ }));
+  fireEvent.click(await screen.findByRole("button", { name: "Choose pack folder" }));
+  await screen.findByText(/1 imported, 1 failed/);
+  expect(screen.getByText(/b: checksum mismatch/)).toBeTruthy();
+  const call = t.calls.find((c) => c.command === "models_pack_import");
+  expect(call?.args).toMatchObject({ path: "/Volumes/USB/NanoNexus-ModelPack-studio", copy: true });
+  expect(typeof (call?.args as { jobId?: unknown }).jobId).toBe("string");
+});
+
+test("Export model pack: all non-discovered models are preselected and the pack is written", async () => {
+  const t = mount({
+    models_list: () => [installed({ id: "a", name: "Alpha" }), installed({ id: "f", name: "Found", source: "discovered", removal: "unlink" })],
+    models_pick_folder: () => "/Volumes/USB",
+    models_pack_export: () => ({ dir: "/Volumes/USB/NanoNexus-ModelPack-models", models: 1, bytes: 1_100_000_000 }),
+  });
+  await screen.findAllByText("Alpha");
+  fireEvent.click(await screen.findByRole("button", { name: /Export model pack/ }));
+  const boxes = await screen.findAllByRole("checkbox");
+  expect(boxes.map((b) => (b as HTMLInputElement).checked)).toEqual([true, false]);
+  fireEvent.click(screen.getByRole("button", { name: /Choose folder and export/ }));
+  await screen.findByText(/Done: 1 model/);
+  expect(t.calls.find((c) => c.command === "models_pack_export")?.args).toMatchObject({ ids: ["a"], dest: "/Volumes/USB", name: "models" });
+});

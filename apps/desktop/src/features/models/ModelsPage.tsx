@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { FolderPlus, ShieldCheck, Upload } from "lucide-react";
+import { FolderPlus, PackageOpen, PackagePlus, ShieldCheck, Upload } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -24,6 +24,7 @@ import { toIpcException } from "@/lib/ipc";
 import { CatalogCardView, DownloadStrip, InstalledCard } from "./ModelCards";
 import { DuoPanel } from "./DuoPanel";
 import { ModelDrawer } from "./ModelDrawer";
+import { ExportPackDialog, ImportPackDialog } from "./PackDialogs";
 import { RuntimePanel } from "./RuntimePanel";
 import { SearchTab } from "./SearchTab";
 import { useModels } from "./useModels";
@@ -48,6 +49,7 @@ export function ModelsPage() {
   const [detail, setDetail] = useState<InstalledModel | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<InstalledModel | null>(null);
   const [tab, setTab] = useState("installed");
+  const [pack, setPack] = useState<"export" | "import" | null>(null);
   const refresh = () => void qc.invalidateQueries({ queryKey: ["models"] });
 
   const activate = useMutation({
@@ -150,6 +152,12 @@ export function ModelsPage() {
             <Button size="sm" disabled={importFile.isPending} onClick={() => importFile.mutate()}>
               <Upload /> Add a .gguf file
             </Button>
+            <Button size="sm" onClick={() => setPack("import")}>
+              <PackageOpen /> Import model pack…
+            </Button>
+            <Button size="sm" disabled={(installed.data ?? []).length === 0} onClick={() => setPack("export")}>
+              <PackagePlus /> Export model pack…
+            </Button>
           </div>
         </div>
 
@@ -226,6 +234,8 @@ export function ModelsPage() {
         </TabsContent>
       </Tabs>
 
+      {pack === "export" ? <ExportPackDialog models={installed.data ?? []} onClose={() => setPack(null)} /> : null}
+      {pack === "import" ? <ImportPackDialog onClose={() => setPack(null)} /> : null}
       {detail ? <ModelDrawer m={detail} onClose={() => setDetail(null)} /> : null}
       {confirmDelete ? (
         <Dialog open onOpenChange={(o) => !o && setConfirmDelete(null)}>

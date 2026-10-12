@@ -21,6 +21,9 @@ import type {
   RepoFiles,
   SearchHit,
   ModelVerifyResult,
+  PackExport,
+  PackImport,
+  PackProgress,
   AppInfo,
   AssistantCard,
   AssistantDetail,
@@ -218,6 +221,16 @@ export const api = {
     import: (path: string, copy: boolean) => getTransport().call<InstalledModel>("models_import", { path, copy }),
     rescan: () => getTransport().call<number>("models_rescan"),
     verifyBundled: () => getTransport().call<ModelVerifyResult[]>("models_verify_bundled"),
+    pickFolder: () => getTransport().call<string | null>("models_pick_folder"),
+    /** Copy installed models into a new model-pack folder inside `dest`; progress per chunk. */
+    packExport: (jobId: string, ids: string[], dest: string, name: string | null, onProgress: (p: PackProgress) => void) =>
+      getTransport().stream<PackProgress, PackExport>("models_pack_export", { jobId, ids, dest, name }, onProgress),
+    /** Verify and install a model pack folder (offline). `copy = false` keeps the files where they are. */
+    packImport: (jobId: string, path: string, copy: boolean, onProgress: (p: PackProgress) => void) =>
+      getTransport().stream<PackProgress, PackImport>("models_pack_import", { jobId, path, copy }, onProgress),
+    packCancel: (jobId: string) => getTransport().call<boolean>("models_pack_cancel", { jobId }),
+    /** Subscribe to `models:list_changed` (models added in the background). */
+    onListChanged: (handler: () => void): Promise<Unsubscribe> => getTransport().on<null>("models:list_changed", () => handler()),
     /** Subscribe to `download:progress`. */
     onProgress: (handler: (d: DownloadView) => void): Promise<Unsubscribe> => getTransport().on<DownloadView>("download:progress", handler),
     /** Subscribe to `model:changed`. */

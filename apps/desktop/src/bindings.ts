@@ -170,6 +170,14 @@ export const commands = {
 	modelsRescan: () => typedError<number, IpcError>(__TAURI_INVOKE("models_rescan")),
 	/**  Re-hash the bundled models. */
 	modelsVerifyBundled: () => typedError<ModelVerifyResult[], IpcError>(__TAURI_INVOKE("models_verify_bundled")),
+	/**  Native picker for a folder (a model pack to import, or where to write one); `None` when cancelled. */
+	modelsPickFolder: () => typedError<string | null, IpcError>(__TAURI_INVOKE("models_pick_folder")),
+	/**  Copy installed models into a new `NanoNexus-ModelPack-<name>` folder inside `dest`. Progress arrives on `on_event`. */
+	modelsPackExport: (jobId: string, ids: string[], dest: string, name: string | null, onEvent: Channel<PackProgress>) => typedError<PackExport, IpcError>(__TAURI_INVOKE("models_pack_export", { jobId, ids, dest, name, onEvent })),
+	/**  Verify and install the models of a pack folder, offline. `copy = false` uses the files where they are. */
+	modelsPackImport: (jobId: string, path: string, copy: boolean, onEvent: Channel<PackProgress>) => typedError<PackImport, IpcError>(__TAURI_INVOKE("models_pack_import", { jobId, path, copy, onEvent })),
+	/**  Stop a running pack export or import. `false` if it is not running. */
+	modelsPackCancel: (jobId: string) => typedError<boolean, IpcError>(__TAURI_INVOKE("models_pack_cancel", { jobId })),
 	/**  Is there a write grant for this file? (No: the editor opens it read-only.) */
 	editorCanWrite: (path: string) => typedError<boolean, IpcError>(__TAURI_INVOKE("editor_can_write", { path })),
 	/**  Save the buffer through a change set. Fails with `conflict` if the file changed since `base_hash`. */
@@ -217,6 +225,7 @@ export const events = {
 	downloadProgress: makeEvent<DownloadProgressEvent>("download:progress"),
 	jobUpdate: makeEvent<JobUpdate>("job:update"),
 	modelChanged: makeEvent<ModelChanged>("model:changed"),
+	modelsListChanged: makeEvent<ModelsListChanged>("models:list_changed"),
 	notificationNew: makeEvent<NotificationNew>("notification:new"),
 	permissionRequest: makeEvent<PermissionRequested>("permission:request"),
 	runtimeStatus: makeEvent<RuntimeStatus>("runtime:status"),
@@ -1032,6 +1041,9 @@ export type ModelVerifyResult = {
 	actual_sha256: string | null,
 };
 
+/**  Global event `models:list_changed`: models were added in the background (pack import, offline kit); refetch the list. */
+export type ModelsListChanged = null;
+
 export type NamingHit = {
 	/**  `spaces | mixed_separators | non_ascii | too_long | copy_pattern | trailing | inconsistent_case | extension_mismatch` */
 	kind: string,
@@ -1081,6 +1093,39 @@ export type OsPermissionsStatus = {
 	folders: OsFolderStatus[],
 	/**  Full Disk Access (macOS only); `None` elsewhere. */
 	full_disk_access: string | null,
+};
+
+/**  What an export wrote. */
+export type PackExport = {
+	dir: string,
+	models: number,
+	bytes: number,
+};
+
+/**  A model that could not be brought in. */
+export type PackFailure = {
+	id: string,
+	reason: string,
+};
+
+/**  What an import did. */
+export type PackImport = {
+	imported: string[],
+	/**  Already installed with the same checksum. */
+	already_installed: string[],
+	failed: PackFailure[],
+};
+
+/**  Where a running export or import is. */
+export type PackProgress = {
+	/**  `copying` (export, or copy-import) or `verifying` (hashing in place). */
+	phase: string,
+	model_id: string,
+	/**  1-based position of the model being handled. */
+	model_index: number,
+	model_total: number,
+	bytes_done: number,
+	bytes_total: number,
 };
 
 /**  A fresh pairing code: the QR secret (URL fragment) and the 6-digit PIN. */

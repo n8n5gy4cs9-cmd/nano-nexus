@@ -84,7 +84,7 @@ pub fn parse_manifest(text: &str) -> Result<Manifest, ModelsError> {
     Ok(m)
 }
 
-fn now_ms() -> i64 {
+pub(crate) fn now_ms() -> i64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_millis() as i64)
@@ -92,7 +92,7 @@ fn now_ms() -> i64 {
 }
 
 /// Reject manifest paths that climb out of the models folder.
-fn safe_join(base: &Path, rel: &str) -> Option<PathBuf> {
+pub(crate) fn safe_join(base: &Path, rel: &str) -> Option<PathBuf> {
     let p = Path::new(rel);
     if p.is_absolute()
         || p.components().any(|c| {
@@ -107,7 +107,7 @@ fn safe_join(base: &Path, rel: &str) -> Option<PathBuf> {
     Some(base.join(p))
 }
 
-fn meta_json(path: &Path) -> (Option<String>, Option<gguf::GgufMeta>) {
+pub(crate) fn meta_json(path: &Path) -> (Option<String>, Option<gguf::GgufMeta>) {
     match gguf::parse_file(path) {
         Ok(m) => (serde_json::to_string(&m).ok(), Some(m)),
         Err(e) => {
@@ -199,7 +199,7 @@ pub fn resolve_active(
     Ok(None)
 }
 
-fn slug(s: &str) -> String {
+pub(crate) fn slug(s: &str) -> String {
     let mut out = String::new();
     for c in s.to_lowercase().chars() {
         if c.is_ascii_alphanumeric() || c == '.' {

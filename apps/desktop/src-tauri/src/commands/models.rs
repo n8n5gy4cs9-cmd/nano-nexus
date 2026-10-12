@@ -4,8 +4,10 @@ use nexus_core::error::{IpcError, NexusError};
 use nexus_models::bundled::VerifyResult;
 use nexus_models::fit::MemoryInfo;
 use nexus_models::hf::SearchHit;
+use nexus_models::pack::{PackExport, PackImport, PackProgress};
 use serde::{Deserialize, Serialize};
 use specta::Type;
+use tauri::ipc::Channel;
 use tauri::{AppHandle, State};
 use tauri_plugin_dialog::DialogExt;
 
@@ -29,6 +31,11 @@ pub struct DownloadProgressEvent(pub DownloadView);
 #[derive(Clone, Debug, Serialize, Deserialize, Type, tauri_specta::Event)]
 #[tauri_specta(event_name = "model:changed")]
 pub struct ModelChanged(pub String);
+
+/// Global event `models:list_changed`: models were added in the background (pack import, offline kit); refetch the list.
+#[derive(Clone, Debug, Serialize, Deserialize, Type, tauri_specta::Event)]
+#[tauri_specta(event_name = "models:list_changed")]
+pub struct ModelsListChanged;
 
 #[tauri::command]
 #[specta::specta]
@@ -151,4 +158,60 @@ pub async fn models_verify_bundled(ctx: Ctx<'_>) -> CmdResult<Vec<VerifyResult>>
     service::models::verify_bundled(&ctx, &Caller::Desktop)
         .await
         .map_err(ipc)
+}
+
+/// Native picker for a folder (a model pack to import, or where to write one); `None` when cancelled.
+#[tauri::command]
+#[specta::specta]
+pub async fn models_pick_folder(app: AppHandle) -> CmdResult<Option<String>> {
+    let picked = tauri::async_runtime::spawn_blocking(move || app.dialog().file().blocking_pick_folder())
+        .await
+        .map_err(|e| ipc(NexusError::Internal(e.to_string())))?;
+    Ok(picked
+        .and_then(|p| p.into_path().ok())
+        .map(|p| p.display().to_string()))
+}
+
+/// Copy installed models into a new `NanoNexus-ModelPack-<name>` folder inside `dest`. Progress arrives on `on_event`.
+#[tauri::command]
+#[specta::specta]
+pub async fn models_pack_export(
+    ctx: Ctx<'_>,
+    job_id: String,
+    ids: Vec<String>,
+    dest: String,
+    name: Option<String>,
+    on_event: Channel<PackProgress>,
+) -> CmdResult<PackExport> {
+    let progress: Arc<dyn Fn(PackProgress) + Send + Sync> = Arc::new(move |p| {
+        let _ = on_event.send(p);
+    });
+    service::models::export_pack(&ctx, &Caller::Desktop, ids, &dest, name, &job_id, progress)
+        .await
+        .map_err(ipc)
+}
+
+/// Verify and install the models of a pack folder, offline. `copy = false` uses the files where they are.
+#[tauri::command]
+#[specta::specta]
+pub async fn models_pack_import(
+    ctx: Ctx<'_>,
+    job_id: String,
+    path: String,
+    copy: bool,
+    on_event: Channel<PackProgress>,
+) -> CmdResult<PackImport> {
+    let progress: Arc<dyn Fn(PackProgress) + Send + Sync> = Arc::new(move |p| {
+        let _ = on_event.send(p);
+    });
+    service::models::import_pack(&ctx, &Caller::Desktop, &path, copy, &job_id, progress)
+        .await
+        .map_err(ipc)
+}
+
+/// Stop a running pack export or import. `false` if it is not running.
+#[tauri::command]
+#[specta::specta]
+pub async fn models_pack_cancel(job_id: String) -> CmdResult<bool> {
+    Ok(service::models::cancel_pack(&job_id))
 }
