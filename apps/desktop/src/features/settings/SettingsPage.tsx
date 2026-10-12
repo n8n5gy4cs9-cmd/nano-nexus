@@ -11,6 +11,7 @@ import { ACCENTS, isAccent, isThemePreference } from "@/lib/theme";
 import { useUi } from "@/stores/ui";
 
 import { AboutSection } from "./AboutSection";
+import { ShortcutsSection } from "./ShortcutsSection";
 import { Row, Section, SelectRow, TextRow, ToggleRow } from "./fields";
 
 export const SETTINGS_KEY = ["settings"] as const;
@@ -191,6 +192,8 @@ export function SettingsPage() {
           }} />
         </Section>
       )}
+
+      <ShortcutsSection />
 
       <AboutSection />
 

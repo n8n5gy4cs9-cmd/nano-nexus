@@ -262,7 +262,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T15.01** Command palette (⌘K / Ctrl+K) with all groups (2026-10-12) — ⌘K/Ctrl+K command palette (`features/palette/CommandPalette.tsx`): pages, new chat with an assistant, conversation search (FTS), model switch, actions (theme, sidebar, console, scan, analyze, Rename Forge, restart runtime). The top-bar search button now opens it
 - [x] **T15.02** Onboarding (4 steps, animated hexagon), re-runnable (2026-10-12) — `features/onboarding/Onboarding.tsx`: welcome (hexagon ring that draws itself, reduced-motion safe), model check (live runtime status or Download a model), optional folder grant (read), first assistant → chat. Opens once on a fresh install only (setting `ui.onboarded`, and only when there are no chats yet); Settings → Welcome and the palette re-run it
 - [ ] **T15.03** (optional) Quick Ask window (⌥Space / Alt+Space)
-- [ ] **T15.04** Shortcuts complete + Settings → Shortcuts viewer
+- [x] **T15.04** Shortcuts complete + Settings → Shortcuts viewer (2026-10-12) — all UI-DESIGN §5 shortcuts work (added ⌘⇧T Think harder in chat; ⌘K palette); Settings → Keyboard shortcuts lists them for this computer's keys from one table (`lib/shortcuts.ts`). ⌥Space Quick Ask is T15.03 (optional, not built)
 - [ ] **T15.05** Accessibility pass (contrast script over tokens, focus order, labels, reduced motion)
 - [ ] **T15.06** Performance budgets (cold start, idle RAM, 60 fps, scan speed) → SPIKES.md §perf
 - [ ] **T15.07** `scripts/eval-assistants.sh` + golden transcripts for all assistants → pass table

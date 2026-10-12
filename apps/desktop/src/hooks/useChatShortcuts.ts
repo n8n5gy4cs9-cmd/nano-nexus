@@ -9,9 +9,11 @@ export interface ChatShortcutActions {
   editLast: (() => void) | undefined;
   copyLastAnswer: (() => void) | undefined;
   composerEmpty: boolean;
+  /** Flip the "Think harder" switch. */
+  toggleThink: (() => void) | undefined;
 }
 
-/** Chat shortcuts: Esc or mod+. stop, mod+Up edit last message (empty composer), mod+Shift+C copy last answer. */
+/** Chat shortcuts: mod+Shift+T think harder, Esc or mod+. stop, mod+Up edit last message (empty composer), mod+Shift+C copy last answer. */
 export function useChatShortcuts(platform: Platform, a: ChatShortcutActions) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -27,6 +29,9 @@ export function useChatShortcuts(platform: Platform, a: ChatShortcutActions) {
       } else if (e.key === "ArrowUp" && a.composerEmpty && a.editLast) {
         e.preventDefault();
         a.editLast();
+      } else if (e.shiftKey && e.key.toLowerCase() === "t" && a.toggleThink) {
+        e.preventDefault();
+        a.toggleThink();
       } else if (e.shiftKey && e.key.toLowerCase() === "c" && a.copyLastAnswer) {
         e.preventDefault();
         a.copyLastAnswer();

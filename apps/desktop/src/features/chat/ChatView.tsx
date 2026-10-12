@@ -210,6 +210,7 @@ export function ChatView() {
       streaming,
       stop: () => void stop(),
       composerEmpty,
+      toggleThink: () => setThink((t) => !t),
       editLast: !streaming && lastUserMsg ? () => setEditingId(lastUserMsg.id) : undefined,
       copyLastAnswer: lastAnswer ? () => void navigator.clipboard.writeText(lastAnswer.content).catch(() => undefined) : undefined,
     }),
