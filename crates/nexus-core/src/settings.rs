@@ -104,6 +104,12 @@ pub struct Settings {
     /// Token budget of the injected passages (and of `kb_search` results).
     #[serde(rename = "knowledge.max_tokens")]
     pub knowledge_max_tokens: u32,
+    /// Show a tray / menu-bar icon with "Open", the sharing status and "Quit". Off by default.
+    #[serde(rename = "app.show_tray_icon")]
+    pub app_show_tray_icon: bool,
+    /// Start NanoNexus when the user logs in. Off by default.
+    #[serde(rename = "app.launch_at_login")]
+    pub app_launch_at_login: bool,
     /// Add the catalog's short, model-specific hint (for example for MiniCPM5) to the system prompt.
     #[serde(rename = "models.use_prompt_hints")]
     pub models_use_prompt_hints: bool,
@@ -151,6 +157,8 @@ impl Default for Settings {
             share_notify_pairing: true,
             knowledge_chat_context: false,
             knowledge_max_tokens: 1200,
+            app_show_tray_icon: false,
+            app_launch_at_login: false,
             models_use_prompt_hints: true,
             duo_light_model_id: String::new(),
             duo_strong_model_id: String::new(),

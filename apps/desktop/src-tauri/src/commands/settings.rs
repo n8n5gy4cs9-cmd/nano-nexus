@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use nexus_core::error::IpcError;
 use nexus_core::settings::Settings;
-use tauri::State;
+use tauri::{AppHandle, State};
 
 use super::CmdResult;
 use crate::service::settings::SettingValue;
@@ -19,9 +19,14 @@ pub async fn settings_get(ctx: State<'_, Arc<AppState>>) -> CmdResult<Settings> 
 #[tauri::command]
 #[specta::specta]
 pub async fn settings_set(
+    app: AppHandle,
     ctx: State<'_, Arc<AppState>>,
     key: String,
     value: SettingValue,
 ) -> CmdResult<Settings> {
-    service::settings::set(&ctx, &Caller::Desktop, &key, value).map_err(IpcError::from)
+    let next = service::settings::set(&ctx, &Caller::Desktop, &key, value).map_err(IpcError::from)?;
+    if key.starts_with("app.") {
+        crate::system::apply_settings(&app, &next, &ctx.share.status());
+    }
+    Ok(next)
 }

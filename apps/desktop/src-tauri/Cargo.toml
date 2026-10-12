@@ -18,7 +18,7 @@ tauri-build.workspace = true
 [dependencies]
 # `macos-private-api` must sit on this plain entry: tauri-build's manifest scan ignores target tables.
 # It is required by `macOSPrivateApi` in tauri.macos.conf.json (transparent window + vibrancy) and is a no-op elsewhere.
-tauri = { workspace = true, features = ["macos-private-api"] }
+tauri = { workspace = true, features = ["macos-private-api", "tray-icon"] }
 nexus-core = { path = "../../../crates/nexus-core" }
 nexus-agent = { path = "../../../crates/nexus-agent" }
 nexus-analyze = { path = "../../../crates/nexus-analyze" }
@@ -37,6 +37,7 @@ tauri-specta.workspace = true
 tauri-plugin-notification.workspace = true
 tauri-plugin-opener.workspace = true
 tauri-plugin-dialog.workspace = true
+tauri-plugin-autostart.workspace = true
 serde_json.workspace = true
 toml.workspace = true
 async-trait.workspace = true

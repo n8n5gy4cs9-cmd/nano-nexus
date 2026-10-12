@@ -8,6 +8,7 @@ pub mod runtime;
 pub mod runtime_paths;
 pub mod service;
 pub mod state;
+pub mod system;
 
 use std::sync::{Arc, RwLock};
 
@@ -80,6 +81,7 @@ fn bridge_app_events(app: &tauri::AppHandle) {
                     }
                 }
                 state::AppEvent::ShareStatus(st) => {
+                    system::update_share(&app, &st);
                     if let Err(e) = commands::share::ShareStatusChanged(st).emit(&app) {
                         tracing::warn!("could not emit share:status: {e}");
                     }
@@ -209,6 +211,11 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     }));
     bridge_runtime_status(app.handle());
     bridge_app_events(app.handle());
+    {
+        // Optional tray icon and start-at-login, as the settings say (both off by default).
+        let ctx = app.state::<Ctx>();
+        system::apply_settings(app.handle(), &ctx.settings_snapshot(), &ctx.share.status());
+    }
     service::models::init(&app.state::<Ctx>());
     let share_ctx: Ctx = (*app.state::<Ctx>()).clone();
     tauri::async_runtime::spawn(service::share::init(share_ctx));
@@ -276,6 +283,10 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            None,
+        ))
         .invoke_handler(specta.invoke_handler())
         .setup(move |app| {
             specta.mount_events(app);

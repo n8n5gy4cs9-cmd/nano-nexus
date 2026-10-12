@@ -12,6 +12,7 @@ import {
   SelectValue,
   Switch,
 } from "@/components/ui";
+import { useAssistants } from "@/hooks/useAssistants";
 import { SHARE_DEVICES_KEY, SHARE_KEY, useShareStatus } from "@/hooks/useShare";
 import { api, type SettingValue } from "@/lib/api";
 import { toIpcException } from "@/lib/ipc";
@@ -36,6 +37,13 @@ function Row({ label, hint, children }: { label: string; hint?: string; children
   );
 }
 
+/** "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 …) …Safari" → "iPhone · Safari". */
+export function shortAgent(ua: string): string {
+  const device = /iPhone|iPad|Android|Windows|Macintosh|Linux/.exec(ua)?.[0] ?? "";
+  const browser = /Edg\/|Firefox|Chrome|Safari/.exec(ua)?.[0]?.replace("Edg/", "Edge") ?? "";
+  return [device, browser].filter(Boolean).join(" · ") || ua.slice(0, 40);
+}
+
 /** Settings → Sharing (LAN-SHARE §2). */
 export function SharingSettings() {
   const qc = useQueryClient();
@@ -43,6 +51,7 @@ export function SharingSettings() {
   const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings.get });
   const devices = useQuery({ queryKey: SHARE_DEVICES_KEY, queryFn: api.share.devices });
   const s = settings.data;
+  const { cards } = useAssistants();
   const [port, setPort] = useState<string | null>(null);
 
   const setSetting = useMutation({
@@ -73,6 +82,8 @@ export function SharingSettings() {
   const failure = [setSetting, enable].find((m) => m.isError)?.error;
 
   if (!s) return <div className="p-6 text-muted">Loading…</div>;
+  const allowed: string[] = s["share.allowed_assistants"] ?? ["*"];
+  const allowedAll = allowed.includes("*");
   const portText = port ?? String(s["share.port"]);
   const portValid = /^\d+$/.test(portText) && Number(portText) >= 1024 && Number(portText) <= 65535;
 
@@ -152,6 +163,27 @@ export function SharingSettings() {
           </SelectContent>
         </Select>
       </Row>
+      <Row label="Assistants available remotely" hint={allowedAll ? "All assistants" : `${allowed.length} chosen`}>
+        <Switch checked={allowedAll} onCheckedChange={(all) => set("share.allowed_assistants", all ? ["*"] : cards.filter((c) => c.enabled).map((c) => c.id))} aria-label="All assistants are available remotely" />
+      </Row>
+      {allowedAll ? null : (
+        <ul className="grid gap-1 border-b border-border py-3 sm:grid-cols-2" aria-label="Assistants available remotely">
+          {cards
+            .filter((c) => c.enabled)
+            .map((c) => (
+              <li key={c.id}>
+                <label className="flex items-center gap-2 text-body">
+                  <input
+                    type="checkbox"
+                    checked={allowed.includes(c.id)}
+                    onChange={(e) => set("share.allowed_assistants", e.target.checked ? [...allowed, c.id] : allowed.filter((a) => a !== c.id))}
+                  />
+                  {c.name}
+                </label>
+              </li>
+            ))}
+        </ul>
+      )}
       <Row label="Session lifetime (days)">
         <Input
           type="number"
@@ -202,6 +234,7 @@ export function SharingSettings() {
                 <div className="mt-1 truncate text-caption text-faint">
                   {d.last_ip ?? "unknown IP"} ·{" "}
                   {d.last_seen_at ? `seen ${new Date(d.last_seen_at).toLocaleString()}` : "never seen"}
+                  {d.user_agent ? ` · ${shortAgent(d.user_agent)}` : ""}
                 </div>
               </div>
               <Select value={d.policy} onValueChange={(v) => update.mutate({ id: d.id, name: null, policy: v as SharePolicy })}>

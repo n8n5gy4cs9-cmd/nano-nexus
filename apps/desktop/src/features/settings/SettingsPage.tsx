@@ -147,6 +147,13 @@ export function SettingsPage() {
         )}
       </Section>
 
+      {IS_WEB ? null : (
+        <Section title="System">
+          <ToggleRow label="Show NanoNexus in the menu bar / system tray" hint="A small icon with Open, the sharing status and Quit." checked={bool(s, "app.show_tray_icon")} onChange={(v) => set("app.show_tray_icon", v)} />
+          <ToggleRow label="Start NanoNexus when I log in" checked={bool(s, "app.launch_at_login")} onChange={(v) => set("app.launch_at_login", v)} />
+        </Section>
+      )}
+
       <Section title="Model tuning">
         <ToggleRow label="Add short model-specific tips to the prompt" hint="For models that have them (for example MiniCPM5): a few plain sentences such as “answer in the user’s language”. Turn off to compare." checked={bool(s, "models.use_prompt_hints", true)} onChange={(v) => set("models.use_prompt_hints", v)} />
       </Section>

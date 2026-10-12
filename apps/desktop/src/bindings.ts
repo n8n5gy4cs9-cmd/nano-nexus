@@ -1401,6 +1401,10 @@ export type Settings = {
 	"knowledge.chat_context"?: boolean,
 	/**  Token budget of the injected passages (and of `kb_search` results). */
 	"knowledge.max_tokens"?: number,
+	/**  Show a tray / menu-bar icon with "Open", the sharing status and "Quit". Off by default. */
+	"app.show_tray_icon"?: boolean,
+	/**  Start NanoNexus when the user logs in. Off by default. */
+	"app.launch_at_login"?: boolean,
 	/**  Add the catalog's short, model-specific hint (for example for MiniCPM5) to the system prompt. */
 	"models.use_prompt_hints"?: boolean,
 	/**  Duo assistant: model id used for easy questions. Empty = the active model. */
