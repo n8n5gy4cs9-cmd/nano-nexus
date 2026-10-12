@@ -25,7 +25,7 @@ their sources: [`docs/architecture/ASSISTANTS.md` §2](../docs/architecture/ASSI
 | `shell-sage.toml` | Shell Sage | chat | Command explainer with safety ratings, never runs anything |
 | `prompt-architect.toml` | Prompt Architect | chat | Writes new assistants as TOML |
 | `duo.toml` | Duo | chat (two models) | Light model for easy questions, strong model for hard ones; pick both in Settings |
-| `librarian.toml` | Librarian | router (`kb_search`, always routes) | Answers from offline libraries with verified `[n]` citations |
+| `librarian.toml` | Librarian | router (`kb_search`, always routes) | Answers from offline libraries with verified `[n]` citations; quotes code exactly, names book + page, flags disagreement. See `docs/GUIDE-ASK-YOUR-BOOKS.md` |
 | `_TEMPLATE.toml` | — | — | Starting point for your own assistants (not loaded) |
 | `regex-smith.example.toml` | Regex Smith | chat | Tutorial example (not loaded; import it to try) |
 

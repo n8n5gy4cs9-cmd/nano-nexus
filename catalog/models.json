@@ -260,10 +260,11 @@
       "tags": [
         "official",
         "tools",
-        "step-up"
+        "step-up",
+        "librarian"
       ],
       "verified": true,
-      "why": "The step-up for Rename Forge proposals and tool use. Designed for tool-use workflows.",
+      "why": "The step-up for Rename Forge proposals and tool use. Designed for tool-use workflows. Librarian pick for older laptops: the lightest model that is still accurate enough; double-check its citations.",
       "notes": "OpenBMB recommends temperature 1.0, top_p 0.95, min_p 0.0 (+ repetition_penalty 1.05 if repeating). The no_think preset is our conservative choice; verify with spike S1."
     },
     {
@@ -351,10 +352,11 @@
       "tags": [
         "tools",
         "best-small",
-        "multilingual"
+        "multilingual",
+        "librarian"
       ],
       "verified": true,
-      "why": "The strongest small tool-caller (BFCL/TAU2-leading at 4B). Pick it for router-heavy work.",
+      "why": "The strongest small tool-caller (BFCL/TAU2-leading at 4B). Pick it for router-heavy work. Librarian pick: native tool calls and 262k context; the most reliable mid-size model for search-then-cite.",
       "notes": "Community imatrix quants by bartowski. Sampling follows Qwen3 guidance; check the Qwen3.5 card. Requires a 2026 llama.cpp (b11552 is fine). Thinking is on by default."
     },
     {
@@ -435,10 +437,11 @@
       "tier": "small",
       "tags": [
         "writing",
-        "multilingual"
+        "multilingual",
+        "librarian"
       ],
       "verified": true,
-      "why": "Strong writing and translation (Scribe, Polyglot) at 4B.",
+      "why": "Strong writing and translation (Scribe, Polyglot) at 4B. Librarian pick for answer quality, but heavy: expect it to be slow on older laptops.",
       "notes": "Static quants by mradermacher of google/gemma-4-E4B-it. Sampling follows Gemma family guidance. Gemma license terms apply."
     },
     {
@@ -887,10 +890,11 @@
       "tags": [
         "optimal",
         "ternary",
-        "thinking"
+        "thinking",
+        "librarian"
       ],
       "verified": false,
-      "why": "Optimal pick: 27B-class reasoning in 5.9 GB, the smallest Bonsai 2 27B packing.",
+      "why": "Optimal pick: 27B-class reasoning in 5.9 GB, the smallest Bonsai 2 27B packing. Librarian pick: the best reader here for multi-book and tricky code questions; needs a strong machine.",
       "notes": "Ternary (1.58-bit) weights from PrismML. Needs a llama.cpp build that supports the PrismML ternary quants (the pinned official b11552 may not load it; see docs/QUESTIONS.md Q-8). File names and sizes taken from the model card via search, not yet checked against the repo tree."
     },
     {
@@ -931,10 +935,11 @@
       "tags": [
         "ternary",
         "quality",
-        "thinking"
+        "thinking",
+        "librarian"
       ],
       "verified": false,
-      "why": "Bigger packing of the same 27B: more headroom for quality, 1.3 GB larger.",
+      "why": "Bigger packing of the same 27B: more headroom for quality, 1.3 GB larger. Librarian pick (higher fidelity); needs a strong machine.",
       "notes": "Ternary (1.58-bit) weights from PrismML. Needs a llama.cpp build that supports the PrismML ternary quants (the pinned official b11552 may not load it; see docs/QUESTIONS.md Q-8). File names and sizes taken from the model card via search, not yet checked against the repo tree."
     },
     {
@@ -975,10 +980,11 @@
       "tags": [
         "ternary",
         "small",
-        "thinking"
+        "thinking",
+        "librarian"
       ],
       "verified": false,
-      "why": "Smaller ternary step: 8B in about 2.2 GB.",
+      "why": "Smaller ternary step: 8B in about 2.2 GB. Librarian pick: a good balance of accuracy and speed if the 27B is too heavy.",
       "notes": "Ternary (1.58-bit) weights from PrismML. Needs a llama.cpp build that supports the PrismML ternary quants (the pinned official b11552 may not load it; see docs/QUESTIONS.md Q-8). File names and sizes taken from the model card via search, not yet checked against the repo tree."
     },
     {
