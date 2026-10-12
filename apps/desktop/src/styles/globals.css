@@ -141,3 +141,18 @@ samp {
     opacity: 1;
   }
 }
+
+/* Reduced motion (UI-DESIGN §7): no decorative animation or smooth scrolling. Spinners keep turning, because
+   they tell the user that something is happening. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *:not(.animate-spin),
+  *:not(.animate-spin)::before,
+  *:not(.animate-spin)::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

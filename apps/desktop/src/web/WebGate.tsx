@@ -105,7 +105,7 @@ function ConnectionBanner({ state }: { state: Connection }) {
   return (
     <div
       role="status"
-      className="fixed inset-x-0 top-0 z-50 bg-warning px-4 py-1.5 pt-[calc(env(safe-area-inset-top)+0.375rem)] text-center text-small text-black"
+      className="fixed inset-x-0 top-0 z-50 border-b border-warning bg-surface-2 px-4 py-1.5 pt-[calc(env(safe-area-inset-top)+0.375rem)] text-center text-small font-medium text-warning"
     >
       {state === "ended" ? "Session ended. Pair again to continue." : "Reconnecting…"}
     </div>

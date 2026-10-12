@@ -45,6 +45,13 @@ export function AppShell() {
   }, [platform]);
   return (
     <div className="flex h-full text-text">
+      <button
+        type="button"
+        className="sr-only z-50 rounded-button bg-surface px-3 py-2 text-body focus:not-sr-only focus:fixed focus:top-2 focus:left-2"
+        onClick={() => document.getElementById("main-content")?.focus()}
+      >
+        Skip to content
+      </button>
       {sidebarOpen ? (
         <>
           <button
@@ -68,7 +75,7 @@ export function AppShell() {
               <RuntimePill />
             </>
           } />
-        <main className="min-h-0 flex-1 overflow-auto">
+        <main id="main-content" tabIndex={-1} className="min-h-0 flex-1 overflow-auto outline-none">
           <Outlet />
         </main>
         {consoleOpen ? <ConsolePanel /> : null}
