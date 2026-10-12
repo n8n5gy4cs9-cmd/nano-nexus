@@ -115,7 +115,9 @@ export async function buildWindows(opts, deps = {}) {
 
   if (!opts.skipDoctor) {
     step('1/8 Checking the toolchain');
-    exec(path.join(HERE, 'doctor.sh'), ['--windows', '--quiet']);
+    // Only what this build needs: its own architecture, and NSIS only when an installer is made.
+    const wanted = opts.format ?? profile.windows?.format ?? 'auto';
+    exec(path.join(HERE, 'doctor.sh'), ['--windows', '--arch', arch.dir.replace('windows-', ''), ...(wanted === 'portable' ? ['--no-nsis'] : []), '--quiet']);
   }
   if (!opts.skipFetch) {
     step('2/8 Models and runtime');

@@ -168,6 +168,7 @@ async function main() {
 
   const outDir = path.join(ROOT, 'dist-bundles', profile.name);
   const results = [];
+  const failures = [];
   for (const key of wanted) {
     const t = TARGETS[key];
     step(`Staging ${t.label}`);
@@ -178,23 +179,34 @@ async function main() {
       continue;
     }
     step(`Building ${t.label}`);
-    if (t.win) {
-      // Installer, portable ZIP or offline kit (auto: the installer unless it is over the ~1.8 GB NSIS limit).
-      const built = await buildWindows({
-        profile,
-        profileArg: o.profile ?? profile.name,
-        arch: t.dir.replace('windows-', ''),
-        format: o.format === 'auto' ? undefined : o.format,
-        skipModels: true,
-      });
-      results.push(...built.artifacts);
-    } else {
-      results.push(...build(key, st, outDir));
+    try {
+      if (t.win) {
+        // Installer, portable ZIP or offline kit (auto: the installer unless it is over the ~1.8 GB NSIS limit).
+        const built = await buildWindows({
+          profile,
+          profileArg: o.profile ?? profile.name,
+          arch: t.dir.replace('windows-', ''),
+          format: o.format === 'auto' ? undefined : o.format,
+          skipModels: true,
+        });
+        results.push(...built.artifacts);
+      } else {
+        results.push(...build(key, st, outDir));
+      }
+    } catch (e) {
+      // One target failing must not hide the others: keep what was built and say clearly what went wrong.
+      failures.push(`${t.label}: ${String(e.message ?? e).split('\n')[0]}`);
+      console.error(`\n✖ ${t.label} was not built: ${e.message ?? e}`);
     }
   }
 
-  step('Done');
-  for (const r of results) say(`  ${r}`);
+  step(failures.length ? 'Finished with problems' : 'Done');
+  for (const r of results) say(`  ✔ ${r}`);
+  for (const f of failures) say(`  ✖ ${f}`);
+  if (failures.length) {
+    say('\nWindows builds need the cross-build toolchain: run scripts/doctor.sh --windows and fix the ✖ items (see guide.html → Windows). The other targets above are complete.');
+    process.exitCode = 1;
+  }
   if (!o.stageOnly) say('\nVerify the knowledge files with: node scripts/knowledge-manifest.mjs verify <app>/Contents/Resources/knowledge');
 }
 

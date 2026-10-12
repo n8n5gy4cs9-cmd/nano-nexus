@@ -1,18 +1,23 @@
 #!/usr/bin/env bash
 # doctor.sh: check that this machine can build NanoNexus.
 #
-# Usage: scripts/doctor.sh [--windows] [--quiet]
+# Usage: scripts/doctor.sh [--windows [--arch x64|arm64] [--no-nsis]] [--quiet]
 #   --windows  also check the Windows cross-build toolchain (cargo-xwin, NSIS, LLVM; built on the Mac)
+#   --arch     check only one Windows architecture (default: both)
+#   --no-nsis  the build makes no installer (portable ZIP), so NSIS is not needed
 #   --quiet    only print problems; exit code 1 if a required check fails
 #
 # Portable: bash 3.2 (macOS default). No GNU-only flags.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-WINDOWS=0; QUIET=0
+WINDOWS=0; QUIET=0; WARCH=both; NONSIS=0
 for arg in "$@"; do
   case "$arg" in
     --windows) WINDOWS=1 ;;
+    --no-nsis) NONSIS=1 ;;
+    --arch) ;;
+    x64|arm64) WARCH="$arg" ;;
     --quiet) QUIET=1 ;;
     -h|--help) sed -n '2,8p' "$0"; exit 0 ;;
     *) echo "doctor.sh: unknown argument: $arg" >&2; exit 2 ;;
@@ -119,19 +124,26 @@ if have pdftotext; then ok "pdftotext found (PDF fallback)"; else ok "pdftotext 
 if [ "$WINDOWS" = "1" ]; then
   hdr "Windows cross-build toolchain (built on this Mac)"
   if have rustup; then
-    for t in x86_64-pc-windows-msvc aarch64-pc-windows-msvc; do
+    case "$WARCH" in
+      x64) TARGETS="x86_64-pc-windows-msvc" ;;
+      arm64) TARGETS="aarch64-pc-windows-msvc" ;;
+      *) TARGETS="x86_64-pc-windows-msvc aarch64-pc-windows-msvc" ;;
+    esac
+    for t in $TARGETS; do
       if rustup target list --installed 2>/dev/null | grep -qx "$t"; then ok "rust target $t"; else bad "rust target $t missing: run: rustup target add $t"; fi
     done
   else
     bad "rustup is required to add Windows targets"
   fi
   if have cargo-xwin || cargo xwin --version >/dev/null 2>&1; then ok "cargo-xwin"; else bad "cargo-xwin missing: run: cargo install --locked cargo-xwin"; fi
-  if have makensis; then ok "NSIS $(makensis -VERSION 2>/dev/null)"; else bad "makensis missing: run: brew install nsis"; fi
+  if [ "$NONSIS" = "1" ]; then ok "NSIS not needed (no installer in this build)";
+  elif have makensis; then ok "NSIS $(makensis -VERSION 2>/dev/null)"; else bad "makensis missing: run: brew install nsis"; fi
   for t in clang-cl lld-link llvm-rc; do
     if have "$t"; then ok "$t"; else bad "$t missing: run: brew install llvm, then add \"\$(brew --prefix llvm)/bin\" to PATH"; fi
   done
   if [ -n "${XWIN_CACHE_DIR:-}" ]; then ok "XWIN_CACHE_DIR=$XWIN_CACHE_DIR"; else warn "XWIN_CACHE_DIR not set (recommended: export XWIN_CACHE_DIR=~/.cache/xwin)"; fi
   for a in x64 arm64; do
+    if [ "$WARCH" != "both" ] && [ "$WARCH" != "$a" ]; then continue; fi
     if [ -f "$ROOT/vendor/runtime/windows-$a/llama-server.exe" ]; then ok "Windows runtime ($a)"; else warn "Windows runtime ($a) not fetched yet: run: node scripts/fetch-runtime-windows.mjs --arch $a (M13)"; fi
   done
 fi
