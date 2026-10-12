@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 193/234 tasks done (82%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 194/234 tasks done (82%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -236,7 +236,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T13.09** Write `docs/WINDOWS-TESTING.md` checklist (2026-10-12) — `docs/WINDOWS-TESTING.md`: install, no-orphan, portable, offline kit (incl. damaged-file test), model packs, files/CFA, Vulkan/CPU, firewall, ARM VM
 - [ ] **T13.10** 🪟🔬 **S8** Vulkan GPU on the studio PC; CPU fallback without vulkan-1.dll → SPIKES.md
 - [ ] **T13.11** 🪟 Run the checklist on the Win11 ARM VM (arm64 + x64 emulation) and the x64 PC (offline)
-- [ ] **T13.12** Update `guide.html` Windows sections to "available"
+- [x] **T13.12** Update `guide.html` Windows sections to "available" (2026-10-12) — guide.html sections 3 and 5 and the command table now say "Available now"; points to `docs/WINDOWS-TESTING.md` and the SHA256SUMS file. Real Windows builds still need the Mac (T13.11/T13.13)
 - [ ] ⭐ **T13.13** Exit check: offline install works on x64; Task Manager kill → no orphan; no console flash; 3-model kit verified
 
 ## M14: LAN Share + mobile web UI · [spec](docs/milestones/M14-lan-share.md) · [contract](docs/architecture/LAN-SHARE.md)
