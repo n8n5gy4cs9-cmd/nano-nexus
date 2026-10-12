@@ -73,3 +73,8 @@ Options: A) Keep 0006; Nexus uses the setting `knowledge.chat_context` (context 
 only the Librarian lists `kb_search`. B) Add `kb_search` to Nexus and accept new prompt snapshots.
 Recommendation: A.
 Answer (owner): _pending_
+
+## Q-8: Ternary Bonsai needs a PrismML llama.cpp build? (2026-10-12)
+- Context: catalog now lists Ternary Bonsai 2 27B (PTQ1_0 5.9 GB tagged `optimal`, PQ2_0 7.2 GB) plus the 8B/4B/1.7B Q2_0 models, all `verified: false`. Their model cards reportedly require PrismML's llama.cpp fork (new ternary quant types); the pinned official `b11552` may refuse to load them. HF was unreachable from the authoring container, so file names/sizes are unchecked.
+- Options: (a) leave as community/unverified and let the Mac owner test with `cargo test -- --ignored`; (b) bump the pin if upstream merged the quant types; (c) bundle the fork (ADR change).
+- Recommendation: (a) now; if b11552 fails to load, try (b) before (c). Flip `verified` once a load test passes.

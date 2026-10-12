@@ -848,6 +848,228 @@
       "verified": false,
       "why": "Under 0.4 GB. For very old computers, or just to see how small a model can be.",
       "notes": "Added without network access: the repository and file name are checked when you press Download (the exact file and its SHA-256 are read from the repo at that moment)."
+    },
+    {
+      "id": "ternary-bonsai-2-27b-ptq1",
+      "name": "Ternary Bonsai 2 27B (5.9 GB)",
+      "family": "Ternary Bonsai",
+      "params_b": 27.0,
+      "quant": "PTQ1_0",
+      "repo": "prism-ml/Ternary-Bonsai-2-27B-gguf",
+      "revision": "main",
+      "file_pattern": "(?i)PTQ1_0\\.gguf$",
+      "approx_bytes": 5950000000,
+      "license": "Apache-2.0",
+      "context_default": 8192,
+      "capabilities": [
+        "chat",
+        "code",
+        "thinking",
+        "multilingual"
+      ],
+      "supports_thinking_toggle": true,
+      "sampling": {
+        "no_think": {
+          "temperature": 0.7,
+          "top_p": 0.8,
+          "top_k": 20,
+          "min_p": 0.0
+        },
+        "think": {
+          "temperature": 0.6,
+          "top_p": 0.95,
+          "top_k": 20,
+          "min_p": 0.0
+        }
+      },
+      "min_ram_gb": 12,
+      "tier": "medium",
+      "tags": [
+        "optimal",
+        "ternary",
+        "thinking"
+      ],
+      "verified": false,
+      "why": "Optimal pick: 27B-class reasoning in 5.9 GB, the smallest Bonsai 2 27B packing.",
+      "notes": "Ternary (1.58-bit) weights from PrismML. Needs a llama.cpp build that supports the PrismML ternary quants (the pinned official b11552 may not load it; see docs/QUESTIONS.md Q-8). File names and sizes taken from the model card via search, not yet checked against the repo tree."
+    },
+    {
+      "id": "ternary-bonsai-2-27b-pq2",
+      "name": "Ternary Bonsai 2 27B (7.2 GB, higher fidelity)",
+      "family": "Ternary Bonsai",
+      "params_b": 27.0,
+      "quant": "PQ2_0",
+      "repo": "prism-ml/Ternary-Bonsai-2-27B-gguf",
+      "revision": "main",
+      "file_pattern": "(?i)PQ2_0\\.gguf$",
+      "approx_bytes": 7210000000,
+      "license": "Apache-2.0",
+      "context_default": 8192,
+      "capabilities": [
+        "chat",
+        "code",
+        "thinking",
+        "multilingual"
+      ],
+      "supports_thinking_toggle": true,
+      "sampling": {
+        "no_think": {
+          "temperature": 0.7,
+          "top_p": 0.8,
+          "top_k": 20,
+          "min_p": 0.0
+        },
+        "think": {
+          "temperature": 0.6,
+          "top_p": 0.95,
+          "top_k": 20,
+          "min_p": 0.0
+        }
+      },
+      "min_ram_gb": 16,
+      "tier": "medium",
+      "tags": [
+        "ternary",
+        "quality",
+        "thinking"
+      ],
+      "verified": false,
+      "why": "Bigger packing of the same 27B: more headroom for quality, 1.3 GB larger.",
+      "notes": "Ternary (1.58-bit) weights from PrismML. Needs a llama.cpp build that supports the PrismML ternary quants (the pinned official b11552 may not load it; see docs/QUESTIONS.md Q-8). File names and sizes taken from the model card via search, not yet checked against the repo tree."
+    },
+    {
+      "id": "ternary-bonsai-8b-q2",
+      "name": "Ternary Bonsai 8B",
+      "family": "Ternary Bonsai",
+      "params_b": 8.0,
+      "quant": "Q2_0",
+      "repo": "prism-ml/Ternary-Bonsai-8B-gguf",
+      "revision": "main",
+      "file_pattern": "(?i)Q2_0\\.gguf$",
+      "approx_bytes": 2180000000,
+      "license": "Apache-2.0",
+      "context_default": 8192,
+      "capabilities": [
+        "chat",
+        "code",
+        "thinking",
+        "multilingual"
+      ],
+      "supports_thinking_toggle": true,
+      "sampling": {
+        "no_think": {
+          "temperature": 0.7,
+          "top_p": 0.8,
+          "top_k": 20,
+          "min_p": 0.0
+        },
+        "think": {
+          "temperature": 0.6,
+          "top_p": 0.95,
+          "top_k": 20,
+          "min_p": 0.0
+        }
+      },
+      "min_ram_gb": 8,
+      "tier": "small",
+      "tags": [
+        "ternary",
+        "small",
+        "thinking"
+      ],
+      "verified": false,
+      "why": "Smaller ternary step: 8B in about 2.2 GB.",
+      "notes": "Ternary (1.58-bit) weights from PrismML. Needs a llama.cpp build that supports the PrismML ternary quants (the pinned official b11552 may not load it; see docs/QUESTIONS.md Q-8). File names and sizes taken from the model card via search, not yet checked against the repo tree."
+    },
+    {
+      "id": "ternary-bonsai-4b-q2",
+      "name": "Ternary Bonsai 4B",
+      "family": "Ternary Bonsai",
+      "params_b": 4.0,
+      "quant": "Q2_0",
+      "repo": "prism-ml/Ternary-Bonsai-4B-gguf",
+      "revision": "main",
+      "file_pattern": "(?i)Q2_0\\.gguf$",
+      "approx_bytes": 1100000000,
+      "license": "Apache-2.0",
+      "context_default": 8192,
+      "capabilities": [
+        "chat",
+        "code",
+        "thinking",
+        "multilingual"
+      ],
+      "supports_thinking_toggle": true,
+      "sampling": {
+        "no_think": {
+          "temperature": 0.7,
+          "top_p": 0.8,
+          "top_k": 20,
+          "min_p": 0.0
+        },
+        "think": {
+          "temperature": 0.6,
+          "top_p": 0.95,
+          "top_k": 20,
+          "min_p": 0.0
+        }
+      },
+      "min_ram_gb": 6,
+      "tier": "small",
+      "tags": [
+        "ternary",
+        "small",
+        "fast",
+        "thinking"
+      ],
+      "verified": false,
+      "why": "Ternary 4B in about 1.1 GB (size estimated).",
+      "notes": "Ternary (1.58-bit) weights from PrismML. Needs a llama.cpp build that supports the PrismML ternary quants (the pinned official b11552 may not load it; see docs/QUESTIONS.md Q-8). File names and sizes taken from the model card via search, not yet checked against the repo tree."
+    },
+    {
+      "id": "ternary-bonsai-1.7b-q2",
+      "name": "Ternary Bonsai 1.7B",
+      "family": "Ternary Bonsai",
+      "params_b": 1.7,
+      "quant": "Q2_0",
+      "repo": "prism-ml/Ternary-Bonsai-1.7B-gguf",
+      "revision": "main",
+      "file_pattern": "(?i)Q2_0\\.gguf$",
+      "approx_bytes": 460000000,
+      "license": "Apache-2.0",
+      "context_default": 8192,
+      "capabilities": [
+        "chat",
+        "code",
+        "thinking",
+        "multilingual"
+      ],
+      "supports_thinking_toggle": true,
+      "sampling": {
+        "no_think": {
+          "temperature": 0.7,
+          "top_p": 0.8,
+          "top_k": 20,
+          "min_p": 0.0
+        },
+        "think": {
+          "temperature": 0.6,
+          "top_p": 0.95,
+          "top_k": 20,
+          "min_p": 0.0
+        }
+      },
+      "min_ram_gb": 4,
+      "tier": "tiny",
+      "tags": [
+        "ternary",
+        "smallest",
+        "fast",
+        "thinking"
+      ],
+      "verified": false,
+      "why": "Tiny ternary model, under 0.5 GB.",
+      "notes": "Ternary (1.58-bit) weights from PrismML. Needs a llama.cpp build that supports the PrismML ternary quants (the pinned official b11552 may not load it; see docs/QUESTIONS.md Q-8). File names and sizes taken from the model card via search, not yet checked against the repo tree."
     }
   ]
 }
