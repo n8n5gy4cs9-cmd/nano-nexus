@@ -225,7 +225,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [ ] ⭐ **T12.12** 🍎 Exit check: App Builder 3-model build → works offline on a 2nd Mac; tamper test fails verify; model pack import offline
 
 ## M13: Windows build, cross-compiled on the Mac (MUST) · [spec](docs/milestones/M13-windows.md)
-- [ ] **T13.01** `scripts/doctor.sh --windows` checks (targets, cargo-xwin, makensis, clang-cl, lld-link, XWIN_CACHE_DIR)
+- [x] **T13.01** `scripts/doctor.sh --windows` checks (targets, cargo-xwin, makensis, clang-cl, lld-link, XWIN_CACHE_DIR) (2026-10-12) — already in `scripts/doctor.sh --windows`; re-checked 2026-10-12 (targets, cargo-xwin, makensis, clang-cl, lld-link, llvm-rc, XWIN_CACHE_DIR, fetched runtimes)
 - [ ] **T13.02** 🍎 Harden `fetch-runtime-windows.mjs` (x64 vulkan/cpu, arm64) on the Mac; locks recorded
 - [ ] **T13.03** Rust Windows specifics complete: paths (dunce), Recycle Bin, CFA detection, Windows deny list, Mica, Ctrl shortcuts
 - [ ] **T13.04** `windows/hooks.nsh` (offline kit post-install copy) + NSIS config (currentUser, compression none, WebView2 mode)
