@@ -14,7 +14,7 @@
 //   --name <profile>                     name of this bundle (default: "my-bundle"); saved in bundles/local/
 //   --profile <name|path>                use an existing profile instead of the options above
 //   --target mac|windows|windows-arm64|all   (default: the OS you are on)
-//   --format installer|portable|auto     Windows only; auto = portable when the payload is over 1.8 GB
+//   --format installer|portable|kit|auto  Windows only; auto = installer, or kit when the payload is over 1.8 GB
 //   --stage-only                         prepare the payload and the Tauri overlay, do not build
 //   --yes                                do not ask before building
 import { spawnSync } from 'node:child_process';
@@ -23,10 +23,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { ROOT, VENDOR_MODELS, ensureProfileEntry, loadCatalog, resolveProfile } from './fetch-model.mjs';
+import { buildWindows } from './build-windows.mjs';
 import { TARGETS, stage } from './stage-bundle.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const NSIS_LIMIT = 1.8 * 1024 ** 3;
 const say = (m) => console.log(m);
 const step = (m) => console.log(`\n\x1b[1m▶ ${m}\x1b[0m`);
 const fail = (m) => {
@@ -109,7 +109,7 @@ function run(cmd, args, opts = {}) {
   if (r.status !== 0) fail(`${cmd} failed (exit ${r.status ?? 'signal'})`);
 }
 
-function build(key, st, format, outDir) {
+function build(key, st, outDir) {
   const t = TARGETS[key];
   const tauri = ['-C', 'apps/desktop', 'tauri', 'build', '--config', st.overlay];
   fs.mkdirSync(outDir, { recursive: true });
@@ -127,31 +127,7 @@ function build(key, st, format, outDir) {
     run('codesign', ['--force', '--deep', '--sign', '-', dest]); // ad-hoc so it launches on this Mac
     return [dest];
   }
-  const cross = process.platform !== 'win32' ? ['--runner', 'cargo-xwin'] : [];
-  const portable = format === 'portable';
-  run('pnpm', [...tauri, ...cross, '--target', t.triple, ...(portable ? ['--no-bundle'] : ['--bundles', 'nsis'])]);
-  const rel = path.join(ROOT, 'target', t.triple, 'release');
-  if (!portable) {
-    const nsis = path.join(rel, 'bundle', 'nsis');
-    const files = fs.existsSync(nsis) ? fs.readdirSync(nsis).filter((f) => f.endsWith('.exe')) : [];
-    if (!files.length) fail(`No installer found in ${nsis}`);
-    return files.map((f) => {
-      const dest = path.join(outDir, f);
-      fs.copyFileSync(path.join(nsis, f), dest);
-      return dest;
-    });
-  }
-  // Portable folder: the exe next to runtime\, models\, knowledge\ and portable.flag (data goes to .\data\).
-  const folder = path.join(outDir, `NanoNexus-${t.dir}`);
-  fs.rmSync(folder, { recursive: true, force: true });
-  fs.mkdirSync(folder, { recursive: true });
-  fs.copyFileSync(path.join(rel, 'nano-nexus.exe'), path.join(folder, 'nano-nexus.exe'));
-  for (const entry of fs.readdirSync(st.dir)) {
-    fs.cpSync(path.join(st.dir, entry), path.join(folder, entry), { recursive: true });
-  }
-  fs.writeFileSync(path.join(folder, 'portable.flag'), '');
-  fs.writeFileSync(path.join(folder, 'README.txt'), 'Run nano-nexus.exe. Everything (settings, chats) stays in the data\\ folder next to it.\r\nNeeds Windows 11, or Windows 10 with the WebView2 runtime.\r\n');
-  return [folder];
+  fail(`${t.label} is built by scripts/build-windows.mjs`);
 }
 
 async function main() {
@@ -197,18 +173,24 @@ async function main() {
     step(`Staging ${t.label}`);
     const st = await stage(profile, key, locks);
     say(`Payload: ${fmt(st.bytes)}${st.kb ? ` (includes ${st.kb.libraries.length} knowledge librar${st.kb.libraries.length === 1 ? 'y' : 'ies'})` : ''}`);
-    let format = o.format;
-    if (t.win) {
-      if (format === 'auto') format = st.bytes > NSIS_LIMIT ? 'portable' : 'installer';
-      if (format === 'installer' && st.bytes > NSIS_LIMIT) say(`⚠ ${fmt(st.bytes)} is over the ~1.8 GB NSIS limit; the installer may fail. Use --format portable.`);
-      say(`Windows format: ${format}`);
-    }
     if (o.stageOnly) {
       results.push(st.dir);
       continue;
     }
     step(`Building ${t.label}`);
-    results.push(...build(key, st, format, outDir));
+    if (t.win) {
+      // Installer, portable ZIP or offline kit (auto: the installer unless it is over the ~1.8 GB NSIS limit).
+      const built = await buildWindows({
+        profile,
+        profileArg: o.profile ?? profile.name,
+        arch: t.dir.replace('windows-', ''),
+        format: o.format === 'auto' ? undefined : o.format,
+        skipModels: true,
+      });
+      results.push(...built.artifacts);
+    } else {
+      results.push(...build(key, st, outDir));
+    }
   }
 
   step('Done');

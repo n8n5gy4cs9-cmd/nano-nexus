@@ -40,9 +40,11 @@ pre{background:#0e0d13;color:#d8d8e6;border-radius:10px;padding:12px;max-height:
 <div class="card row" id="targets">
   <label><input type="radio" name="t" value="mac"> macOS</label>
   <label><input type="radio" name="t" value="windows"> Windows (x64)</label>
-  <label><input type="radio" name="t" value="all"> Both</label>
+  <label><input type="radio" name="t" value="windows-arm64"> Windows (ARM64, for a VM)</label>
+  <label><input type="radio" name="t" value="all"> macOS + Windows x64</label>
   <span class="mut">Windows format:</span>
-  <select id="fmt"><option value="auto">Automatic</option><option value="installer">Installer</option><option value="portable">Portable folder</option></select>
+  <select id="fmt"><option value="auto">Automatic</option><option value="installer">Installer</option><option value="portable">Portable ZIP</option><option value="kit">Offline kit</option></select>
+  <span class="mut" id="fmthint">Automatic = installer, or an offline kit when the models are over 1.8 GB.</span>
 </div>
 
 <div class="row" style="margin-top:18px"><button class="p" id="go">Build</button><button id="stop" disabled>Cancel</button><span id="msg" class="mut"></span></div>
@@ -133,7 +135,7 @@ let es;
 function watch() {
   $('log').textContent = ''; es?.close(); es = new EventSource('/api/log?t=' + T);
   es.onmessage = e => { const l = $('log'); l.textContent += JSON.parse(e.data) + '\n'; l.scrollTop = l.scrollHeight; };
-  es.addEventListener('done', e => { es.close(); $('go').disabled = false; $('stop').disabled = true; $('msg').textContent = e.data === '0' ? '✔ Finished. Files are in dist-bundles/' : '✖ Build failed (see the log).'; });
+  es.addEventListener('done', e => { es.close(); $('go').disabled = false; $('stop').disabled = true; $('msg').textContent = e.data === '0' ? '✔ Finished. macOS apps are in dist-bundles/, Windows builds in dist/<name>/ (with SHA256SUMS).' : '✖ Build failed (see the log).'; });
 }
 $('go').onclick = async () => {
   if (!state.ggufs.length && !state.catalog.size) return ($('msg').textContent = 'Choose at least one model.');

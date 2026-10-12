@@ -81,7 +81,7 @@ export function buildArgs(b) {
   if (b.default) args.push('--default', String(b.default));
   if (!['mac', 'windows', 'windows-arm64', 'all'].includes(b.target)) throw new Error('Choose a target.');
   args.push('--target', b.target);
-  if (['auto', 'installer', 'portable'].includes(b.format)) args.push('--format', b.format);
+  if (['auto', 'installer', 'portable', 'kit'].includes(b.format)) args.push('--format', b.format);
   return args;
 }
 

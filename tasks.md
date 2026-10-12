@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 188/234 tasks done (80%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 191/234 tasks done (81%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -231,7 +231,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T13.04** `windows/hooks.nsh` (offline kit post-install copy) + NSIS config (currentUser, compression none, WebView2 mode) (2026-10-12) — `windows/hooks.nsh` and the NSIS settings were already written; `scripts/windows-config.test.mjs` now guards them (per-user, compression none, hook macro, jump offsets)
 - [x] **T13.05** `scripts/build-windows.sh` installer format (x64 + arm64) (2026-10-12) — `scripts/build-windows.sh` (wrapper) → `build-windows.mjs`: doctor → models/runtime → stage → `verify-payload --windows` → web UI → `tauri build --runner cargo-xwin` → package → SHA256SUMS; x64 + arm64; format auto/installer/portable/kit; `--dry-run`. Tested with a fake repo and recorded commands (`build-windows.test.mjs`); a real build needs the Mac with the Windows toolchain
 - [x] **T13.06** Portable format + `portable.flag` → data in `.\data\` (AppPaths portable mode) (2026-10-12) — portable format in `build-windows.mjs`: exe + runtime + models + `portable.flag` + README, zipped; the folder is verified with `verify-payload --windows`; the app switches to `.\data\` when `portable.flag` is next to the exe (`AppPaths::portable`, already in `resolve_paths`). Tested in `build-windows.test.mjs`
-- [ ] **T13.07** Offline kit format (basic installer + `models-extra/` + WebView2 offline installer + INSTALL.txt), auto rule > 1.8 GB
+- [x] **T13.07** Offline kit format (basic installer + `models-extra/` + WebView2 offline installer + INSTALL.txt), auto rule > 1.8 GB (2026-10-12) — offline kit in `build-windows.mjs`: setup.exe with the default model + WebView2 offline installer (`offlineInstaller` in the overlay), `models-extra/` as a model pack, `INSTALL.txt`; `auto` picks the kit above 1.8 GB (`chooseFormat`). First-launch import of `models-extra/pack.json` is T12.09. Tested in `build-windows.test.mjs`
 - [ ] **T13.08** App Builder integration (Windows targets + formats) + SHA256SUMS
 - [ ] **T13.09** Write `docs/WINDOWS-TESTING.md` checklist
 - [ ] **T13.10** 🪟🔬 **S8** Vulkan GPU on the studio PC; CPU fallback without vulkan-1.dll → SPIKES.md
