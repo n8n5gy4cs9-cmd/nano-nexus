@@ -4,7 +4,7 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist", "src-tauri", "src/bindings.ts", "node_modules"] },
+  { ignores: ["dist", "dist-web", "src-tauri", "src/bindings.ts", "node_modules"] },
   js.configs.recommended,
   ...tseslint.configs.strict,
   {
