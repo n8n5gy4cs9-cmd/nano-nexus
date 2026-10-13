@@ -60,4 +60,5 @@ sees tools on the `PATH` of the terminal that started the App Builder. In that t
 - `vendor/bundle/`, `apps/desktop/src-tauri/gen/` staged build inputs (safe to delete)
 - `dist-bundles/` your finished macOS apps (never auto-deleted)
 - `target/` Rust build output (the big one; see section 1)
+- `apps/desktop/src/plugins/` small UI add-ons (model name, speed); see `docs/PLUGINS.md`
 - `catalog/models.json` the Discover list; `assistants/*.toml` the assistants

@@ -37,12 +37,9 @@ pub struct Settings {
     pub ui_accent: String,
     #[serde(rename = "ui.show_perf_stats")]
     pub ui_show_perf_stats: bool,
-    /// Small line under the composer with the model in use.
-    #[serde(rename = "ui.show_model_name")]
-    pub ui_show_model_name: bool,
-    /// Small line under the composer with the speed (tokens per second) of the last answer.
-    #[serde(rename = "ui.show_speed_line")]
-    pub ui_show_speed_line: bool,
+    /// Comma-separated ids of UI plugins the user turned off (see `apps/desktop/src/plugins`).
+    #[serde(rename = "plugins.disabled")]
+    pub plugins_disabled: String,
     #[serde(rename = "runtime.ctx_size")]
     pub runtime_ctx_size: u32,
     /// `"all"` or a number as a string.
@@ -140,8 +137,7 @@ impl Default for Settings {
             ui_theme: Theme::System,
             ui_accent: "violet".into(),
             ui_show_perf_stats: true,
-            ui_show_model_name: true,
-            ui_show_speed_line: true,
+            plugins_disabled: String::new(),
             runtime_ctx_size: 8192,
             runtime_gpu_layers: "all".into(),
             runtime_flash_attn: "auto".into(),

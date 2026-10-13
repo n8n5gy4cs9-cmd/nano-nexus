@@ -8,6 +8,7 @@ import { api, type SettingValue } from "@/lib/api";
 import { toIpcException } from "@/lib/ipc";
 import { IS_WEB } from "@/lib/target";
 import { ACCENTS, isAccent, isThemePreference } from "@/lib/theme";
+import { PLUGINS, parseDisabled, serializeDisabled } from "@/plugins";
 import { useUi } from "@/stores/ui";
 
 import { AboutSection } from "./AboutSection";
@@ -92,8 +93,6 @@ export function SettingsPage() {
           }}
         />
         <ToggleRow label="Show speed under answers" hint="Tokens per second and time to first token." checked={bool(s, "ui.show_perf_stats", true)} onChange={(v) => set("ui.show_perf_stats", v)} />
-        <ToggleRow label="Show the model name under the chat box" hint="A small line with the model that is running." checked={bool(s, "ui.show_model_name", true)} onChange={(v) => set("ui.show_model_name", v)} />
-        <ToggleRow label="Show speed under the chat box" hint="Tokens per second of the last answer." checked={bool(s, "ui.show_speed_line", true)} onChange={(v) => set("ui.show_speed_line", v)} />
         {IS_WEB ? null : (
           <ToggleRow label="Quit when the window closes" hint="Off keeps NanoNexus running in the background (macOS default)." checked={bool(s, "app.quit_on_window_close")} onChange={(v) => set("app.quit_on_window_close", v)} />
         )}
@@ -183,6 +182,25 @@ export function SettingsPage() {
           onChange={(v) => set("knowledge.answer_style", v)}
         />
         <TextRow label="Library passage budget (tokens)" type="number" value={String(num(s, "knowledge.max_tokens", 1200))} onCommit={(v) => setWhole("knowledge.max_tokens", v, 100)} />
+      </Section>
+
+      <Section title="Plugins" hint="Small add-ons for the app view. Turn any of them off here.">
+        {PLUGINS.map((p) => {
+          const disabled = parseDisabled(s["plugins.disabled"]);
+          return (
+            <ToggleRow
+              key={p.id}
+              label={p.name}
+              hint={p.description}
+              checked={!disabled.has(p.id)}
+              onChange={(on) => {
+                if (on) disabled.delete(p.id);
+                else disabled.add(p.id);
+                set("plugins.disabled", serializeDisabled(disabled));
+              }}
+            />
+          );
+        })}
       </Section>
 
       <Section title="Notifications">

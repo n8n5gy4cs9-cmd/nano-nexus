@@ -23,6 +23,8 @@ import { EmptyChat } from "./EmptyChat";
 import { AssistantMessage, UserMessage, type AssistantBadge, type AssistantView } from "./Message";
 import { parseToolTrace } from "./ToolChips";
 import { MessageList, type ListItem } from "./MessageList";
+import { parseDisabled } from "@/plugins";
+
 import { ChatStatusLine } from "./ChatStatusLine";
 import { conversationKey, useChatStream } from "./useChatStream";
 
@@ -149,7 +151,7 @@ export function ChatView() {
   const messages = useMemo(() => conv.data?.messages ?? [], [conv.data]);
   const lastTps = useMemo(() => [...messages].reverse().find((m) => m.role === "assistant" && m.tps !== null)?.tps ?? null, [messages]);
   // New settings keys are read loosely until bindings.ts is regenerated.
-  const flag = (key: string): boolean => (settings.data as Record<string, unknown> | undefined)?.[key] !== false;
+  const disabledPlugins = useMemo(() => parseDisabled((settings.data as Record<string, unknown> | undefined)?.["plugins.disabled"]), [settings.data]);
   const liveSlot = turn;
 
   const items: ListItem[] = useMemo(() => {
@@ -262,12 +264,7 @@ export function ChatView() {
         usedTokens={usedTokens}
         ctxSize={ctxSize}
       />
-      <ChatStatusLine
-        modelPath={runtime?.state === "ready" ? runtime.model_path : undefined}
-        tps={lastTps}
-        showModel={flag("ui.show_model_name")}
-        showSpeed={flag("ui.show_speed_line")}
-      />
+      <ChatStatusLine ctx={{ modelPath: runtime?.state === "ready" ? runtime.model_path : undefined, lastTps }} disabled={disabledPlugins} />
     </div>
   );
 }
