@@ -30,7 +30,7 @@ Old leftovers from earlier builds: run `scripts/clean-trash.sh`.
 ## 2. Which model should I pick?
 - **Discover tags:** `librarian` marks models that cope well with "search the books, then answer". Bigger
   is more accurate. `optimal` marks the pick for its size class.
-- **Rough guide:** Ternary Bonsai 2 27B (strong machines), Bonsai 8B, Qwen3.5 4B (best balance),
+- **Rough guide:** Qwen3.5 35B-A3B (32 GB machines), Qwen3.5 9B (best reader on a normal laptop), Qwen3.5 4B (best balance),
   Gemma 4 E4B (good answers, slow on older laptops), MiniCPM5 2B Q4 (older laptops, check citations).
 - **Models under 2B** often miss answers. Use them to find where to read, then read the page yourself.
 - **Unverified models** (the Ternary Bonsai family) show a "Community: unverified" badge. They may need

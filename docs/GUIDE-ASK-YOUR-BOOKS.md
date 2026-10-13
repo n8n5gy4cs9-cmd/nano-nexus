@@ -15,7 +15,7 @@ does not return, the model never sees. So **most wrong answers are search misses
 3. Use the Library page's search box to confirm the book's text is readable (code indentation can be
    mangled by PDFs).
 4. Pick a **Librarian**-tagged model in Models → Discover. Bigger is more accurate:
-   Ternary Bonsai 2 27B (strong machines), Bonsai 8B, Qwen3.5 4B (best balance), Gemma 4 E4B (good
+   Qwen3.5 35B-A3B (32 GB machines), Qwen3.5 9B (best reader on a normal laptop), Qwen3.5 4B (best balance), Gemma 4 E4B (good
    answers, but slow on older laptops). On an older laptop use MiniCPM5 2B Q4 and check every citation.
    Models under 2B often miss; use them only to find *where* to read.
 5. Start the **Librarian** assistant, not plain chat.

@@ -360,6 +360,102 @@
       "notes": "Community imatrix quants by bartowski. Sampling follows Qwen3 guidance; check the Qwen3.5 card. Requires a 2026 llama.cpp (b11552 is fine). Thinking is on by default."
     },
     {
+      "id": "qwen3.5-9b-q4",
+      "name": "Qwen3.5 9B",
+      "family": "Qwen3.5",
+      "params_b": 9.0,
+      "quant": "Q4_K_M",
+      "repo": "bartowski/Qwen_Qwen3.5-9B-GGUF",
+      "revision": "main",
+      "file_pattern": "(?i)Qwen3\\.5-9B-Q4_K_M\\.gguf$",
+      "approx_bytes": 6170000000,
+      "license": "Apache-2.0",
+      "context_max": 262144,
+      "context_default": 8192,
+      "capabilities": [
+        "chat",
+        "code",
+        "thinking",
+        "tools-native",
+        "multilingual",
+        "long-context"
+      ],
+      "supports_thinking_toggle": true,
+      "sampling": {
+        "no_think": {
+          "temperature": 0.7,
+          "top_p": 0.8,
+          "top_k": 20,
+          "min_p": 0.0
+        },
+        "think": {
+          "temperature": 0.6,
+          "top_p": 0.95,
+          "top_k": 20,
+          "min_p": 0.0
+        }
+      },
+      "min_ram_gb": 12,
+      "tier": "medium",
+      "tags": [
+        "tools",
+        "librarian",
+        "best-reader",
+        "multilingual"
+      ],
+      "verified": true,
+      "why": "A step up from the 4B in accuracy at about 6 GB: the strongest reader that still runs on a typical 16 GB laptop. Librarian pick for hard book questions and code.",
+      "notes": "Community imatrix quants by bartowski, same family as the Qwen3.5 4B entry (loads with the bundled llama.cpp b11552). Sampling follows Qwen3 guidance. Thinking is on by default. File name and size taken from the repo page via search."
+    },
+    {
+      "id": "qwen3.5-35b-a3b-q4",
+      "name": "Qwen3.5 35B-A3B",
+      "family": "Qwen3.5",
+      "params_b": 35.0,
+      "quant": "Q4_K_M",
+      "repo": "bartowski/Qwen_Qwen3.5-35B-A3B-GGUF",
+      "revision": "main",
+      "file_pattern": "(?i)Qwen3\\.5-35B-A3B-Q4_K_M\\.gguf$",
+      "approx_bytes": 22290000000,
+      "license": "Apache-2.0",
+      "context_max": 262144,
+      "context_default": 8192,
+      "capabilities": [
+        "chat",
+        "code",
+        "thinking",
+        "tools-native",
+        "multilingual",
+        "long-context"
+      ],
+      "supports_thinking_toggle": true,
+      "sampling": {
+        "no_think": {
+          "temperature": 0.7,
+          "top_p": 0.8,
+          "top_k": 20,
+          "min_p": 0.0
+        },
+        "think": {
+          "temperature": 0.6,
+          "top_p": 0.95,
+          "top_k": 20,
+          "min_p": 0.0
+        }
+      },
+      "min_ram_gb": 32,
+      "tier": "medium",
+      "tags": [
+        "tools",
+        "librarian",
+        "best-reader",
+        "big"
+      ],
+      "verified": true,
+      "why": "Big brain, fast speed: a 35B mixture-of-experts that only uses about 3B parameters per token. Needs 32 GB RAM and a 22 GB download. Librarian pick for strong machines.",
+      "notes": "Community imatrix quants by bartowski, same family as the Qwen3.5 4B entry (loads with the bundled llama.cpp b11552). Sampling follows Qwen3 guidance. Thinking is on by default. File name and size taken from the repo page via search."
+    },
+    {
       "id": "qwen3.5-2b-q4",
       "name": "Qwen3.5 2B",
       "family": "Qwen3.5",
@@ -851,93 +947,6 @@
       "verified": false,
       "why": "Under 0.4 GB. For very old computers, or just to see how small a model can be.",
       "notes": "Added without network access: the repository and file name are checked when you press Download (the exact file and its SHA-256 are read from the repo at that moment)."
-    },
-    {
-      "id": "ternary-bonsai-2-27b-ptq1",
-      "name": "Ternary Bonsai 2 27B (5.9 GB)",
-      "family": "Ternary Bonsai",
-      "params_b": 27.0,
-      "quant": "PTQ1_0",
-      "repo": "prism-ml/Ternary-Bonsai-2-27B-gguf",
-      "revision": "main",
-      "file_pattern": "(?i)PTQ1_0\\.gguf$",
-      "approx_bytes": 5950000000,
-      "license": "Apache-2.0",
-      "context_default": 8192,
-      "capabilities": [
-        "chat",
-        "code",
-        "thinking",
-        "multilingual"
-      ],
-      "supports_thinking_toggle": true,
-      "sampling": {
-        "no_think": {
-          "temperature": 0.7,
-          "top_p": 0.8,
-          "top_k": 20,
-          "min_p": 0.0
-        },
-        "think": {
-          "temperature": 0.6,
-          "top_p": 0.95,
-          "top_k": 20,
-          "min_p": 0.0
-        }
-      },
-      "min_ram_gb": 12,
-      "tier": "medium",
-      "tags": [
-        "ternary",
-        "thinking"
-      ],
-      "verified": false,
-      "why": "Does NOT load in this app yet: PTQ1_0/PQ2_0 need the PrismML llama.cpp fork (the bundled llama.cpp stops with \"invalid ggml type 143\"). Kept for when the runtime supports it.",
-      "notes": "Confirmed on a Mac build: llama-server b11552 fails with \"tensor output.weight has invalid ggml type 143. should be in [0, 43)\". See docs/QUESTIONS.md Q-8."
-    },
-    {
-      "id": "ternary-bonsai-2-27b-pq2",
-      "name": "Ternary Bonsai 2 27B (7.2 GB, higher fidelity)",
-      "family": "Ternary Bonsai",
-      "params_b": 27.0,
-      "quant": "PQ2_0",
-      "repo": "prism-ml/Ternary-Bonsai-2-27B-gguf",
-      "revision": "main",
-      "file_pattern": "(?i)PQ2_0\\.gguf$",
-      "approx_bytes": 7210000000,
-      "license": "Apache-2.0",
-      "context_default": 8192,
-      "capabilities": [
-        "chat",
-        "code",
-        "thinking",
-        "multilingual"
-      ],
-      "supports_thinking_toggle": true,
-      "sampling": {
-        "no_think": {
-          "temperature": 0.7,
-          "top_p": 0.8,
-          "top_k": 20,
-          "min_p": 0.0
-        },
-        "think": {
-          "temperature": 0.6,
-          "top_p": 0.95,
-          "top_k": 20,
-          "min_p": 0.0
-        }
-      },
-      "min_ram_gb": 16,
-      "tier": "medium",
-      "tags": [
-        "ternary",
-        "quality",
-        "thinking"
-      ],
-      "verified": false,
-      "why": "Does NOT load in this app yet: PTQ1_0/PQ2_0 need the PrismML llama.cpp fork (the bundled llama.cpp stops with \"invalid ggml type 143\"). Kept for when the runtime supports it.",
-      "notes": "Confirmed on a Mac build: llama-server b11552 fails with \"tensor output.weight has invalid ggml type 143. should be in [0, 43)\". See docs/QUESTIONS.md Q-8."
     },
     {
       "id": "ternary-bonsai-8b-q2",
