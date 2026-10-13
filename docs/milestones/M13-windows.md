@@ -36,7 +36,7 @@ In a Windows 11 ARM VM (UTM/Parallels on the Mac): the arm64 portable ZIP runs �
 6. **`scripts/build-windows.sh`** `--profile <p> --arch x64|arm64 --format installer|portable|kit`:
    stage (shared with M12) → `pnpm tauri build --runner cargo-xwin --target <triple> --bundles nsis --config <overlay>`
    → post-process:
-   - *installer*: `dist/<profile>/NanoNexus-<v>-<profile>-windows-<arch>-setup.exe`
+   - *installer*: `dist-bundles/<profile>/NanoNexus-<v>-<profile>-windows-<arch>-setup.exe`
    - *portable*: zip of `nano-nexus.exe` + `runtime/` + `models/` + `portable.flag` (the app stores data in
      `.\data\` when this flag exists next to the exe) + `README-WINDOWS.txt`
    - *kit*: basic installer (default model only) + `models-extra/` (all other profile models + `pack.json`) +

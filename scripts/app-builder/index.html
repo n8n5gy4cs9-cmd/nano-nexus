@@ -139,7 +139,7 @@ let es;
 function watch() {
   $('log').textContent = ''; es?.close(); es = new EventSource('/api/log?t=' + T);
   es.onmessage = e => { const l = $('log'); l.textContent += JSON.parse(e.data) + '\n'; l.scrollTop = l.scrollHeight; };
-  es.addEventListener('done', e => { es.close(); $('go').disabled = false; $('stop').disabled = true; if (e.data === '0') setMsg('✔ Finished. macOS apps are in dist-bundles/, Windows builds in dist/<name>/ (with SHA256SUMS).', 'ok'); else setMsg('✖ Not everything was built. The log lists what is done and what is missing.', 'err'); });
+  es.addEventListener('done', e => { es.close(); $('go').disabled = false; $('stop').disabled = true; if (e.data === '0') setMsg('✔ Finished. macOS and Windows builds are both in dist-bundles/<name>/ (Windows with SHA256SUMS).', 'ok'); else setMsg('✖ Not everything was built. The log lists what is done and what is missing.', 'err'); });
 }
 $('go').onclick = async () => {
   if (!state.ggufs.length && !state.catalog.size) return setMsg('Choose at least one model.', 'err');

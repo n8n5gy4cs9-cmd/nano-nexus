@@ -10,9 +10,9 @@
 //   (--skip-models: library option, the caller already fetched the models)
 //   --dry-run                          print the steps, run nothing
 //
-// installer  dist/<p>/NanoNexus-<v>-<p>-windows-<arch>-setup.exe
-// portable   dist/<p>/NanoNexus-<v>-<p>-windows-<arch>-portable.zip   (unzip, run; data stays in .\data\)
-// kit        dist/<p>/NanoNexus-<v>-<p>-windows-<arch>-kit/  setup.exe (default model) + models-extra\ + INSTALL.txt
+// installer  dist-bundles/<p>/NanoNexus-<v>-<p>-windows-<arch>-setup.exe
+// portable   dist-bundles/<p>/NanoNexus-<v>-<p>-windows-<arch>-portable.zip   (unzip, run; data stays in .\data\)
+// kit        dist-bundles/<p>/NanoNexus-<v>-<p>-windows-<arch>-kit/  setup.exe (default model) + models-extra\ + INSTALL.txt
 // Every format ends with verify-payload.mjs --windows and a SHA256SUMS.txt. Node 22+, no dependencies.
 import { spawnSync } from 'node:child_process';
 import crypto from 'node:crypto';
@@ -109,7 +109,7 @@ export async function buildWindows(opts, deps = {}) {
   if (problems.length) throw new Error(`profile "${profile.name}" is invalid:\n  ${problems.join('\n  ')}`);
   const version = deps.version ?? JSON.parse(fs.readFileSync(path.join(root, 'apps', 'desktop', 'src-tauri', 'tauri.conf.json'), 'utf8')).version;
   const stem = `NanoNexus-${version}-${profile.name}-windows-${arch.dir.replace('windows-', '')}`;
-  const outDir = path.join(root, 'dist', profile.name);
+  const outDir = path.join(root, 'dist-bundles', profile.name);
   const runtimeDir = path.join(root, 'vendor', 'runtime', arch.dir);
   const cpuOnly = arch.dir === 'windows-arm64' || profile.windows?.runtime === 'cpu';
 

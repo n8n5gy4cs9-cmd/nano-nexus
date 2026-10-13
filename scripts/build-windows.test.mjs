@@ -42,7 +42,7 @@ function world(ids, arch = 'x64') {
   };
   const deps = { root: w.root, modelsDir: w.modelsDir, exec, log: () => {}, version: '0.1.0' };
   const profile = { ...w.profile, targets: ['windows-x64'] };
-  return { ...w, calls, deps, profile, out: path.join(w.root, 'dist', 'fake') };
+  return { ...w, calls, deps, profile, out: path.join(w.root, 'dist-bundles', 'fake') };
 }
 
 const run = (w, opts) => buildWindows({ profile: w.profile, skipDoctor: true, skipFetch: true, ...opts }, w.deps);
