@@ -344,8 +344,8 @@ pub fn document_source(ctx: &AppCtx, chunk_id: i64) -> Result<KbDocumentSource, 
     if !file.starts_with(&root) {
         return Err(NexusError::PathDenied(p.doc_path));
     }
-    let f = std::fs::File::open(&file)
-        .map_err(|e| NexusError::InvalidInput(format!("{}: {e}", p.doc_path)))?;
+    let f =
+        std::fs::File::open(&file).map_err(|e| NexusError::InvalidInput(format!("{}: {e}", p.doc_path)))?;
     let mut buf = Vec::new();
     f.take(MAX_SOURCE_BYTES + 1)
         .read_to_end(&mut buf)

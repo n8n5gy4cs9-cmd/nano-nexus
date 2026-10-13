@@ -108,4 +108,3 @@ pub async fn kb_passage(ctx: Ctx<'_>, chunk_id: i64) -> CmdResult<Passage> {
 pub async fn kb_document_source(ctx: Ctx<'_>, chunk_id: i64) -> CmdResult<KbDocumentSource> {
     service::knowledge::document_source(&ctx, chunk_id).map_err(ipc)
 }
-
