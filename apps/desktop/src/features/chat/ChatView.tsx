@@ -23,6 +23,7 @@ import { EmptyChat } from "./EmptyChat";
 import { AssistantMessage, UserMessage, type AssistantBadge, type AssistantView } from "./Message";
 import { parseToolTrace } from "./ToolChips";
 import { MessageList, type ListItem } from "./MessageList";
+import { ChatStatusLine } from "./ChatStatusLine";
 import { conversationKey, useChatStream } from "./useChatStream";
 
 
@@ -146,6 +147,9 @@ export function ChatView() {
   const ctxSize = settings.data?.["runtime.ctx_size"] ?? 8192;
 
   const messages = useMemo(() => conv.data?.messages ?? [], [conv.data]);
+  const lastTps = useMemo(() => [...messages].reverse().find((m) => m.role === "assistant" && m.tps !== null)?.tps ?? null, [messages]);
+  // New settings keys are read loosely until bindings.ts is regenerated.
+  const flag = (key: string): boolean => (settings.data as Record<string, unknown> | undefined)?.[key] !== false;
   const liveSlot = turn;
 
   const items: ListItem[] = useMemo(() => {
@@ -257,6 +261,12 @@ export function ChatView() {
         onEmptyChange={onEmptyChange}
         usedTokens={usedTokens}
         ctxSize={ctxSize}
+      />
+      <ChatStatusLine
+        modelPath={runtime?.state === "ready" ? runtime.model_path : undefined}
+        tps={lastTps}
+        showModel={flag("ui.show_model_name")}
+        showSpeed={flag("ui.show_speed_line")}
       />
     </div>
   );

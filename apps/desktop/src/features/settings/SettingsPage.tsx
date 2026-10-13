@@ -92,6 +92,8 @@ export function SettingsPage() {
           }}
         />
         <ToggleRow label="Show speed under answers" hint="Tokens per second and time to first token." checked={bool(s, "ui.show_perf_stats", true)} onChange={(v) => set("ui.show_perf_stats", v)} />
+        <ToggleRow label="Show the model name under the chat box" hint="A small line with the model that is running." checked={bool(s, "ui.show_model_name", true)} onChange={(v) => set("ui.show_model_name", v)} />
+        <ToggleRow label="Show speed under the chat box" hint="Tokens per second of the last answer." checked={bool(s, "ui.show_speed_line", true)} onChange={(v) => set("ui.show_speed_line", v)} />
         {IS_WEB ? null : (
           <ToggleRow label="Quit when the window closes" hint="Off keeps NanoNexus running in the background (macOS default)." checked={bool(s, "app.quit_on_window_close")} onChange={(v) => set("app.quit_on_window_close", v)} />
         )}
