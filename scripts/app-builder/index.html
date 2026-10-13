@@ -2,12 +2,13 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>NanoNexus App Builder</title>
 <style>
-:root{--bg:#fff;--fg:#1c1b22;--mut:#6b6a76;--bd:#dedde6;--card:#f6f6fa;--ac:#6d4aff}
-@media(prefers-color-scheme:dark){:root{--bg:#15141b;--fg:#ececf3;--mut:#9a99a8;--bd:#2c2b38;--card:#1d1c26}}
+:root{--bg:#fff;--fg:#1c1b22;--mut:#6b6a76;--bd:#dedde6;--card:#f6f6fa;--ac:#6d4aff;--ok:#15803d;--run:#c2410c;--err:#b91c1c}
+@media(prefers-color-scheme:dark){:root{--bg:#15141b;--fg:#ececf3;--mut:#9a99a8;--bd:#2c2b38;--card:#1d1c26;--ok:#4ade80;--run:#fb923c;--err:#f87171}}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,sans-serif}
 main{max-width:860px;margin:0 auto;padding:20px 16px 60px}h1{margin:0 0 4px}h2{font-size:16px;margin:26px 0 8px}
 .mut{color:var(--mut);font-size:13px}.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px}
 button{font:inherit;border:1px solid var(--bd);background:var(--card);color:var(--fg);border-radius:8px;padding:6px 12px;cursor:pointer}
+#msg.ok{color:var(--ok)}#msg.run{color:var(--run)}#msg.err{color:var(--err)}#msg.ok,#msg.run,#msg.err{font-weight:600}
 button.p{background:var(--ac);border-color:var(--ac);color:#fff}button:disabled{opacity:.5}
 input[type=text]{font:inherit;width:100%;padding:6px 8px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--fg)}
 label{display:flex;gap:8px;align-items:center;padding:3px 0}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
@@ -115,7 +116,7 @@ api('/api/state').catch(() => null).then(s => { if (s) saved = s; return api('/a
     document.querySelectorAll('#cat input').forEach((i, n) => { i.checked = state.catalog.has(info.catalog[n].id); });
     document.querySelectorAll('#dl input').forEach((i, n) => { i.checked = state.ggufs.some(g => g.path === info.downloadsGguf[n].path); });
     renderChosen(); renderBooks(); if (saved.def) $('def').value = saved.def;
-  } } catch (e) { $('msg').textContent = 'Could not restore the previous choices: ' + e.message; }
+  } } catch (e) { setMsg('Could not restore the previous choices: ' + e.message, 'err'); }
   const mac = info.platform === 'darwin';
   document.querySelector(`input[name=t][value=${saved?.target && (mac || saved.target !== 'mac') ? saved.target : (mac ? 'mac' : 'windows')}]`).checked = true;
   if (!mac) document.querySelector('input[name=t][value=mac]').disabled = true;
@@ -123,7 +124,7 @@ api('/api/state').catch(() => null).then(s => { if (s) saved = s; return api('/a
   $('browseG').onclick = () => browser($('browserG'), info.downloads, true, addGguf);
   $('browseK').onclick = () => browser($('browserK'), info.home, false, p => { if ((p === info.downloads || p === info.home) && !confirm(p + ' is a very large folder and all of it would be copied into the app. Use it anyway?')) return; if (!state.books.includes(p)) state.books.push(p); renderBooks(); });
   save();
-}).catch(e => { ready = true; $('msg').textContent = e.message; });
+}).catch(e => { ready = true; setMsg(e.message, 'err'); });
 
 function renderBooks() {
   save();
@@ -131,17 +132,20 @@ function renderBooks() {
   state.books.forEach((p, i) => { const d = document.createElement('div'); d.className = 'sel'; d.innerHTML = `<span>📚 ${p}</span><button>Remove</button>`; d.querySelector('button').onclick = () => { state.books.splice(i, 1); renderBooks(); }; $('books').append(d); });
 }
 
+/** Show a status message; `kind` is 'ok' (green), 'run' (orange), 'err' (red) or '' (neutral). */
+function setMsg(text, kind = '') { const m = $('msg'); m.textContent = text; m.className = 'mut' + (kind ? ' ' + kind : ''); }
+
 let es;
 function watch() {
   $('log').textContent = ''; es?.close(); es = new EventSource('/api/log?t=' + T);
   es.onmessage = e => { const l = $('log'); l.textContent += JSON.parse(e.data) + '\n'; l.scrollTop = l.scrollHeight; };
-  es.addEventListener('done', e => { es.close(); $('go').disabled = false; $('stop').disabled = true; $('msg').textContent = e.data === '0' ? '✔ Finished. macOS apps are in dist-bundles/, Windows builds in dist/<name>/ (with SHA256SUMS).' : '✖ Not everything was built. The log lists what is done and what is missing.'; });
+  es.addEventListener('done', e => { es.close(); $('go').disabled = false; $('stop').disabled = true; if (e.data === '0') setMsg('✔ Finished. macOS apps are in dist-bundles/, Windows builds in dist/<name>/ (with SHA256SUMS).', 'ok'); else setMsg('✖ Not everything was built. The log lists what is done and what is missing.', 'err'); });
 }
 $('go').onclick = async () => {
-  if (!state.ggufs.length && !state.catalog.size) return ($('msg').textContent = 'Choose at least one model.');
+  if (!state.ggufs.length && !state.catalog.size) return setMsg('Choose at least one model.', 'err');
   const body = { name: $('name').value, ggufs: state.ggufs.map(g => ({ path: g.path, id: gid(g), name: g.name })), catalog: [...state.catalog], knowledge: state.books, default: $('def').value, target: document.querySelector('input[name=t]:checked')?.value, format: $('fmt').value };
-  try { await api('/api/build', { method: 'POST', body: JSON.stringify(body) }); } catch (e) { return ($('msg').textContent = e.message); }
-  $('go').disabled = true; $('stop').disabled = false; $('msg').textContent = 'Building… this can take several minutes.'; watch();
+  try { await api('/api/build', { method: 'POST', body: JSON.stringify(body) }); } catch (e) { return setMsg(e.message, 'err'); }
+  $('go').disabled = true; $('stop').disabled = false; setMsg('Building… this can take several minutes.', 'run'); watch();
 };
 document.addEventListener('change', save); $('name').addEventListener('input', save);
 $('stop').onclick = () => api('/api/cancel', { method: 'POST' });
