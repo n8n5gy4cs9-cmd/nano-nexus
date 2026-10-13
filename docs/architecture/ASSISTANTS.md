@@ -181,7 +181,7 @@ Built-in tools: `read_file`, `list_dir`, `search_files`, `grep_text`, `file_info
 `doc_search`, `kb_search`, `find_symbol`, `calculate`, `now`; **proposing** tools `write_file(path, content)`,
 `edit_file(path, old_text, new_text)`, `move_file(path, to)`, `trash_file(path)` (stage a change set, never
 write: ADR-016); and web tools `search_web(query)`, `fetch_url(url)` (only when Settings → Tools → Allow web
-access is on). Settings → Tools can turn off any tool an assistant declares (`tools.disabled`).
+access is on). The router also routes on *intent* when the assistant has the matching tools ("save that as notes.txt", "what's the latest …"), is given the assistant's previous answer so "save that" has content, and gets 3 500 tokens (not 160) when `write_file`/`edit_file` is allowed. A proposal adds a **Review** chip that opens Changes, where Apply is. Settings → Tools can turn off any tool an assistant declares (`tools.disabled`).
 
 Tool descriptions follow Anthropic's tool-design advice ("make tools hard to misuse"): one verb,
 absolute paths, small outputs with truncation notes ("…and 120 more files"). Error messages are

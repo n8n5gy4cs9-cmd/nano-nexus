@@ -11,9 +11,9 @@ their sources: [`docs/architecture/ASSISTANTS.md` §2](../docs/architecture/ASSI
 | `doc-lens.toml` | DocLens | pipeline `doc_qa` | PDF and doc Q&A with `[p. N]` citations, plus summaries |
 | `folder-scout.toml` | Folder Scout | pipeline `folder_report` | Folder reports, cleanup plans |
 | `rename-forge.toml` | Rename Forge | pipeline `rename_propose` | Renames identifiers, files, and folders in any code project, updating every reference |
-| `code-mentor.toml` | Code Mentor | chat | Explain and review code |
-| `bug-hunter.toml` | Bug Hunter | chat | Scientific debugging (thinking on by default) |
-| `doc-writer.toml` | Doc Writer | chat | Doc comments and READMEs (Diátaxis) |
+| `code-mentor.toml` | Code Mentor | router (tools) | Explain and review code |
+| `bug-hunter.toml` | Bug Hunter | router (tools) | Scientific debugging (thinking on by default) |
+| `doc-writer.toml` | Doc Writer | router (tools) | Doc comments and READMEs (Diátaxis) |
 | `commit-crafter.toml` | Commit Crafter | pipeline `commit_message` | Conventional Commits 1.0.0 |
 | `tidy.toml` | Tidy | pipeline `tidy_plan` | Move plans, never deletes |
 | `secret-sentinel.toml` | Secret Sentinel | pipeline `secrets_report` | Masked secret and PII findings |
@@ -25,7 +25,7 @@ their sources: [`docs/architecture/ASSISTANTS.md` §2](../docs/architecture/ASSI
 | `shell-sage.toml` | Shell Sage | chat | Command explainer with safety ratings, never runs anything |
 | `prompt-architect.toml` | Prompt Architect | chat | Writes new assistants as TOML |
 | `agent.toml` | Agent | router (always routes, 5 hops) | Multi-step jobs: reads, searches, proposes file changes (you apply them), optional web search. Tools can be switched off in Settings → Tools |
-| `duo.toml` | Duo | chat (two models) | Light model for easy questions, strong model for hard ones; pick both in Settings |
+| `duo.toml` | Duo | router (tools, two models) | Light model for easy questions, strong model for hard ones; pick both in Settings |
 | `librarian.toml` | Librarian | router (`kb_search`, always routes) | Answers from offline libraries with verified `[n]` citations; quotes code exactly, names book + page, flags disagreement. See `docs/GUIDE-ASK-YOUR-BOOKS.md` |
 | `_TEMPLATE.toml` | — | — | Starting point for your own assistants (not loaded) |
 | `regex-smith.example.toml` | Regex Smith | chat | Tutorial example (not loaded; import it to try) |

@@ -24,13 +24,14 @@ max_attach_tokens = 3000
 history_turns = 6
 
 [permissions]
-needs = []
+needs = ["read", "write", "create"]
 
 [workflow]
-kind = "chat"
+kind = "router"
+max_hops = 3
 
 [tools]
-allowed = []
+allowed = ["read_file", "list_dir", "search_files", "grep_text", "write_file", "edit_file", "search_web", "fetch_url"]
 
 [ui]
 starters = [

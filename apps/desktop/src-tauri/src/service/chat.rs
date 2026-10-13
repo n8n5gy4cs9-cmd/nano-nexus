@@ -76,6 +76,31 @@ fn router_tools(spec: &nexus_agent::AssistantSpec, settings: &nexus_core::settin
         .collect()
 }
 
+/// What the model should know about its tools this turn, so it neither invents tools it lacks nor
+/// tells the user to "use the search_web tool" itself.
+fn tools_note(
+    spec: &nexus_agent::AssistantSpec,
+    active: &[String],
+    settings: &nexus_core::settings::Settings,
+) -> String {
+    let has = |n: &str| active.iter().any(|t| t == n);
+    let declares = |n: &str| spec.tools.allowed.iter().any(|t| t == n);
+    let mut note = String::new();
+    if has("write_file") || has("edit_file") || has("move_file") || has("trash_file") {
+        note.push_str("\nTo save or change files the app proposes the change for you; the user applies it from the Review chip or the Changes page. If a <tool_result> says a change was proposed, say so and do not claim it is already done. If no change was proposed, say what is missing (a folder grant, the file name) in one sentence.");
+    } else if spec.workflow.kind != "pipeline" {
+        note.push_str("\nYou cannot save files in this assistant. Put the content in a code block and tell the user the Agent assistant can save it.");
+    }
+    if (declares("search_web") || declares("fetch_url")) && !settings.tools_web_enabled {
+        note.push_str("\nWeb access is turned off. If the user needs current information from the web, tell them to turn on Settings → Tools → Allow web access.");
+    } else if has("search_web") {
+        note.push_str(
+            "\nWeb search is on: results appear as <web_results> in a <tool_result>. Name the page you used.",
+        );
+    }
+    note
+}
+
 /// Stages the change sets that `write_file` and friends propose, tagged with the assistant.
 struct ChatProposals {
     ctx: Arc<crate::state::AppCtx>,
@@ -410,6 +435,14 @@ fn start_turn(
         })
         .collect();
 
+    // "Save that" needs the last answer; the router reads it before the history moves into the turn.
+    let previous_answer = history
+        .iter()
+        .rev()
+        .find(|m| m.role == MessageRole::Assistant)
+        .map(|m| m.content.clone())
+        .unwrap_or_default();
+
     let settings = ctx.settings_snapshot();
     let mut pctx = PromptContext::new(prompt::os_display_name(std::env::consts::OS), prompt::today_iso());
     pctx.granted_roots = ctx.perms.grants().into_iter().map(|g| g.root).collect();
@@ -427,6 +460,7 @@ fn start_turn(
         tracing::warn!("prompt rendering failed, using the raw prompt: {e}");
         spec.prompt.system.clone()
     });
+    let system_prompt = format!("{system_prompt}{}", tools_note(&spec, &tool_names, &settings));
     let system_prompt = with_model_hint(&ctx.store, &settings, model_id.as_deref(), system_prompt);
     let docs = attached_docs(&user.attachments);
     let is_pipeline = spec.workflow.kind == "pipeline";
@@ -574,6 +608,7 @@ fn start_turn(
                 max_hops,
                 always_route,
                 home: home_dir(),
+                previous_answer,
             };
             let llm = SchedulerRouter(Arc::new(ctx.scheduler.clone()));
             let routed = run_router(request, &llm, &builtin_tools(), &cx, &persisting, cancel.clone()).await;

@@ -88,6 +88,7 @@ pub trait RouterLlm: Send + Sync {
         messages: Vec<ChatMessage>,
         schema: &Value,
         allowed: &[String],
+        max_tokens: u32,
         cancel: CancellationToken,
     ) -> Option<RouterAction>;
 }
@@ -102,13 +103,14 @@ impl RouterLlm for SchedulerRouter {
         messages: Vec<ChatMessage>,
         schema: &Value,
         allowed: &[String],
+        max_tokens: u32,
         cancel: CancellationToken,
     ) -> Option<RouterAction> {
         let spec = StructuredSpec {
             name: "router_action",
             schema,
             temperature: 0.2,
-            max_tokens: 120,
+            max_tokens,
         };
         let vctx = ValidationCtx {
             allowed_ids: allowed.to_vec(),
@@ -142,6 +144,9 @@ pub fn router_schema(allowed_tools: &[String]) -> Value {
         }
     })
 }
+
+/// Most characters of the previous answer shown to the router.
+const MAX_PREVIOUS_CHARS: usize = 6000;
 
 const KEYWORDS: [&str; 17] = [
     "file",
@@ -210,6 +215,54 @@ pub fn needs_tools_heuristic(input: &str, granted_roots: &[PathBuf], always_rout
         let n = n.to_string_lossy().to_lowercase();
         n.len() >= 3 && lower.contains(&n)
     })
+}
+
+/// Words that mean the user wants something saved, created, changed, moved or removed.
+const WRITE_WORDS: [&str; 14] = [
+    "save", "write", "create", "make", "edit", "change", "update", "append", "rename", "move", "delete",
+    "trash", "remove", "replace",
+];
+
+/// Phrases that mean the answer lives on the web.
+const WEB_PHRASES: [&str; 16] = [
+    "search the web",
+    "search online",
+    "web search",
+    "google",
+    "look up",
+    "lookup",
+    "latest",
+    "news",
+    "current version",
+    "right now",
+    "today's",
+    "http://",
+    "https://",
+    "www.",
+    "on the internet",
+    "online",
+];
+
+/// [`needs_tools_heuristic`] plus intent: a request to save a file or to look something up routes when
+/// the assistant has the matching tools, even without a path in the text ("save that as notes.txt").
+pub fn needs_tools_for(
+    input: &str,
+    granted_roots: &[PathBuf],
+    always_route: bool,
+    allowed: &[String],
+) -> bool {
+    if needs_tools_heuristic(input, granted_roots, always_route) {
+        return true;
+    }
+    let has = |names: &[&str]| allowed.iter().any(|a| names.contains(&a.as_str()));
+    let lower = input.to_lowercase();
+    let words: Vec<&str> = lower
+        .split(|c: char| !c.is_alphanumeric())
+        .filter(|w| !w.is_empty())
+        .collect();
+    (has(&["write_file", "edit_file", "move_file", "trash_file"])
+        && WRITE_WORDS.iter().any(|w| words.contains(w)))
+        || (has(&["search_web", "fetch_url"]) && WEB_PHRASES.iter().any(|p| lower.contains(p)))
 }
 
 /// A validated call ready to run.
@@ -416,6 +469,8 @@ pub struct RouterRequest<'a> {
     pub max_hops: u32,
     pub always_route: bool,
     pub home: PathBuf,
+    /// The assistant's last answer, so "save that" has something to save. May be empty.
+    pub previous_answer: String,
 }
 
 /// Run the router loop. Never fails: any problem ends the loop and the assistant answers anyway.
@@ -429,7 +484,9 @@ pub async fn run_router(
 ) -> RouterOutcome {
     let roots = cx.gate.granted_roots();
     let mut outcome = RouterOutcome::default();
-    if req.allowed_tools.is_empty() || !needs_tools_heuristic(req.user_text, &roots, req.always_route) {
+    if req.allowed_tools.is_empty()
+        || !needs_tools_for(req.user_text, &roots, req.always_route, &req.allowed_tools)
+    {
         outcome.stopped = "skipped".into();
         return outcome;
     }
@@ -443,6 +500,14 @@ pub async fn run_router(
         .filter_map(|n| tools.iter().find(|t| t.name() == n))
         .map(|t| json!({"signature": t.signature(), "description": t.description()}))
         .collect();
+    let has_tool = |n: &str| req.allowed_tools.iter().any(|t| t == n);
+    // The router writes a whole file inside its JSON decision, so it needs room for it.
+    let max_tokens = if has_tool("write_file") || has_tool("edit_file") {
+        3500
+    } else {
+        160
+    };
+    let previous: String = req.previous_answer.chars().take(MAX_PREVIOUS_CHARS).collect();
     let mut allowed_actions = vec!["answer".to_owned()];
     allowed_actions.extend(req.allowed_tools.iter().cloned());
     let schema = router_schema(&req.allowed_tools);
@@ -462,6 +527,11 @@ pub async fn run_router(
             "home_dir": req.home.display().to_string().replace('\\', "/"),
             "request": req.user_text,
             "tool_results_so_far": outcome.runs.len(),
+            "has_write": has_tool("write_file"),
+            "has_edit": has_tool("edit_file"),
+            "has_move": has_tool("move_file") || has_tool("trash_file"),
+            "has_web": has_tool("search_web"),
+            "previous_answer": if has_tool("write_file") || has_tool("edit_file") { previous.as_str() } else { "" },
         });
         let Ok(p) = render_full(src, &vars) else {
             outcome.stopped = "invalid".into();
@@ -499,7 +569,7 @@ pub async fn run_router(
                 ..RouterAction::default()
             }
         } else {
-            llm.decide(msgs, &schema, &allowed_actions, cancel.clone())
+            llm.decide(msgs, &schema, &allowed_actions, max_tokens, cancel.clone())
                 .await
                 .unwrap_or_else(RouterAction::answer)
         };
@@ -540,13 +610,27 @@ pub async fn run_router(
         };
         cx_run.reason = format!("to run {}", call.tool);
         let run = match tool.run(call.args, &cx_run).await {
-            Ok(o) => ToolRun {
-                tool: call.tool.clone(),
-                args_json,
-                ok: true,
-                summary: o.summary,
-                llm_text: o.llm_text,
-            },
+            Ok(o) => {
+                // A proposed change gets its own clickable chip that opens Changes, where Apply is.
+                if let Some(id) = o.ui.as_ref().and_then(|u| u["change_set"].as_str()) {
+                    sink.send(ChatEvent::ToolCall {
+                        tool: "report".into(),
+                        args_json: json!({"changeset_id": id}).to_string(),
+                    });
+                    sink.send(ChatEvent::ToolResult {
+                        tool: "report".into(),
+                        summary: "Review and apply the proposed change".into(),
+                        ok: true,
+                    });
+                }
+                ToolRun {
+                    tool: call.tool.clone(),
+                    args_json,
+                    ok: true,
+                    summary: o.summary,
+                    llm_text: o.llm_text,
+                }
+            }
             Err(e) => ToolRun {
                 tool: call.tool.clone(),
                 args_json,
@@ -630,6 +714,7 @@ mod tests {
             _m: Vec<ChatMessage>,
             _s: &Value,
             _a: &[String],
+            _t: u32,
             _c: CancellationToken,
         ) -> Option<RouterAction> {
             *self.1.lock().unwrap() += 1;
@@ -684,6 +769,7 @@ mod tests {
             max_hops: 3,
             always_route: false,
             home: home.to_owned(),
+            previous_answer: String::new(),
         }
     }
 
@@ -736,6 +822,55 @@ mod tests {
         );
         assert_eq!(resolve_path("", home, &roots), None);
         assert_eq!(resolve_path("nowhere-at-all", home, &roots), None);
+    }
+
+    #[test]
+    fn the_router_prompt_teaches_only_the_tools_it_has() {
+        let src = internal_source("router").unwrap();
+        let render = |write: bool, web: bool| {
+            let vars = json!({
+                "tools": [], "granted_roots": [], "home_dir": "/h", "request": "save that",
+                "tool_results_so_far": 0, "has_write": write, "has_edit": write, "has_move": false,
+                "has_web": web, "previous_answer": if write { "print(1)" } else { "" },
+            });
+            let p = render_full(src, &vars).unwrap();
+            format!("{}\n{}", p.system, p.user)
+        };
+        let both = render(true, true);
+        assert!(both.contains("write_file with an absolute path") && both.contains("search_web"));
+        assert!(both.contains("Previous answer:\nprint(1)"));
+        let none = render(false, false);
+        assert!(
+            !none.contains("write_file") && !none.contains("search_web") && !none.contains("Previous answer")
+        );
+    }
+
+    #[test]
+    fn saving_and_web_requests_route_only_when_the_tools_exist() {
+        let tools = |names: &[&str]| names.iter().map(|s| (*s).to_owned()).collect::<Vec<_>>();
+        let write = tools(&["write_file", "read_file"]);
+        let web = tools(&["search_web", "read_file"]);
+        let read = tools(&["read_file"]);
+        assert!(needs_tools_for("save that as notes", &[], false, &write));
+        assert!(!needs_tools_for("save that as notes", &[], false, &read));
+        assert!(needs_tools_for(
+            "what is the latest Rust version?",
+            &[],
+            false,
+            &web
+        ));
+        assert!(!needs_tools_for(
+            "what is the latest Rust version?",
+            &[],
+            false,
+            &write
+        ));
+        assert!(!needs_tools_for(
+            "explain what a mutex is",
+            &[],
+            false,
+            &tools(&["write_file", "search_web"])
+        ));
     }
 
     #[test]
