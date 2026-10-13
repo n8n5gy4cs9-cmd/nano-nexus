@@ -177,6 +177,22 @@ pub struct ToolCx {
 pub trait ProposalSink: Send + Sync {
     /// Stage `ops` under `title`; returns the change set id.
     fn propose(&self, title: &str, ops: Vec<FileOp>) -> Result<String, String>;
+    /// Apply the just-staged change set when the user chose to apply proposals automatically.
+    /// The write still goes through the journaled, undoable apply; the default never applies.
+    fn auto_apply(&self, _id: &str) -> AutoApply {
+        AutoApply::Off
+    }
+}
+
+/// What happened when a proposal was offered for automatic apply.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum AutoApply {
+    /// Automatic apply is off: the user applies the change from the chat card or Changes.
+    Off,
+    /// The change was written to disk.
+    Applied,
+    /// The apply was refused or failed; nothing was written and the change stays staged.
+    Failed(String),
 }
 
 /// One web search result.
@@ -1187,23 +1203,57 @@ fn sink(cx: &ToolCx) -> Result<&Arc<dyn ProposalSink>, ToolError> {
         .ok_or(ToolError::Unavailable("Proposing file changes"))
 }
 
+/// Stages one op and, when automatic apply is on, writes it. `what` reads "create /a/b.txt (5 characters)".
 fn staged(
     cx: &ToolCx,
     title: String,
     op: FileOp,
     ui: Value,
-    llm: String,
+    what: String,
     summary: String,
 ) -> Result<ToolOutput, ToolError> {
-    let id = sink(cx)?
+    let sink = sink(cx)?;
+    let id = sink
         .propose(&title, vec![op])
         .map_err(|e| ToolError::Invalid(format!("Could not stage the change: {e}")))?;
+    let outcome = sink.auto_apply(&id);
     let mut ui = ui;
     if let Some(o) = ui.as_object_mut() {
         o.insert("change_set".into(), Value::String(id));
+        o.insert(
+            "state".into(),
+            Value::String(
+                match &outcome {
+                    AutoApply::Off => "planned",
+                    AutoApply::Applied => "applied",
+                    AutoApply::Failed(_) => "failed",
+                }
+                .into(),
+            ),
+        );
     }
+    let (llm_text, summary) = match outcome {
+        AutoApply::Off => (
+            format!(
+                "Proposed to {what}. NOT written yet: tell the user to press Apply on the change card in this chat (or in Changes)."
+            ),
+            format!("{summary} (press Apply)"),
+        ),
+        AutoApply::Applied => (
+            format!(
+                "DONE: {what}. It is written to disk and the user can undo it in Changes. Tell the user it is done."
+            ),
+            format!("Applied: {summary}"),
+        ),
+        AutoApply::Failed(why) => (
+            format!(
+                "Proposed to {what}, but it was NOT written: {why}. Tell the user why; the change card in this chat still lets them Apply or Discard it."
+            ),
+            format!("{summary} (not applied: {why})"),
+        ),
+    };
     Ok(ToolOutput {
-        llm_text: llm,
+        llm_text,
         ui: Some(ui),
         summary,
     })
@@ -1278,11 +1328,12 @@ impl Tool for WriteFile {
             ),
             op,
             serde_json::json!({"path": shown, "kind": verb}),
+            format!("{verb} {shown} ({} characters)", content.chars().count()),
             format!(
-                "Proposed to {verb} {shown} ({} characters). NOT written yet: tell the user to review it in Changes and click Apply.",
-                content.chars().count()
+                "{} {}",
+                if verb == "create" { "Create" } else { "Replace" },
+                base(&path)
             ),
-            format!("Proposed to {verb} {} (review in Changes)", base(&path)),
         )
     }
 }
@@ -1367,10 +1418,8 @@ impl Tool for EditFile {
                 }],
             },
             serde_json::json!({"path": shown, "kind": "edit"}),
-            format!(
-                "Proposed an edit to {shown}. NOT written yet: tell the user to review it in Changes and click Apply."
-            ),
-            format!("Proposed an edit to {} (review in Changes)", base(&path)),
+            format!("edit {shown}"),
+            format!("Edit {}", base(&path)),
         )
     }
 }
@@ -1430,10 +1479,8 @@ impl Tool for MoveFile {
                 to: t.clone(),
             },
             serde_json::json!({"path": f, "to": t, "kind": "move"}),
-            format!(
-                "Proposed to move {f} to {t}. NOT moved yet: tell the user to review it in Changes and click Apply."
-            ),
-            format!("Proposed to move {} (review in Changes)", base(&from)),
+            format!("move {f} to {t}"),
+            format!("Move {}", base(&from)),
         )
     }
 }
@@ -1477,10 +1524,8 @@ impl Tool for TrashFile {
             format!("Trash {}", base(&path)),
             FileOp::Trash { path: shown.clone() },
             serde_json::json!({"path": shown, "kind": "trash"}),
-            format!(
-                "Proposed to move {shown} to the Trash. NOT done yet: tell the user to review it in Changes and click Apply."
-            ),
-            format!("Proposed to trash {} (review in Changes)", base(&path)),
+            format!("move {shown} to the Trash"),
+            format!("Trash {}", base(&path)),
         )
     }
 }
@@ -2122,6 +2167,34 @@ mod tests {
         assert!(!target.exists());
         let ops = staged.0.lock().unwrap();
         assert!(matches!(&ops[0].1[0], FileOp::Create { contents, .. } if contents == "hello"));
+    }
+
+    struct AutoSink;
+
+    impl ProposalSink for AutoSink {
+        fn propose(&self, _title: &str, _ops: Vec<FileOp>) -> Result<String, String> {
+            Ok("cs1".into())
+        }
+        fn auto_apply(&self, _id: &str) -> AutoApply {
+            AutoApply::Applied
+        }
+    }
+
+    #[tokio::test]
+    async fn auto_applied_proposals_report_done_not_pending() {
+        let d = fixture();
+        let e = engine();
+        write_grant(&e, d.path());
+        let (mut c, _) = cx_with_sink(e);
+        c.proposals = Some(Arc::new(AutoSink));
+        let target = d.path().join("auto.txt");
+        let out = WriteFile
+            .run(args(&[("path", target.to_str().unwrap()), ("content", "x")]), &c)
+            .await
+            .unwrap();
+        assert!(out.llm_text.starts_with("DONE:"));
+        assert!(out.summary.starts_with("Applied:"));
+        assert_eq!(out.ui.unwrap()["state"], "applied");
     }
 
     #[tokio::test]

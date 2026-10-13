@@ -617,10 +617,19 @@ pub async fn run_router(
                         tool: "report".into(),
                         args_json: json!({"changeset_id": id}).to_string(),
                     });
+                    let state =
+                        o.ui.as_ref()
+                            .and_then(|u| u["state"].as_str())
+                            .unwrap_or("planned");
                     sink.send(ChatEvent::ToolResult {
                         tool: "report".into(),
-                        summary: "Review and apply the proposed change".into(),
-                        ok: true,
+                        summary: match state {
+                            "applied" => "Change applied (undo in Changes)",
+                            "failed" => "Change not applied: review it",
+                            _ => "Change ready: Apply or Discard",
+                        }
+                        .into(),
+                        ok: state != "failed",
                     });
                 }
                 ToolRun {
