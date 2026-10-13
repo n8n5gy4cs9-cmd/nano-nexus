@@ -5,7 +5,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { buildArgs } from './app-builder.mjs';
+import { buildArgs, buildEnv } from './app-builder.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const base = { name: 'studio', catalog: ['minicpm5-2b-q4'], default: 'minicpm5-2b-q4', target: 'windows', format: 'kit' };
@@ -35,4 +35,13 @@ test('the page offers every target and format that the server accepts', () => {
   for (const v of ['name="t" value="mac"', 'value="windows"', 'value="windows-arm64"', 'value="all"', '<option value="kit">', '<option value="portable">', '<option value="installer">']) {
     assert.ok(html.includes(v), v);
   }
+});
+
+test('build env appends Homebrew llvm only when installed and not already on PATH', () => {
+  const llvm = '/opt/homebrew/opt/llvm/bin';
+  const has = (d) => d === llvm;
+  assert.equal(buildEnv({ PATH: '/usr/bin:/bin' }, has).PATH, `/usr/bin:/bin:${llvm}`);
+  assert.equal(buildEnv({ PATH: `/usr/bin:${llvm}` }, has).PATH, `/usr/bin:${llvm}`);
+  assert.equal(buildEnv({ PATH: '/usr/bin' }, () => false).PATH, '/usr/bin');
+  assert.equal(buildEnv({ PATH: '/usr/bin' }, has).FORCE_COLOR, '0');
 });

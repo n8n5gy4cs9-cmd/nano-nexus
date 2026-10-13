@@ -19,6 +19,19 @@ const IDLE_MS = 30 * 60 * 1000;
 const DEFAULT_PORT = 8787;
 const STATE_FILE = path.join(ROOT, 'bundles', 'local', 'app-builder-state.json');
 
+/**
+ * The environment for the build. Homebrew's `llvm` is keg-only (clang-cl and llvm-rc live in its own
+ * bin dir, which brew does not put on PATH), so a builder started from a shell without it would fail the
+ * Windows toolchain check even though llvm is installed. Append (never prepend) any installed
+ * Homebrew llvm bin dir; nothing changes when it is already on PATH or not installed.
+ */
+export function buildEnv(base = process.env, exists = fs.existsSync) {
+  const dirs = (base.PATH ?? '').split(path.delimiter).filter(Boolean);
+  const extra = ['/opt/homebrew/opt/llvm/bin', '/usr/local/opt/llvm/bin'].filter((d) => exists(d) && !dirs.includes(d));
+  const PATH = [...dirs, ...extra].join(path.delimiter);
+  return { ...base, PATH, FORCE_COLOR: '0' };
+}
+
 /** The last choices made in the page (null when none). */
 export function readState() {
   try {
@@ -181,7 +194,7 @@ export function startServer({ port = DEFAULT_PORT, open = true } = {}) {
           } catch {
             /* remembering is best effort */
           }
-          const child = spawn(process.execPath, args, { cwd: ROOT, env: { ...process.env, FORCE_COLOR: '0' } });
+          const child = spawn(process.execPath, args, { cwd: ROOT, env: buildEnv() });
           job = { child, log: [], done: false, code: null };
           push(`$ node scripts/bundle.mjs ${args.slice(1).join(' ')}`);
           const feed = (d) => d.toString().split(/\r?\n/).filter(Boolean).forEach(push);
