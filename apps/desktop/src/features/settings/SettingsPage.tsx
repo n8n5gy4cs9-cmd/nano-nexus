@@ -9,6 +9,7 @@ import { toIpcException } from "@/lib/ipc";
 import { IS_WEB } from "@/lib/target";
 import { ACCENTS, isAccent, isThemePreference } from "@/lib/theme";
 import { PLUGINS, parseDisabled, serializeDisabled } from "@/plugins";
+import { ZOOM_LEVELS } from "@/lib/zoom";
 import { useUi } from "@/stores/ui";
 
 import { AboutSection } from "./AboutSection";
@@ -46,6 +47,8 @@ export function SettingsPage() {
   const settings = useQuery({ queryKey: SETTINGS_KEY, queryFn: api.settings.get, retry: false });
   const setTheme = useUi((s) => s.setTheme);
   const setAccent = useUi((s) => s.setAccent);
+  const zoom = useUi((s) => s.zoom);
+  const setZoom = useUi((s) => s.setZoom);
 
   const save = useMutation({
     mutationFn: ({ key, value }: { key: string; value: SettingValue }) => api.settings.set(key, value),
@@ -92,6 +95,12 @@ export function SettingsPage() {
             if (isAccent(v)) setAccent(v);
             set("ui.accent", v);
           }}
+        />
+        <SelectRow
+          label="Zoom"
+          value={String(zoom)}
+          options={ZOOM_LEVELS.map((z) => ({ value: String(z), label: `${Math.round(z * 100)}%` }))}
+          onChange={(v) => setZoom(Number(v))}
         />
         <ToggleRow label="Show speed under answers" hint="Tokens per second and time to first token." checked={bool(s, "ui.show_perf_stats", true)} onChange={(v) => set("ui.show_perf_stats", v)} />
         {IS_WEB ? null : (

@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 
 import { cn } from "@/lib/cn";
 import { modLabel, type Platform } from "@/lib/platform";
-import { NAV, SETTINGS_SECTION, type NavSection } from "@/routes";
+import { HELP_SECTION, NAV, SETTINGS_SECTION, type NavSection } from "@/routes";
 
 import { ConversationList } from "./ConversationList";
 
@@ -65,6 +65,7 @@ export function Sidebar({ platform }: { platform: Platform }) {
         <ConversationList />
       </div>
       <div className="border-t border-border p-2">
+        <NavItem section={HELP_SECTION} platform={platform} />
         <NavItem section={SETTINGS_SECTION} platform={platform} />
       </div>
     </aside>

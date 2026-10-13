@@ -26,7 +26,7 @@ import { toIpcException } from "@/lib/ipc";
 import { modLabel } from "@/lib/platform";
 import { IS_WEB } from "@/lib/target";
 import { resolveTheme, systemPrefersDark } from "@/lib/theme";
-import { NAV, SETTINGS_SECTION } from "@/routes";
+import { HELP_SECTION, NAV, SETTINGS_SECTION } from "@/routes";
 import { useActivity } from "@/stores/activity";
 import { useAssistantChoice } from "@/stores/assistant";
 import { useUi } from "@/stores/ui";
@@ -92,7 +92,7 @@ export function CommandPalette() {
             ) : null}
 
             <Group title="Go to">
-              {[...NAV, SETTINGS_SECTION].map((s) => (
+              {[...NAV, HELP_SECTION, SETTINGS_SECTION].map((s) => (
                 <CommandItem key={s.path} value={`go ${s.label} ${s.tagline}`} onSelect={go(s.path)}>
                   <s.icon className="size-4 text-muted" />
                   <span>{s.label}</span>

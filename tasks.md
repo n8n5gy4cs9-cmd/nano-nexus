@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 195/234 tasks done (83%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 205/236 tasks done (86%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -295,6 +295,8 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T17.10** UI: Library page (add via drag-drop/picker, progress, enable, re-index, remove, passage search) + composer "Libraries" chip + clickable citations (2026-10-11) — Library page, composer chip, clickable citations (library crates compiled, clippy-clean, tests pass; app crate + UI not yet built here)
 - [x] **T17.11** Bundling: profile `knowledge[]`, stage-bundle copies sources + prebuilt index, `verify-payload` hashes, App Builder size summary (2026-10-11) — profile `knowledge[]`, `scripts/knowledge-manifest.mjs` (stage/verify/size) ready for stage-bundle/verify-payload once M12 lands; prebuilt index deferred (Q-6) (library crates compiled, clippy-clean, tests pass; app crate + UI not yet built here)
 - [x] **T17.12** Docs: user guide section, sample library, walkthrough (e.g. a Reaper manual, a JavaScript book) (2026-10-11) — guide.html section, `docs/samples/knowledge/mixing-basics` + walkthrough (library crates compiled, clippy-clean, tests pass; app crate + UI not yet built here)
+- [x] **T17.14** Help page with the full docs bundled in the app (`docs/**/*.md` + `guide.html`, offline), rendered Markdown/HTML with a Raw toggle; Library passage dialog gets "Original document" (sandboxed HTML / Markdown render + Raw) via new `kb_document_source` command (2026-10-13) — HTML iframe is `sandbox=""` with a no-network CSP; see Q-9. **Not built/linted/tested here (no deps installed); `src/bindings.ts` regenerates on the next Mac build**
+- [x] **T17.15** Settings → Appearance → Zoom (80–200%, CSS `zoom` on `<html>`, stored in localStorage `nn.zoom`) (2026-10-13) — not built/tested here
 - [ ] ⭐ **T17.13** 🍎 Exit check: offline cited answers from a bundled library; user-added EPUB/PDF/MD work; libraries off = no behavior change
 
 ## M18: Duo assistant (light + strong model) · [spec](docs/milestones/M18-duo.md)

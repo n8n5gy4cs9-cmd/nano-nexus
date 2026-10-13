@@ -58,7 +58,7 @@ import type {
 
 import type { EditorAiEvent, EditorAiRequest, EditorSaveResult } from "@/features/editor/types";
 import type { PairingView, SharePolicy, ShareDevice, ShareStatus } from "@/features/share/types";
-import type { KbIndexResult, KbLibrary, KbLibraryDetail, KbPassage, KbProgress } from "@/features/library/types";
+import type { KbIndexResult, KbLibrary, KbDocumentSource, KbLibraryDetail, KbPassage, KbProgress } from "@/features/library/types";
 
 import { getTransport } from "./transport";
 import type { ReportDelta, WatchSchedule, WatchView } from "@/features/analyzer/watches";
@@ -308,6 +308,8 @@ export const api = {
     search: (query: string, libraryIds: string[] | null = null, k = 6) =>
       getTransport().call<KbPassage[]>("kb_search", { query, libraryIds, k }),
     passage: (chunkId: number) => getTransport().call<KbPassage>("kb_passage", { chunkId }),
+    /** Original text of the passage's document (html/md/txt...), for the rendered and raw views. */
+    documentSource: (chunkId: number) => getTransport().call<KbDocumentSource>("kb_document_source", { chunkId }),
   },
   share: {
     status: () => getTransport().call<ShareStatus>("share_status"),

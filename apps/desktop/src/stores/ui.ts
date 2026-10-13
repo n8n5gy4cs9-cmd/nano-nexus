@@ -1,14 +1,18 @@
 import { create } from "zustand";
 
 import { readStored, writeStored } from "@/lib/storage";
+import { parseZoom } from "@/lib/zoom";
 import { isAccent, isThemePreference, type Accent, type ThemePreference } from "@/lib/theme";
 
 const THEME_KEY = "nn.theme";
 const ACCENT_KEY = "nn.accent";
+const ZOOM_KEY = "nn.zoom";
 
 interface UiState {
   theme: ThemePreference;
   accent: Accent;
+  /** UI scale factor (1 = 100%). */
+  zoom: number;
   sidebarOpen: boolean;
   inspectorOpen: boolean;
   paletteOpen: boolean;
@@ -16,6 +20,7 @@ interface UiState {
   onboardingOpen: boolean;
   setTheme: (t: ThemePreference) => void;
   setAccent: (a: Accent) => void;
+  setZoom: (z: number) => void;
   toggleSidebar: () => void;
   toggleInspector: () => void;
   setPaletteOpen: (open: boolean) => void;
@@ -35,6 +40,7 @@ function initialAccent(): Accent {
 export const useUi = create<UiState>((set) => ({
   theme: initialTheme(),
   accent: initialAccent(),
+  zoom: parseZoom(readStored(ZOOM_KEY)),
   sidebarOpen: typeof window === "undefined" || window.innerWidth >= 768,
   inspectorOpen: false,
   paletteOpen: false,
@@ -46,6 +52,11 @@ export const useUi = create<UiState>((set) => ({
   setAccent: (accent) => {
     writeStored(ACCENT_KEY, accent);
     set({ accent });
+  },
+  setZoom: (zoom) => {
+    const z = parseZoom(zoom);
+    writeStored(ZOOM_KEY, String(z));
+    set({ zoom: z });
   },
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
   toggleInspector: () => set((s) => ({ inspectorOpen: !s.inspectorOpen })),

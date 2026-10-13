@@ -241,6 +241,7 @@ expandable "Details" section and in logs).
 Tables (`0006_knowledge.sql`): `kb_libraries`, `kb_documents`, `kb_chunks`, and the external-content FTS5 table
 `kb_chunks_fts(heading_path, text)` (porter + unicode61, `bm25(…, 3.0, 1.0)`).
 Commands: `kb_list`, `kb_detail`, `kb_add(name?, paths, reference)`, `kb_reindex(jobId, libraryId, onEvent: KbProgress) -> KbIndexResult`,
-`kb_cancel(jobId)`, `kb_set_enabled`, `kb_remove`, `kb_search(query, libraryIds?, k)`, `kb_passage(chunkId)`.
+`kb_cancel(jobId)`, `kb_set_enabled`, `kb_remove`, `kb_search(query, libraryIds?, k)`, `kb_passage(chunkId)`, `kb_document_source(chunkId) -> {kind, path, content, truncated}` (original text of an html/md/txt/json/csv document, <= 2 MB, must resolve inside its library folder; PDFs and binaries are refused).
+The UI zoom is a per-device preference (`localStorage` `nn.zoom`, 0.5–3, default 1), not a backend setting. The Help page bundles `docs/**/*.md` and `guide.html` into the frontend build (Vite `?raw` imports), so it needs no backend and works offline.
 Settings: `models.use_prompt_hints` (bool, default true: the catalog's optional `prompt_hint` is appended to the system prompt for that model), `knowledge.chat_context` (bool, default false), `knowledge.max_tokens` (default 1200), `knowledge.answer_style` (`strict` default | `guide`; `guide` lets chats that inject library passages explain and write adapted code, labelled; `kb_search` and the Librarian are always strict).
 Citation links in answers use `https://nanonexus.local/passage/<chunk_id>`; the chat opens them as a passage dialog.

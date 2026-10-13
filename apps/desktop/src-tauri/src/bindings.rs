@@ -144,6 +144,8 @@ pub fn builder() -> Builder<tauri::Wry> {
             knowledge::kb_remove,
             knowledge::kb_search,
             knowledge::kb_passage,
+            knowledge::kb_document_source,
+            knowledge::kb_document_source,
         ])
         .events(collect_events![
             runtime::RuntimeStatus,

@@ -43,6 +43,34 @@ pub struct KbIndexResult {
     pub truncated: bool,
 }
 
+/// The original text of a library document (for the rendered / raw views).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Type)]
+pub struct KbDocumentSource {
+    /// Lower-case file extension: `html`, `md`, `txt`, ...
+    pub kind: String,
+    pub path: String,
+    pub content: String,
+    /// The file was longer than the cap and `content` is cut.
+    pub truncated: bool,
+}
+
+/// Largest document source sent to the UI.
+const MAX_SOURCE_BYTES: u64 = 2 * 1024 * 1024;
+
+/// The original text of a library document (for the rendered / raw views).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Type)]
+pub struct KbDocumentSource {
+    /// Lower-case file extension: `html`, `md`, `txt`, ...
+    pub kind: String,
+    pub path: String,
+    pub content: String,
+    /// The file was longer than the cap and `content` is cut.
+    pub truncated: bool,
+}
+
+/// Largest document source sent to the UI.
+const MAX_SOURCE_BYTES: u64 = 2 * 1024 * 1024;
+
 /// A library with its documents (the Library page's detail view).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Type)]
 pub struct KbLibraryDetail {
@@ -302,6 +330,90 @@ pub fn search_passages(
 /// One passage in full (a citation was clicked).
 pub fn passage(ctx: &AppCtx, chunk_id: i64) -> Result<Passage, NexusError> {
     repo::get_passage(&ctx.store, chunk_id).map_err(kb)
+}
+
+/// The original text of the document a passage came from. Only text formats are returned (PDF and
+/// other binaries are refused); the file must resolve inside its library folder.
+pub fn document_source(ctx: &AppCtx, chunk_id: i64) -> Result<KbDocumentSource, NexusError> {
+    use std::io::Read;
+    let p = repo::get_passage(&ctx.store, chunk_id).map_err(kb)?;
+    let lib = repo::get_library(&ctx.store, &p.library_id).map_err(kb)?;
+    let kind = Path::new(&p.doc_path)
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_ascii_lowercase();
+    if !matches!(
+        kind.as_str(),
+        "html" | "htm" | "xhtml" | "md" | "markdown" | "txt" | "json" | "csv" | "tsv"
+    ) {
+        return Err(NexusError::InvalidInput(
+            "no text source for this document type".into(),
+        ));
+    }
+    let root = std::fs::canonicalize(&lib.path)
+        .map_err(|e| NexusError::InvalidInput(format!("library folder: {e}")))?;
+    let file = std::fs::canonicalize(root.join(&p.doc_path))
+        .map_err(|e| NexusError::InvalidInput(format!("{}: {e}", p.doc_path)))?;
+    if !file.starts_with(&root) {
+        return Err(NexusError::PathDenied(p.doc_path));
+    }
+    let f = std::fs::File::open(&file)
+        .map_err(|e| NexusError::InvalidInput(format!("{}: {e}", p.doc_path)))?;
+    let mut buf = Vec::new();
+    f.take(MAX_SOURCE_BYTES + 1)
+        .read_to_end(&mut buf)
+        .map_err(|e| NexusError::InvalidInput(format!("{}: {e}", p.doc_path)))?;
+    let truncated = buf.len() as u64 > MAX_SOURCE_BYTES;
+    buf.truncate(MAX_SOURCE_BYTES as usize);
+    Ok(KbDocumentSource {
+        kind,
+        path: p.doc_path,
+        content: String::from_utf8_lossy(&buf).into_owned(),
+        truncated,
+    })
+}
+
+/// The original text of the document a passage came from. Only text formats are returned (PDF and
+/// other binaries are refused); the file must resolve inside its library folder.
+pub fn document_source(ctx: &AppCtx, chunk_id: i64) -> Result<KbDocumentSource, NexusError> {
+    use std::io::Read;
+    let p = repo::get_passage(&ctx.store, chunk_id).map_err(kb)?;
+    let lib = repo::get_library(&ctx.store, &p.library_id).map_err(kb)?;
+    let kind = Path::new(&p.doc_path)
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_ascii_lowercase();
+    if !matches!(
+        kind.as_str(),
+        "html" | "htm" | "xhtml" | "md" | "markdown" | "txt" | "json" | "csv" | "tsv"
+    ) {
+        return Err(NexusError::InvalidInput(
+            "no text source for this document type".into(),
+        ));
+    }
+    let root = std::fs::canonicalize(&lib.path)
+        .map_err(|e| NexusError::InvalidInput(format!("library folder: {e}")))?;
+    let file = std::fs::canonicalize(root.join(&p.doc_path))
+        .map_err(|e| NexusError::InvalidInput(format!("{}: {e}", p.doc_path)))?;
+    if !file.starts_with(&root) {
+        return Err(NexusError::PathDenied(p.doc_path));
+    }
+    let f = std::fs::File::open(&file)
+        .map_err(|e| NexusError::InvalidInput(format!("{}: {e}", p.doc_path)))?;
+    let mut buf = Vec::new();
+    f.take(MAX_SOURCE_BYTES + 1)
+        .read_to_end(&mut buf)
+        .map_err(|e| NexusError::InvalidInput(format!("{}: {e}", p.doc_path)))?;
+    let truncated = buf.len() as u64 > MAX_SOURCE_BYTES;
+    buf.truncate(MAX_SOURCE_BYTES as usize);
+    Ok(KbDocumentSource {
+        kind,
+        path: p.doc_path,
+        content: String::from_utf8_lossy(&buf).into_owned(),
+        truncated,
+    })
 }
 
 // ---- bundled libraries ------------------------------------------------------------------------

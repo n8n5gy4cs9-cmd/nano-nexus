@@ -51,6 +51,13 @@ export interface KbIndexResult {
   truncated: boolean;
 }
 
+export interface KbDocumentSource {
+  kind: string;
+  path: string;
+  content: string;
+  truncated: boolean;
+}
+
 export interface KbPassage {
   chunk_id: number;
   document_id: number;

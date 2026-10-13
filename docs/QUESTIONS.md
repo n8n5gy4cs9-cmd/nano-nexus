@@ -83,3 +83,8 @@ Answer (owner): _pending_
 A real Mac build showed the failure: `gguf_init_from_reader: tensor 'output.weight' has invalid ggml type 143. should be in [0, 43)` with llama.cpp b11552. PTQ1_0 and PQ2_0 are PrismML-fork-only tensor types (not in upstream). Per PrismML's docs, plain ternary `Q2_0_g64` files are merged upstream and need no fork; the 27B Bonsai 2 packings still do.
 - Options: (a) bundle a second runtime built from PrismML's fork (an ADR change, +size, extra pins); (b) wait for upstream; (c) rely on Q2_0_g64 Bonsai models only. The 27B entries are now untagged and marked "does not load yet" in the catalog.
 - The 8B/4B/1.7B entries now match `Q2_0_g64.gguf`. Their repo files and upstream support in b11552 are still unverified.
+
+## Q-9: Render original HTML in the Library "Sources" view (2026-10-13)
+- Context: M17 said "HTML is sanitized to text". The owner asked for HTML manuals to render (with a Raw toggle), PDFs staying text.
+- Decision taken (owner request): indexing is unchanged (text). The passage dialog's "Original document" tab reads the file via `kb_document_source` and shows it in a sandboxed iframe (`sandbox=""`, CSP `default-src 'none'`), so no scripts or network. Relative images/CSS inside the manual do not load (srcdoc has no base); only inline styles and `data:` images show.
+- Open: inline the manual's local CSS/images into the iframe (read-only, inside the library folder) if the plain render looks too bare.

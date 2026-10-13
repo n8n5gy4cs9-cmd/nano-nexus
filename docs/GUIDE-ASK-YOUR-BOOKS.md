@@ -20,6 +20,11 @@ does not return, the model never sees. So **most wrong answers are search misses
    Models under 2B often miss; use them only to find *where* to read.
 5. Start the **Librarian** assistant, not plain chat.
 
+## Reading the source
+Click a citation or a search result to open the passage. For HTML and Markdown documents, switch to
+**Original document** to see the page rendered, and **Raw** to see its source text. PDFs show text only.
+This guide and all other docs are in the app under **Help** (sidebar), offline.
+
 ## How to ask
 - **Use the book's own words.** Class, method, and menu names beat descriptions:
   "addEventListener passive" or "Entity::SetPosition" finds more than "how do I react to scrolling" or "how do I move an object".

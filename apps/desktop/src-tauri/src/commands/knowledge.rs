@@ -9,7 +9,7 @@ use tauri::ipc::Channel;
 
 use super::CmdResult;
 use crate::service;
-use crate::service::knowledge::{KbIndexResult, KbLibraryDetail, KbProgress};
+use crate::service::knowledge::{KbDocumentSource, KbIndexResult, KbLibraryDetail, KbProgress};
 use crate::state::AppState;
 
 type Ctx<'a> = State<'a, Arc<AppState>>;
@@ -100,4 +100,18 @@ pub async fn kb_search(
 #[specta::specta]
 pub async fn kb_passage(ctx: Ctx<'_>, chunk_id: i64) -> CmdResult<Passage> {
     service::knowledge::passage(&ctx, chunk_id).map_err(ipc)
+}
+
+/// The original text of a passage's document (rendered / raw views). Text formats only.
+#[tauri::command]
+#[specta::specta]
+pub async fn kb_document_source(ctx: Ctx<'_>, chunk_id: i64) -> CmdResult<KbDocumentSource> {
+    service::knowledge::document_source(&ctx, chunk_id).map_err(ipc)
+}
+
+/// The original text of a passage's document (rendered / raw views). Text formats only.
+#[tauri::command]
+#[specta::specta]
+pub async fn kb_document_source(ctx: Ctx<'_>, chunk_id: i64) -> CmdResult<KbDocumentSource> {
+    service::knowledge::document_source(&ctx, chunk_id).map_err(ipc)
 }

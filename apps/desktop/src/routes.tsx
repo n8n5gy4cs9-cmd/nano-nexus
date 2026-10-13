@@ -1,5 +1,6 @@
 import {
   Code2,
+  CircleHelp,
   Download,
   FolderSearch,
   History,
@@ -19,6 +20,7 @@ import { AssistantsPage } from "@/features/assistants/AssistantsPage";
 import { AnalyzerPage } from "@/features/analyzer/AnalyzerPage";
 import { ReportPage } from "@/features/analyzer/ReportPage";
 import { ChangesPage } from "@/features/changes/ChangesPage";
+import { HelpPage } from "@/features/help/HelpPage";
 import { LibraryPage } from "@/features/library/LibraryPage";
 import { ModelsPage } from "@/features/models/ModelsPage";
 import { PermissionsPage } from "@/features/permissions/PermissionsPage";
@@ -52,6 +54,13 @@ export const NAV: NavSection[] = [
   { path: "/library", label: "Library", icon: Library, tagline: "Offline reference books the assistant can search and cite.", digit: 9 },
 ];
 
+export const HELP_SECTION: NavSection = {
+  path: "/help",
+  label: "Help",
+  icon: CircleHelp,
+  tagline: "The full documentation, offline.",
+};
+
 export const SETTINGS_SECTION: NavSection = {
   path: "/settings",
   label: "Settings",
@@ -72,6 +81,7 @@ function pageFor(s: NavSection) {
   if (s.path === "/permissions") return <PermissionsPage />;
   if (s.path === "/library") return <LibraryPage />;
   if (s.path === "/rename") return <RenamePage />;
+  if (s.path === "/help") return <HelpPage />;
   if (s.path === "/settings") return <SettingsPage />;
   return <PlaceholderPage section={s} />;
 }
@@ -80,7 +90,7 @@ export const routes: RouteObject[] = [
   {
     path: "/",
     element: <AppShell />,
-    children: [{ path: "c/:conversationId", element: <ChatView /> }, { path: "analyzer/:id", element: <ReportPage /> }, { path: "settings/sharing", element: IS_WEB ? <DesktopOnly title="Sharing settings" /> : <SharingSettings /> }, ...[...NAV, SETTINGS_SECTION].map((s) => ({
+    children: [{ path: "c/:conversationId", element: <ChatView /> }, { path: "analyzer/:id", element: <ReportPage /> }, { path: "settings/sharing", element: IS_WEB ? <DesktopOnly title="Sharing settings" /> : <SharingSettings /> }, ...[...NAV, HELP_SECTION, SETTINGS_SECTION].map((s) => ({
       ...(s.path === "/" ? { index: true as const } : { path: s.path.slice(1) }),
       element: pageFor(s),
     }))],
