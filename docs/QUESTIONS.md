@@ -78,3 +78,8 @@ Answer (owner): _pending_
 - Context: catalog now lists Ternary Bonsai 2 27B (PTQ1_0 5.9 GB tagged `optimal`, PQ2_0 7.2 GB) plus the 8B/4B/1.7B Q2_0 models, all `verified: false`. Their model cards reportedly require PrismML's llama.cpp fork (new ternary quant types); the pinned official `b11552` may refuse to load them. HF was unreachable from the authoring container, so file names/sizes are unchecked.
 - Options: (a) leave as community/unverified and let the Mac owner test with `cargo test -- --ignored`; (b) bump the pin if upstream merged the quant types; (c) bundle the fork (ADR change).
 - Recommendation: (a) now; if b11552 fails to load, try (b) before (c). Flip `verified` once a load test passes.
+
+### Q-8 update (2026-10-13): confirmed
+A real Mac build showed the failure: `gguf_init_from_reader: tensor 'output.weight' has invalid ggml type 143. should be in [0, 43)` with llama.cpp b11552. PTQ1_0 and PQ2_0 are PrismML-fork-only tensor types (not in upstream). Per PrismML's docs, plain ternary `Q2_0_g64` files are merged upstream and need no fork; the 27B Bonsai 2 packings still do.
+- Options: (a) bundle a second runtime built from PrismML's fork (an ADR change, +size, extra pins); (b) wait for upstream; (c) rely on Q2_0_g64 Bonsai models only. The 27B entries are now untagged and marked "does not load yet" in the catalog.
+- The 8B/4B/1.7B entries now match `Q2_0_g64.gguf`. Their repo files and upstream support in b11552 are still unverified.

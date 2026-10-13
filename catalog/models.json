@@ -888,14 +888,12 @@
       "min_ram_gb": 12,
       "tier": "medium",
       "tags": [
-        "optimal",
         "ternary",
-        "thinking",
-        "librarian"
+        "thinking"
       ],
       "verified": false,
-      "why": "Optimal pick: 27B-class reasoning in 5.9 GB, the smallest Bonsai 2 27B packing. Librarian pick: the best reader here for multi-book and tricky code questions; needs a strong machine.",
-      "notes": "Ternary (1.58-bit) weights from PrismML. Needs a llama.cpp build that supports the PrismML ternary quants (the pinned official b11552 may not load it; see docs/QUESTIONS.md Q-8). File names and sizes taken from the model card via search, not yet checked against the repo tree."
+      "why": "Does NOT load in this app yet: PTQ1_0/PQ2_0 need the PrismML llama.cpp fork (the bundled llama.cpp stops with \"invalid ggml type 143\"). Kept for when the runtime supports it.",
+      "notes": "Confirmed on a Mac build: llama-server b11552 fails with \"tensor output.weight has invalid ggml type 143. should be in [0, 43)\". See docs/QUESTIONS.md Q-8."
     },
     {
       "id": "ternary-bonsai-2-27b-pq2",
@@ -935,12 +933,11 @@
       "tags": [
         "ternary",
         "quality",
-        "thinking",
-        "librarian"
+        "thinking"
       ],
       "verified": false,
-      "why": "Bigger packing of the same 27B: more headroom for quality, 1.3 GB larger. Librarian pick (higher fidelity); needs a strong machine.",
-      "notes": "Ternary (1.58-bit) weights from PrismML. Needs a llama.cpp build that supports the PrismML ternary quants (the pinned official b11552 may not load it; see docs/QUESTIONS.md Q-8). File names and sizes taken from the model card via search, not yet checked against the repo tree."
+      "why": "Does NOT load in this app yet: PTQ1_0/PQ2_0 need the PrismML llama.cpp fork (the bundled llama.cpp stops with \"invalid ggml type 143\"). Kept for when the runtime supports it.",
+      "notes": "Confirmed on a Mac build: llama-server b11552 fails with \"tensor output.weight has invalid ggml type 143. should be in [0, 43)\". See docs/QUESTIONS.md Q-8."
     },
     {
       "id": "ternary-bonsai-8b-q2",
@@ -950,7 +947,7 @@
       "quant": "Q2_0",
       "repo": "prism-ml/Ternary-Bonsai-8B-gguf",
       "revision": "main",
-      "file_pattern": "(?i)Q2_0\\.gguf$",
+      "file_pattern": "(?i)Q2_0_g64\\.gguf$",
       "approx_bytes": 2180000000,
       "license": "Apache-2.0",
       "context_default": 8192,
@@ -980,11 +977,10 @@
       "tags": [
         "ternary",
         "small",
-        "thinking",
-        "librarian"
+        "thinking"
       ],
       "verified": false,
-      "why": "Smaller ternary step: 8B in about 2.2 GB. Librarian pick: a good balance of accuracy and speed if the 27B is too heavy.",
+      "why": "Smaller ternary step: 8B in about 2.2 GB. Librarian pick: a good balance of accuracy and speed if the 27B is too heavy. Uses the Q2_0_g64 file (the older plain Q2_0 file is a deprecated format that stock llama.cpp mis-reads).",
       "notes": "Ternary (1.58-bit) weights from PrismML. Needs a llama.cpp build that supports the PrismML ternary quants (the pinned official b11552 may not load it; see docs/QUESTIONS.md Q-8). File names and sizes taken from the model card via search, not yet checked against the repo tree."
     },
     {
@@ -995,7 +991,7 @@
       "quant": "Q2_0",
       "repo": "prism-ml/Ternary-Bonsai-4B-gguf",
       "revision": "main",
-      "file_pattern": "(?i)Q2_0\\.gguf$",
+      "file_pattern": "(?i)Q2_0_g64\\.gguf$",
       "approx_bytes": 1100000000,
       "license": "Apache-2.0",
       "context_default": 8192,
@@ -1029,7 +1025,7 @@
         "thinking"
       ],
       "verified": false,
-      "why": "Ternary 4B in about 1.1 GB (size estimated).",
+      "why": "Ternary 4B in about 1.1 GB (size estimated). Uses the Q2_0_g64 file (the older plain Q2_0 file is a deprecated format that stock llama.cpp mis-reads).",
       "notes": "Ternary (1.58-bit) weights from PrismML. Needs a llama.cpp build that supports the PrismML ternary quants (the pinned official b11552 may not load it; see docs/QUESTIONS.md Q-8). File names and sizes taken from the model card via search, not yet checked against the repo tree."
     },
     {
@@ -1040,7 +1036,7 @@
       "quant": "Q2_0",
       "repo": "prism-ml/Ternary-Bonsai-1.7B-gguf",
       "revision": "main",
-      "file_pattern": "(?i)Q2_0\\.gguf$",
+      "file_pattern": "(?i)Q2_0_g64\\.gguf$",
       "approx_bytes": 460000000,
       "license": "Apache-2.0",
       "context_default": 8192,
@@ -1074,7 +1070,7 @@
         "thinking"
       ],
       "verified": false,
-      "why": "Tiny ternary model, under 0.5 GB.",
+      "why": "Tiny ternary model, under 0.5 GB. Uses the Q2_0_g64 file (the older plain Q2_0 file is a deprecated format that stock llama.cpp mis-reads).",
       "notes": "Ternary (1.58-bit) weights from PrismML. Needs a llama.cpp build that supports the PrismML ternary quants (the pinned official b11552 may not load it; see docs/QUESTIONS.md Q-8). File names and sizes taken from the model card via search, not yet checked against the repo tree."
     }
   ]
