@@ -111,6 +111,7 @@ CREATE TABLE rename_items (
 | `models.active_model_id` | `"builtin"` |
 | `privacy.allow_network_downloads` | `true` |
 | `tools.web_enabled` | `false` (ADR-016: lets `search_web`/`fetch_url` run) |
+| `chat.auto_apply_proposals` | `false` (opt-in: write what an assistant proposes right away, via the journaled apply; off = Apply button) |
 | `tools.disabled` | `{}` (assistant id → tool names switched off) |
 | `notifications.os_when_unfocused` | `true` |
 | `notifications.kinds` | all `true` |

@@ -87,7 +87,7 @@ fn tools_note(
     let declares = |n: &str| spec.tools.allowed.iter().any(|t| t == n);
     let mut note = String::new();
     if has("write_file") || has("edit_file") || has("move_file") || has("trash_file") {
-        note.push_str("\nTo save or change files the app proposes the change for you; the user applies it from the Review chip or the Changes page. If a <tool_result> says a change was proposed, say so and do not claim it is already done. If no change was proposed, say what is missing (a folder grant, the file name) in one sentence.");
+        note.push_str("\nTo save or change files the app proposes the change for you; the app writes it when automatic apply is on, otherwise the user presses Apply on the change card in this chat. Say a file is written only if a <tool_result> says DONE; if it says NOT written yet, tell the user to press Apply on the change card. If no change was proposed, say what is missing (a folder grant, the file name) in one sentence.");
     } else if spec.workflow.kind != "pipeline" {
         note.push_str("\nYou cannot save files in this assistant. Put the content in a code block and tell the user the Agent assistant can save it.");
     }
@@ -112,6 +112,17 @@ impl nexus_agent::tools::ProposalSink for ChatProposals {
         super::fs::changeset_plan(&self.ctx, title, &self.origin, ops)
             .map(|id| id.0)
             .map_err(|e| e.to_string())
+    }
+
+    fn auto_apply(&self, id: &str) -> nexus_agent::tools::AutoApply {
+        use nexus_agent::tools::AutoApply;
+        if !self.ctx.settings_snapshot().chat_auto_apply_proposals {
+            return AutoApply::Off;
+        }
+        match super::fs::changeset_apply(&self.ctx, &super::Caller::Desktop, id) {
+            Ok(_) => AutoApply::Applied,
+            Err(e) => AutoApply::Failed(e.to_string()),
+        }
     }
 }
 

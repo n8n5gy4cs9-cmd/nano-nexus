@@ -34,12 +34,18 @@ export function ToolsSection({ settings, set }: { settings: Record<string, unkno
   const withTools = cards.filter((c) => c.tools.length > 0);
 
   return (
-    <Section title="Tools" hint="Tools let an assistant act. Changes that edit, move or trash files are only proposed: you always review and apply them in Changes. An assistant can only use tools it was built with; here you can switch them off.">
+    <Section title="Tools" hint="Tools let an assistant act. Changes that edit, move or trash files can be applied automatically or wait for your Apply button; either way they are undoable. An assistant can only use tools it was built with; here you can switch them off.">
       <ToggleRow
         label="Allow web access"
         hint="Lets assistants that have web tools search the web and read pages. Search words and page addresses leave this computer. Off by default; local addresses are always blocked."
         checked={webOn}
         onChange={(v) => set("tools.web_enabled", v)}
+      />
+      <ToggleRow
+        label="Apply file changes automatically"
+        hint="When an assistant proposes writing, editing, moving or trashing a file, write it right away. It still needs a folder grant and every apply can be undone in Changes. Off = you press Apply on the change card."
+        checked={settings["chat.auto_apply_proposals"] === true}
+        onChange={(v) => set("chat.auto_apply_proposals", v)}
       />
       {withTools.length === 0 ? <p className="py-3 text-small text-muted">No assistant uses tools yet.</p> : null}
       {withTools.map((c) => (
@@ -58,7 +64,7 @@ export function ToolsSection({ settings, set }: { settings: Record<string, unkno
                   <span className="text-small">
                     {label}
                     {isWeb && !webOn ? <span className="text-muted"> (needs web access)</span> : null}
-                    {PROPOSE_TOOLS.includes(t) ? <span className="text-muted"> (you approve)</span> : null}
+                    {PROPOSE_TOOLS.includes(t) ? <span className="text-muted"> (undoable)</span> : null}
                   </span>
                   <Switch checked={on} onCheckedChange={(v) => set("tools.disabled", toggleTool(disabled, c.id, t, v))} aria-label={`${c.name}: ${label}`} />
                 </li>

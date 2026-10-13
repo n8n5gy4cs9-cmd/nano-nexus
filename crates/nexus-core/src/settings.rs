@@ -127,6 +127,10 @@ pub struct Settings {
     /// computer unless the user turns this on.
     #[serde(rename = "tools.web_enabled")]
     pub tools_web_enabled: bool,
+    /// Opt in: write the files an assistant proposes as soon as it proposes them (through the same journaled,
+    /// undoable apply as the Changes page). Off = the change waits for the Apply button in the chat or in Changes.
+    #[serde(rename = "chat.auto_apply_proposals")]
+    pub chat_auto_apply_proposals: bool,
     /// Tools the user turned off for one assistant: assistant id → tool names. A tool can only be
     /// turned off here, never added to an assistant that does not declare it.
     #[serde(rename = "tools.disabled")]
@@ -143,6 +147,7 @@ impl Default for Settings {
     fn default() -> Self {
         Self {
             tools_web_enabled: false,
+            chat_auto_apply_proposals: false,
             tools_disabled: BTreeMap::new(),
             ui_theme: Theme::System,
             ui_accent: "violet".into(),

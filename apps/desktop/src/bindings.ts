@@ -1423,6 +1423,7 @@ export type Settings = {
 	 *  computer unless the user turns this on.
 	 */
 	"tools.web_enabled"?: boolean,
+	"chat.auto_apply_proposals"?: boolean,
 	/**
 	 *  Tools the user turned off for one assistant: assistant id → tool names. A tool can only be
 	 *  turned off here, never added to an assistant that does not declare it.

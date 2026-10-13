@@ -1,7 +1,9 @@
-import { Calculator, Clock, FileSearch, FileText, FolderOpen, History, Info, Loader2, Search, Wrench, type LucideIcon } from "lucide-react";
+import { Calculator, Clock, FileSearch, FileText, FolderOpen, Info, Loader2, Search, Wrench, type LucideIcon } from "lucide-react";
 
 import { cn } from "@/lib/cn";
 import type { ToolChip } from "@/stores/chat";
+
+import { ChangeCard } from "./ChangeCard";
 
 const ICON: Record<string, LucideIcon> = {
   read_file: FileText,
@@ -48,6 +50,13 @@ export function ToolChips({ chips }: { chips: ToolChip[] }) {
       {chips.map((c, i) => {
         const Icon = c.ok === null ? Loader2 : (ICON[c.tool] ?? Wrench);
         const target = chipTarget(c);
+        if (typeof c.args?.changeset_id === "string") {
+          return (
+            <li key={i} className="w-full">
+              <ChangeCard id={c.args.changeset_id} label={c.summary} />
+            </li>
+          );
+        }
         if (target) {
           return (
             <li key={i}>
@@ -55,7 +64,7 @@ export function ToolChips({ chips }: { chips: ToolChip[] }) {
                 href={target}
                 className="flex max-w-full items-center gap-1.5 rounded-full border border-accent/50 bg-accent/10 px-2.5 py-1 text-small text-text hover:bg-accent/20"
               >
-                {c.args?.changeset_id ? <History className="size-3.5 shrink-0" /> : <Icon className="size-3.5 shrink-0" />}
+                <Icon className="size-3.5 shrink-0" />
                 <span className="truncate">{c.summary ?? "Open"}</span>
               </a>
             </li>
