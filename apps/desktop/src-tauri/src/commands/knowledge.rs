@@ -109,9 +109,3 @@ pub async fn kb_document_source(ctx: Ctx<'_>, chunk_id: i64) -> CmdResult<KbDocu
     service::knowledge::document_source(&ctx, chunk_id).map_err(ipc)
 }
 
-/// The original text of a passage's document (rendered / raw views). Text formats only.
-#[tauri::command]
-#[specta::specta]
-pub async fn kb_document_source(ctx: Ctx<'_>, chunk_id: i64) -> CmdResult<KbDocumentSource> {
-    service::knowledge::document_source(&ctx, chunk_id).map_err(ipc)
-}
