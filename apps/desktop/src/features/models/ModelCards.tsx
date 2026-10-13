@@ -198,6 +198,11 @@ export function CatalogCardView({
           <p className="text-small text-muted">
             {e.params_b} B · {e.quant} · ≈ {formatBytes(e.approx_bytes)}
           </p>
+          {e.min_ram_gb ? (
+            <p className="text-small text-muted" title="Memory needed to run it comfortably, including the chat context">
+              Needs about {e.min_ram_gb} GB RAM
+            </p>
+          ) : null}
         </div>
         {isActive ? <ActivePill /> : null}
       </div>

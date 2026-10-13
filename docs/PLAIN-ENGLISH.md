@@ -32,6 +32,7 @@ Old leftovers from earlier builds: run `scripts/clean-trash.sh`.
   is more accurate. `optimal` marks the pick for its size class.
 - **Rough guide:** Qwen3.5 35B-A3B (32 GB machines), Qwen3.5 9B (best reader on a normal laptop), Qwen3.5 4B (best balance),
   Gemma 4 E4B (good answers, slow on older laptops), MiniCPM5 2B Q4 (older laptops, check citations).
+- **RAM:** every Discover card shows "Needs about N GB RAM". Pick a model whose number is below your computer's memory, with room to spare.
 - **Models under 2B** often miss answers. Use them to find where to read, then read the page yourself.
 - **Unverified models** (the Ternary Bonsai family) show a "Community: unverified" badge. They may need
   PrismML's llama.cpp build; see Q-8 in `docs/QUESTIONS.md`.

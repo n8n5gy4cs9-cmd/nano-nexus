@@ -408,6 +408,148 @@
       "notes": "Community imatrix quants by bartowski, same family as the Qwen3.5 4B entry (loads with the bundled llama.cpp b11552). Sampling follows Qwen3 guidance. Thinking is on by default. File name and size taken from the repo page via search."
     },
     {
+      "id": "qwen3.5-4b-q8",
+      "name": "Qwen3.5 4B (high quality)",
+      "family": "Qwen3.5",
+      "params_b": 4.0,
+      "quant": "Q4_K_M",
+      "repo": "bartowski/Qwen_Qwen3.5-4B-GGUF",
+      "revision": "main",
+      "file_pattern": "(?i)Qwen3\\.5-4B-Q8_0\\.gguf$",
+      "approx_bytes": 4620000000,
+      "license": "Apache-2.0",
+      "context_max": 262144,
+      "context_default": 8192,
+      "capabilities": [
+        "chat",
+        "code",
+        "thinking",
+        "tools-native",
+        "multilingual",
+        "long-context"
+      ],
+      "supports_thinking_toggle": true,
+      "sampling": {
+        "no_think": {
+          "temperature": 0.7,
+          "top_p": 0.8,
+          "top_k": 20,
+          "min_p": 0.0
+        },
+        "think": {
+          "temperature": 0.6,
+          "top_p": 0.95,
+          "top_k": 20,
+          "min_p": 0.0
+        }
+      },
+      "min_ram_gb": 8,
+      "tier": "small",
+      "tags": [
+        "tools",
+        "librarian",
+        "quality"
+      ],
+      "verified": true,
+      "why": "Middle ground: the same 4B at near-full quality, about 4.6 GB. Slightly slower than Q4 but more careful with code and citations.",
+      "notes": "Community imatrix quants by bartowski. Sampling follows Qwen3 guidance; check the Qwen3.5 card. Requires a 2026 llama.cpp (b11552 is fine). Thinking is on by default."
+    },
+    {
+      "id": "qwen3.5-9b-q3",
+      "name": "Qwen3.5 9B (smaller)",
+      "family": "Qwen3.5",
+      "params_b": 9.0,
+      "quant": "Q4_K_M",
+      "repo": "bartowski/Qwen_Qwen3.5-9B-GGUF",
+      "revision": "main",
+      "file_pattern": "(?i)Qwen3\\.5-9B-Q3_K_M\\.gguf$",
+      "approx_bytes": 5180000000,
+      "license": "Apache-2.0",
+      "context_max": 262144,
+      "context_default": 8192,
+      "capabilities": [
+        "chat",
+        "code",
+        "thinking",
+        "tools-native",
+        "multilingual",
+        "long-context"
+      ],
+      "supports_thinking_toggle": true,
+      "sampling": {
+        "no_think": {
+          "temperature": 0.7,
+          "top_p": 0.8,
+          "top_k": 20,
+          "min_p": 0.0
+        },
+        "think": {
+          "temperature": 0.6,
+          "top_p": 0.95,
+          "top_k": 20,
+          "min_p": 0.0
+        }
+      },
+      "min_ram_gb": 10,
+      "tier": "small",
+      "tags": [
+        "tools",
+        "librarian",
+        "small"
+      ],
+      "verified": true,
+      "why": "The 9B squeezed to about 5.2 GB for 8-12 GB machines, with a small quality loss against the Q4 version.",
+      "notes": "Community imatrix quants by bartowski, same family as the Qwen3.5 4B entry (loads with the bundled llama.cpp b11552). Sampling follows Qwen3 guidance. Thinking is on by default. File name and size taken from the repo page via search."
+    },
+    {
+      "id": "qwen3.5-27b-q4",
+      "name": "Qwen3.5 27B",
+      "family": "Qwen3.5",
+      "params_b": 27.0,
+      "quant": "Q4_K_M",
+      "repo": "bartowski/Qwen_Qwen3.5-27B-GGUF",
+      "revision": "main",
+      "file_pattern": "(?i)Qwen3\\.5-27B-Q4_K_M\\.gguf$",
+      "approx_bytes": 17980000000,
+      "license": "Apache-2.0",
+      "context_max": 262144,
+      "context_default": 8192,
+      "capabilities": [
+        "chat",
+        "code",
+        "thinking",
+        "tools-native",
+        "multilingual",
+        "long-context"
+      ],
+      "supports_thinking_toggle": true,
+      "sampling": {
+        "no_think": {
+          "temperature": 0.7,
+          "top_p": 0.8,
+          "top_k": 20,
+          "min_p": 0.0
+        },
+        "think": {
+          "temperature": 0.6,
+          "top_p": 0.95,
+          "top_k": 20,
+          "min_p": 0.0
+        }
+      },
+      "min_ram_gb": 24,
+      "tier": "medium",
+      "tags": [
+        "tools",
+        "librarian",
+        "best-reader",
+        "big"
+      ],
+      "verified": true,
+      "why": "Middle ground between the 9B and the 35B-A3B: a dense 27B, about 18 GB. Needs 24 GB RAM and is slower than the 35B-A3B, but very accurate.",
+      "notes": "Community imatrix quants by bartowski, same family as the Qwen3.5 4B entry (loads with the bundled llama.cpp b11552). Sampling follows Qwen3 guidance. Thinking is on by default. File name and size taken from the repo page via search."
+    },
+    {
       "id": "qwen3.5-35b-a3b-q4",
       "name": "Qwen3.5 35B-A3B",
       "family": "Qwen3.5",

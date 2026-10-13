@@ -187,7 +187,7 @@ mod tests {
     #[test]
     fn the_embedded_catalog_is_valid() {
         let c = Catalog::parse(CATALOG_JSON).unwrap();
-        assert_eq!(c.models.len(), 26);
+        assert_eq!(c.models.len(), 29);
         assert_eq!(
             c.default_entry().map(|d| d.id.as_str()),
             Some("minicpm5-1b-fable5-v2-q8")
