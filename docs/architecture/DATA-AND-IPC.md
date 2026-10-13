@@ -110,6 +110,8 @@ CREATE TABLE rename_items (
 | `runtime.idle_unload_minutes` | `0` (never). If > 0, stop the server after N idle minutes and restart it on the next request |
 | `models.active_model_id` | `"builtin"` |
 | `privacy.allow_network_downloads` | `true` |
+| `tools.web_enabled` | `false` (ADR-016: lets `search_web`/`fetch_url` run) |
+| `tools.disabled` | `{}` (assistant id → tool names switched off) |
 | `notifications.os_when_unfocused` | `true` |
 | `notifications.kinds` | all `true` |
 | `journal.retention_days` | `30` |

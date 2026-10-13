@@ -177,6 +177,12 @@ pub trait Tool: Send + Sync {
 pub struct ToolOutput { pub llm_text: String /* already budgeted */, pub ui: Option<serde_json::Value>, pub summary: String /* chip text */ }
 ```
 
+Built-in tools: `read_file`, `list_dir`, `search_files`, `grep_text`, `file_info`, `scan_folder`,
+`doc_search`, `kb_search`, `find_symbol`, `calculate`, `now`; **proposing** tools `write_file(path, content)`,
+`edit_file(path, old_text, new_text)`, `move_file(path, to)`, `trash_file(path)` (stage a change set, never
+write: ADR-016); and web tools `search_web(query)`, `fetch_url(url)` (only when Settings → Tools → Allow web
+access is on). Settings → Tools can turn off any tool an assistant declares (`tools.disabled`).
+
 Tool descriptions follow Anthropic's tool-design advice ("make tools hard to misuse"): one verb,
 absolute paths, small outputs with truncation notes ("…and 120 more files"). Error messages are
 written for the model ("Path not granted: ~/Secret. Ask the user to grant access.").

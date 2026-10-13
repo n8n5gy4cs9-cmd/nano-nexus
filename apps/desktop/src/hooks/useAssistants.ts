@@ -30,6 +30,7 @@ export const FALLBACK_CARD: AssistantCard = {
   enabled: true,
   sort: -1,
   needs: ["read"],
+  tools: ["read_file", "list_dir", "search_files", "grep_text", "scan_folder", "file_info", "calculate", "now"],
   workflow: "router",
   pipeline: null,
   starters: [

@@ -26,6 +26,8 @@ pub struct AssistantCard {
     pub sort: i32,
     /// Access the assistant may ask for (`read`, `write`, ...), shown as chips.
     pub needs: Vec<String>,
+    /// Tools the assistant declares (router workflows), for the card and Settings → Tools.
+    pub tools: Vec<String>,
     /// `chat | router | pipeline`
     pub workflow: String,
     pub pipeline: Option<String>,
@@ -64,6 +66,7 @@ fn card(e: &Entry) -> AssistantCard {
         enabled: e.enabled,
         sort: e.sort,
         needs: s.permissions.needs.clone(),
+        tools: s.tools.allowed.clone(),
         workflow: s.workflow.kind.clone(),
         pipeline,
         starters: s.ui.starters.clone(),
@@ -275,7 +278,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let ctx = AppState::for_tests(dir.path());
         let cards = list(&ctx).unwrap();
-        assert_eq!(cards.len(), 19);
+        assert_eq!(cards.len(), 20);
         assert_eq!(cards[0].id, "nexus");
         assert!(cards[0].available);
         let scout = cards.iter().find(|c| c.id == "folder-scout").unwrap();

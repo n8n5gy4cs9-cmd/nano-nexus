@@ -67,7 +67,7 @@ import type { Checker, Found, RenameItem, RenamePlan, RenamePlanOptions, RenameP
 import type { Unsubscribe } from "./transport";
 
 /** Value accepted by `settings.set`. */
-export type SettingValue = null | boolean | number | string | string[] | Record<string, boolean>;
+export type SettingValue = null | boolean | number | string | string[] | Record<string, boolean> | Record<string, string[]>;
 
 export const api = {
   app: {

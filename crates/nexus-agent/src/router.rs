@@ -38,6 +38,21 @@ pub struct RouterAction {
     pub query: Option<String>,
     #[serde(default)]
     pub expression: Option<String>,
+    /// `write_file`: the whole file. `edit_file`: unused.
+    #[serde(default)]
+    pub content: Option<String>,
+    /// `edit_file`: the exact passage to replace.
+    #[serde(default)]
+    pub old_text: Option<String>,
+    /// `edit_file`: its replacement.
+    #[serde(default)]
+    pub new_text: Option<String>,
+    /// `move_file`: the destination path.
+    #[serde(default)]
+    pub to: Option<String>,
+    /// `fetch_url`: the page address.
+    #[serde(default)]
+    pub url: Option<String>,
 }
 
 impl RouterAction {
@@ -118,7 +133,12 @@ pub fn router_schema(allowed_tools: &[String]) -> Value {
             "action": {"type": "string", "enum": actions},
             "path": {"type": "string", "maxLength": 1024},
             "query": {"type": "string", "maxLength": 200},
-            "expression": {"type": "string", "maxLength": 200}
+            "expression": {"type": "string", "maxLength": 200},
+            "content": {"type": "string", "maxLength": 12000},
+            "old_text": {"type": "string", "maxLength": 4000},
+            "new_text": {"type": "string", "maxLength": 12000},
+            "to": {"type": "string", "maxLength": 1024},
+            "url": {"type": "string", "maxLength": 2048}
         }
     })
 }
@@ -294,6 +314,34 @@ pub fn resolve_action(
             path(&mut args, true)?;
             let q = clean(&a.query).ok_or("a query is required")?;
             args.insert("query".into(), Value::String(q.to_owned()));
+        }
+        "write_file" => {
+            path(&mut args, false)?;
+            let c = a.content.as_deref().ok_or("content is required")?;
+            args.insert("content".into(), Value::String(c.to_owned()));
+        }
+        "edit_file" => {
+            path(&mut args, false)?;
+            let old = clean(&a.old_text).ok_or("old_text is required")?;
+            let new = a.new_text.as_deref().ok_or("new_text is required")?;
+            args.insert("old_text".into(), Value::String(old.to_owned()));
+            args.insert("new_text".into(), Value::String(new.to_owned()));
+        }
+        "move_file" => {
+            path(&mut args, false)?;
+            let raw = clean(&a.to).ok_or("a destination (`to`) is required")?;
+            let dest = resolve_path(raw, home, roots)
+                .ok_or_else(|| format!("could not resolve the path `{raw}`"))?;
+            args.insert("to".into(), Value::String(dest.display().to_string()));
+        }
+        "trash_file" => path(&mut args, false)?,
+        "search_web" => {
+            let q = clean(&a.query).ok_or("a query is required")?;
+            args.insert("query".into(), Value::String(q.to_owned()));
+        }
+        "fetch_url" => {
+            let u = clean(&a.url).ok_or("a url is required")?;
+            args.insert("url".into(), Value::String(u.to_owned()));
         }
         "doc_search" | "kb_search" | "find_symbol" => {
             let q = clean(&a.query).ok_or("a query is required")?;
@@ -487,6 +535,8 @@ pub async fn run_router(
             docs: cx.docs.clone(),
             kb: cx.kb.clone(),
             code: cx.code.clone(),
+            proposals: cx.proposals.clone(),
+            web: cx.web.clone(),
         };
         cx_run.reason = format!("to run {}", call.tool);
         let run = match tool.run(call.args, &cx_run).await {
@@ -593,6 +643,7 @@ mod tests {
             path: path.map(Into::into),
             query: query.map(Into::into),
             expression: None,
+            ..RouterAction::default()
         })
     }
 

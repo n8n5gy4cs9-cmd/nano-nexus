@@ -27,6 +27,7 @@ const card = (over: Partial<AssistantCard>): AssistantCard => ({
   enabled: true,
   sort: 0,
   needs: [],
+  tools: [],
   workflow: "chat",
   pipeline: null,
   starters: [],

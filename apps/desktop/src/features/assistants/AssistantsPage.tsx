@@ -40,6 +40,27 @@ export function permissionChips(needs: string[]): string[] {
   return needs.map((n) => NEED_LABEL[n] ?? n);
 }
 
+/** Plain names for the tools an assistant may call (Settings → Tools can turn them off). */
+export const TOOL_LABEL: Record<string, string> = {
+  read_file: "Read files",
+  list_dir: "List folders",
+  search_files: "Find files",
+  grep_text: "Search text",
+  scan_folder: "Scan folders",
+  file_info: "File info",
+  find_symbol: "Find symbols",
+  doc_search: "Search documents",
+  kb_search: "Search libraries",
+  write_file: "Propose new files",
+  edit_file: "Propose edits",
+  move_file: "Propose moves",
+  trash_file: "Propose trashing",
+  search_web: "Search the web",
+  fetch_url: "Read web pages",
+  calculate: "Calculator",
+  now: "Date and time",
+};
+
 function matches(c: AssistantCard, q: string): boolean {
   const hay = `${c.name} ${c.tagline} ${c.category}`.toLowerCase();
   return q
@@ -130,6 +151,15 @@ function Card({ card, onUse, onEdit, onChanged }: { card: AssistantCard; onUse: 
         ))}
         {card.needs.length === 0 ? <Badge tone="success">No file access</Badge> : null}
       </div>
+      {card.tools.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-1.5" aria-label="Tools">
+          {card.tools.map((t) => (
+            <Badge key={t} tone={t === "search_web" || t === "fetch_url" ? "accent" : "neutral"}>
+              {TOOL_LABEL[t] ?? t}
+            </Badge>
+          ))}
+        </div>
+      ) : null}
       <div className="mt-auto flex justify-end">
         <Button size="sm" variant="primary" disabled={!card.available || !card.enabled} onClick={onUse}>
           Chat

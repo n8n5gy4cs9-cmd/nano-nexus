@@ -64,8 +64,56 @@ fn home_dir() -> std::path::PathBuf {
 }
 
 /// Tools the router may use for `spec`: its allowed list (all tools exist now).
-fn router_tools(spec: &nexus_agent::AssistantSpec) -> Vec<String> {
-    spec.tools.allowed.clone()
+/// The tools this assistant may call now: what its definition declares, minus what the user turned
+/// off for it, and without the web tools unless web access is on (ADR-016).
+fn router_tools(spec: &nexus_agent::AssistantSpec, settings: &nexus_core::settings::Settings) -> Vec<String> {
+    spec.tools
+        .allowed
+        .iter()
+        .filter(|t| !settings.tool_disabled(&spec.id, t))
+        .filter(|t| settings.tools_web_enabled || !matches!(t.as_str(), "search_web" | "fetch_url"))
+        .cloned()
+        .collect()
+}
+
+/// Stages the change sets that `write_file` and friends propose, tagged with the assistant.
+struct ChatProposals {
+    ctx: Arc<crate::state::AppCtx>,
+    origin: String,
+}
+
+impl nexus_agent::tools::ProposalSink for ChatProposals {
+    fn propose(&self, title: &str, ops: Vec<nexus_core::changes::FileOp>) -> Result<String, String> {
+        super::fs::changeset_plan(&self.ctx, title, &self.origin, ops)
+            .map(|id| id.0)
+            .map_err(|e| e.to_string())
+    }
+}
+
+/// `search_web` / `fetch_url` over [`nexus_models::web::WebClient`].
+struct ChatWeb(nexus_models::web::WebClient);
+
+#[async_trait::async_trait]
+impl nexus_agent::tools::WebSource for ChatWeb {
+    async fn search(&self, query: &str, max: usize) -> Result<Vec<nexus_agent::tools::WebHit>, String> {
+        let hits = self.0.search(query, max).await.map_err(|e| e.to_string())?;
+        Ok(hits
+            .into_iter()
+            .map(|h| nexus_agent::tools::WebHit {
+                title: h.title,
+                url: h.url,
+                snippet: h.snippet,
+            })
+            .collect())
+    }
+    async fn fetch(&self, url: &str, max_chars: usize) -> Result<nexus_agent::tools::WebPage, String> {
+        let p = self.0.fetch(url, max_chars).await.map_err(|e| e.to_string())?;
+        Ok(nexus_agent::tools::WebPage {
+            url: p.url,
+            title: p.title,
+            text: p.text,
+        })
+    }
 }
 
 /// Search indexes for long attached documents, so `doc_search` can cite pages.
@@ -365,7 +413,7 @@ fn start_turn(
     let settings = ctx.settings_snapshot();
     let mut pctx = PromptContext::new(prompt::os_display_name(std::env::consts::OS), prompt::today_iso());
     pctx.granted_roots = ctx.perms.grants().into_iter().map(|g| g.root).collect();
-    let tool_names = router_tools(&spec);
+    let tool_names = router_tools(&spec, &settings);
     pctx.tools = builtin_tools()
         .iter()
         .filter(|t| tool_names.iter().any(|n| n == t.name()))
@@ -512,6 +560,13 @@ fn start_turn(
             );
             let mut cx = ToolCx::new(Arc::new(gate));
             cx.docs = docs;
+            cx.proposals = Some(Arc::new(ChatProposals {
+                ctx: ctx.clone(),
+                origin: assistant_slug.clone(),
+            }));
+            if settings.tools_web_enabled {
+                cx.web = Some(Arc::new(ChatWeb(nexus_models::web::WebClient::new())));
+            }
             cx.kb = kb_source.clone().map(|k| k as Arc<dyn KnowledgeSource>);
             let request = RouterRequest {
                 user_text: &input.user_text,
@@ -1180,6 +1235,38 @@ mod tests {
             (v[0]["summary"].as_str(), v[0]["ok"].as_bool()),
             (Some("Read b.md"), Some(true))
         );
+    }
+}
+
+#[cfg(test)]
+mod tool_filter_tests {
+    use super::*;
+    use nexus_core::settings::Settings;
+
+    fn agent() -> nexus_agent::AssistantSpec {
+        let (_, text) = nexus_agent::registry::builtin_sources()
+            .into_iter()
+            .find(|(f, _)| *f == "agent.toml")
+            .expect("agent.toml is built in");
+        nexus_agent::registry::validate_toml(text).expect("agent.toml is valid")
+    }
+
+    #[test]
+    fn web_tools_need_the_setting_and_the_user_can_switch_tools_off() {
+        let spec = agent();
+        let mut s = Settings::default();
+        let tools = router_tools(&spec, &s);
+        assert!(tools.contains(&"write_file".to_owned()));
+        assert!(!tools.contains(&"search_web".to_owned()) && !tools.contains(&"fetch_url".to_owned()));
+
+        s.tools_web_enabled = true;
+        assert!(router_tools(&spec, &s).contains(&"search_web".to_owned()));
+
+        s.tools_disabled
+            .insert("agent".into(), vec!["trash_file".into(), "search_web".into()]);
+        let tools = router_tools(&spec, &s);
+        assert!(!tools.contains(&"trash_file".to_owned()) && !tools.contains(&"search_web".to_owned()));
+        assert!(tools.contains(&"fetch_url".to_owned()));
     }
 }
 

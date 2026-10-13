@@ -97,6 +97,35 @@ auditable and reversible.
 
 ---
 
+## ADR-016: Agent tools: proposal-only file tools and opt-in web access
+**Status:** Accepted · 2026-10-13 · amends ADR-005 and ADR-013 (the owner asked for `write_file` and `search_web`)
+
+**Context.** Chat assistants could only paste code and say "I cannot write files". The owner wants
+agent-style assistants that can act, including writing files and searching the web.
+
+**Decision.**
+- `write_file`, `edit_file`, `move_file` and `trash_file` exist as router tools, but they **propose**:
+  each call stages a `ChangeSet` (origin = the assistant id) through a `ProposalSink`. Nothing touches
+  disk until the user previews and applies it (`Journal::apply`, ADR-005 unchanged). The tool needs a
+  `write`/`create`/`move`/`trash` grant and the deny list still wins. The model is told the change is
+  *not yet written*.
+- `search_web` and `fetch_url` run through `nexus_models::web::WebClient` only when
+  Settings → Tools → "Allow web access" is on (default **off**). The fetcher accepts public `http(s)`
+  addresses only, pins and re-checks DNS and every redirect, strips scripts, and caps time and size,
+  so a page can never reach `llama-server` on 127.0.0.1 or the user's LAN. Search uses DuckDuckGo's
+  HTML endpoint (no key). Web text is wrapped in `<web_results>`/`<web_page>` inside `<tool_result>`
+  and is data, not instructions.
+- `Settings.tools.disabled` (assistant id → tool names) lets the user switch off any tool an assistant
+  declares; a tool can never be added to an assistant that does not declare it.
+- New built-in assistant **Agent** (router, `always_route`, 5 hops) with all of these tools.
+  Nexus gets the web tools (inert unless web access is on).
+
+**Consequences.** Prompt injection from a web page or file can at worst *propose* a change that the
+user sees as a diff. Web access sends search words and URLs off the computer, which is why it is opt-in.
+A router decision carries file text in JSON, so `write_file` is limited to 12 000 characters per call.
+
+---
+
 ## ADR-006: Rust→TS type sharing with tauri-specta (fallback: ts-rs)
 **Status:** Accepted with fallback
 

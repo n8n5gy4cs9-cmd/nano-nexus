@@ -123,6 +123,14 @@ pub struct Settings {
     /// Add the catalog's short, model-specific hint (for example for MiniCPM5) to the system prompt.
     #[serde(rename = "models.use_prompt_hints")]
     pub models_use_prompt_hints: bool,
+    /// Let assistants use `search_web` and `fetch_url` (ADR-016). Off by default: nothing leaves the
+    /// computer unless the user turns this on.
+    #[serde(rename = "tools.web_enabled")]
+    pub tools_web_enabled: bool,
+    /// Tools the user turned off for one assistant: assistant id → tool names. A tool can only be
+    /// turned off here, never added to an assistant that does not declare it.
+    #[serde(rename = "tools.disabled")]
+    pub tools_disabled: BTreeMap<String, Vec<String>>,
     /// Duo assistant: model id used for easy questions. Empty = the active model.
     #[serde(rename = "duo.light_model_id")]
     pub duo_light_model_id: String,
@@ -134,6 +142,8 @@ pub struct Settings {
 impl Default for Settings {
     fn default() -> Self {
         Self {
+            tools_web_enabled: false,
+            tools_disabled: BTreeMap::new(),
             ui_theme: Theme::System,
             ui_accent: "violet".into(),
             ui_show_perf_stats: true,
@@ -191,6 +201,13 @@ pub type SettingsPatch = BTreeMap<String, Value>;
 
 impl Settings {
     /// Whether notifications of `kind` are enabled (absent = enabled).
+    /// Is `tool` switched off for `assistant`?
+    pub fn tool_disabled(&self, assistant: &str, tool: &str) -> bool {
+        self.tools_disabled
+            .get(assistant)
+            .is_some_and(|v| v.iter().any(|t| t == tool))
+    }
+
     pub fn notification_kind_enabled(&self, kind: &str) -> bool {
         self.notifications_kinds.get(kind).copied().unwrap_or(true)
     }
@@ -267,6 +284,18 @@ mod tests {
         assert_eq!(s.share_default_policy, SharePolicy::ChatRead);
         assert_eq!(s.journal_max_bytes, 2_147_483_648);
         assert!(s.notification_kind_enabled("anything"));
+        assert!(!s.tools_web_enabled);
+        assert!(!s.tool_disabled("agent", "write_file"));
+    }
+
+    #[test]
+    fn tools_can_be_disabled_per_assistant() {
+        let mut s = Settings::default();
+        s.set_key("tools.disabled", json!({"agent": ["search_web"]}))
+            .unwrap();
+        assert!(s.tool_disabled("agent", "search_web"));
+        assert!(!s.tool_disabled("agent", "read_file"));
+        assert!(!s.tool_disabled("nexus", "search_web"));
     }
 
     #[test]

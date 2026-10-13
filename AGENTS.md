@@ -38,7 +38,7 @@ platform-only (🍎/🪟), or the session limits are hit. **Never open a pull re
 ## 3. Hard rules (never break these)
 - **Never** commit `vendor/`, `*.gguf`, model files, build outputs, secrets, or `bundles/local/*`.
 - **Never** write files outside `nexus-fs::Journal::apply` (except the app data dir, caches, and
-  download temp files). The LLM never gets a write tool (ADR-005).
+  download temp files). The LLM never writes directly: its file tools only *propose* change sets (ADR-005, ADR-016).
 - **Never** weaken the permission engine: canonicalize first, the deny list always wins, use
   component-wise `starts_with`, and run the tests in PERMISSIONS §8.
 - **Never** expose `llama-server` beyond `127.0.0.1`, and never send its token to the webview or LAN clients.

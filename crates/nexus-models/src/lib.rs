@@ -8,3 +8,4 @@ pub mod fit;
 pub mod gguf;
 pub mod hf;
 pub mod pack;
+pub mod web;

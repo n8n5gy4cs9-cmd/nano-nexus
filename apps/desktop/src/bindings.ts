@@ -291,6 +291,8 @@ export type AssistantCard = {
 	sort: number,
 	/**  Access the assistant may ask for (`read`, `write`, ...), shown as chips. */
 	needs: string[],
+	/**  Tools the assistant declares (router workflows), for the card and Settings → Tools. */
+	tools: string[],
 	/**  `chat | router | pipeline` */
 	workflow: string,
 	pipeline: string | null,
@@ -1363,6 +1365,8 @@ export type Settings = {
 	"ui.theme"?: Theme,
 	"ui.accent"?: string,
 	"ui.show_perf_stats"?: boolean,
+	/**  Comma-separated ids of UI plugins the user turned off (see `apps/desktop/src/plugins`). */
+	"plugins.disabled"?: string,
 	"runtime.ctx_size"?: number,
 	/**  `"all"` or a number as a string. */
 	"runtime.gpu_layers"?: string,
@@ -1401,6 +1405,11 @@ export type Settings = {
 	"knowledge.chat_context"?: boolean,
 	/**  Token budget of the injected passages (and of `kb_search` results). */
 	"knowledge.max_tokens"?: number,
+	/**
+	 *  How ordinary chats use library passages: `strict` (answer only from them) or `guide` (use them
+	 *  as the main reference but explain, adapt, and write new code, labelling what is not from them).
+	 */
+	"knowledge.answer_style"?: string,
 	/**  The welcome tour was finished or skipped. Settings can show it again. */
 	"ui.onboarded"?: boolean,
 	/**  Show a tray / menu-bar icon with "Open", the sharing status and "Quit". Off by default. */
@@ -1409,6 +1418,16 @@ export type Settings = {
 	"app.launch_at_login"?: boolean,
 	/**  Add the catalog's short, model-specific hint (for example for MiniCPM5) to the system prompt. */
 	"models.use_prompt_hints"?: boolean,
+	/**
+	 *  Let assistants use `search_web` and `fetch_url` (ADR-016). Off by default: nothing leaves the
+	 *  computer unless the user turns this on.
+	 */
+	"tools.web_enabled"?: boolean,
+	/**
+	 *  Tools the user turned off for one assistant: assistant id → tool names. A tool can only be
+	 *  turned off here, never added to an assistant that does not declare it.
+	 */
+	"tools.disabled"?: { [key in string]: string[] },
 	/**  Duo assistant: model id used for easy questions. Empty = the active model. */
 	"duo.light_model_id"?: string,
 	/**  Duo assistant: model id used for hard questions. Empty = the active model. */

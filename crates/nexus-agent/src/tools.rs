@@ -1,12 +1,15 @@
-//! Tools the router can call (ASSISTANTS §5). All tools are read-only: the model never gets a write
-//! tool (ADR-005). Every file access goes through a [`Gatekeeper`], which checks the permission engine
-//! and, when a grant is missing, asks the user.
+//! Tools the router can call (ASSISTANTS §5). The model never writes a file itself (ADR-005, ADR-016):
+//! `write_file`, `edit_file`, `move_file` and `trash_file` only *propose* a change set that the user
+//! previews and applies. Every file access goes through a [`Gatekeeper`], which checks the permission
+//! engine and, when a grant is missing, asks the user. The web tools run only when the user turned
+//! web access on (ADR-013, ADR-016).
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::UNIX_EPOCH;
 
 use async_trait::async_trait;
+use nexus_core::changes::{FileOp, TextEdit};
 use nexus_core::fs::Access;
 use nexus_fs::PermissionEngine;
 use serde::Serialize;
@@ -164,6 +167,39 @@ pub struct ToolCx {
     pub kb: Option<Arc<dyn KnowledgeSource>>,
     /// The indexed code project behind `find_symbol` (M09). `None` until a project is indexed.
     pub code: Option<Arc<dyn CodeSource>>,
+    /// Where `write_file` and friends stage their change sets. `None` = proposing is not available.
+    pub proposals: Option<Arc<dyn ProposalSink>>,
+    /// Web access behind `search_web` and `fetch_url`. `None` = web access is off.
+    pub web: Option<Arc<dyn WebSource>>,
+}
+
+/// Stores a change set the model proposed. Nothing touches disk until the user applies it (ADR-005).
+pub trait ProposalSink: Send + Sync {
+    /// Stage `ops` under `title`; returns the change set id.
+    fn propose(&self, title: &str, ops: Vec<FileOp>) -> Result<String, String>;
+}
+
+/// One web search result.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct WebHit {
+    pub title: String,
+    pub url: String,
+    pub snippet: String,
+}
+
+/// A fetched page, already reduced to plain text.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct WebPage {
+    pub url: String,
+    pub title: String,
+    pub text: String,
+}
+
+/// Implemented by the app over `nexus-models::web` (keeps this crate free of network code).
+#[async_trait]
+pub trait WebSource: Send + Sync {
+    async fn search(&self, query: &str, max_results: usize) -> Result<Vec<WebHit>, String>;
+    async fn fetch(&self, url: &str, max_chars: usize) -> Result<WebPage, String>;
 }
 
 /// Implemented by the app over the Rename Forge index (keeps this crate free of the project store).
@@ -195,6 +231,8 @@ impl ToolCx {
             docs: Vec::new(),
             kb: None,
             code: None,
+            proposals: None,
+            web: None,
         }
     }
 }
@@ -1132,6 +1170,425 @@ impl Tool for FindSymbol {
     }
 }
 
+// ---- proposing tools (ADR-016) -------------------------------------------------------------------
+
+/// Largest text `write_file` and `edit_file` accept in one call.
+pub const MAX_WRITE_CHARS: usize = 20_000;
+
+fn arg_text<'a>(args: &'a ToolArgs, key: &str) -> Result<&'a str, ToolError> {
+    args.get(key)
+        .and_then(Value::as_str)
+        .ok_or_else(|| ToolError::Invalid(format!("Missing argument `{key}`.")))
+}
+
+fn sink(cx: &ToolCx) -> Result<&Arc<dyn ProposalSink>, ToolError> {
+    cx.proposals
+        .as_ref()
+        .ok_or(ToolError::Unavailable("Proposing file changes"))
+}
+
+fn staged(
+    cx: &ToolCx,
+    title: String,
+    op: FileOp,
+    ui: Value,
+    llm: String,
+    summary: String,
+) -> Result<ToolOutput, ToolError> {
+    let id = sink(cx)?
+        .propose(&title, vec![op])
+        .map_err(|e| ToolError::Invalid(format!("Could not stage the change: {e}")))?;
+    let mut ui = ui;
+    if let Some(o) = ui.as_object_mut() {
+        o.insert("change_set".into(), Value::String(id));
+    }
+    Ok(ToolOutput {
+        llm_text: llm,
+        ui: Some(ui),
+        summary,
+    })
+}
+
+/// `write_file(path, content)`: propose creating a file, or replacing one the user can preview.
+pub struct WriteFile;
+
+#[async_trait]
+impl Tool for WriteFile {
+    fn name(&self) -> &'static str {
+        "write_file"
+    }
+    fn description(&self) -> &'static str {
+        "Propose a new file or a full replacement of one. The user reviews and applies it; nothing is written yet."
+    }
+    fn signature(&self) -> &'static str {
+        "write_file(path, content)"
+    }
+    fn required_access(&self, args: &ToolArgs) -> Vec<(PathBuf, Access)> {
+        arg_path(args)
+            .map(|p| {
+                let a = if p.exists() { Access::Write } else { Access::Create };
+                vec![(p, a)]
+            })
+            .unwrap_or_default()
+    }
+    async fn run(&self, args: ToolArgs, cx: &ToolCx) -> Result<ToolOutput, ToolError> {
+        let given = arg_path(&args)?;
+        let content = arg_text(&args, "content")?;
+        if content.chars().count() > MAX_WRITE_CHARS {
+            return Err(ToolError::Invalid(format!(
+                "Content is longer than {MAX_WRITE_CHARS} characters. Write a smaller file, or split it into several files."
+            )));
+        }
+        sink(cx)?;
+        let exists = given.exists();
+        let access = if exists { Access::Write } else { Access::Create };
+        let path = cx
+            .gate
+            .authorize(&given, access, &format!("to propose changes to {}", base(&given)))
+            .await?;
+        let shown = path.display().to_string();
+        let (op, verb) = if path.exists() {
+            if path.is_dir() {
+                return Err(ToolError::Invalid(format!("{shown} is a folder.")));
+            }
+            let bytes = std::fs::read(&path).map_err(|e| io_err(&path, e))?;
+            (
+                FileOp::Write {
+                    path: shown.clone(),
+                    base_hash: Some(nexus_fs::hash_bytes(&bytes)),
+                    contents: content.to_owned(),
+                },
+                "replace",
+            )
+        } else {
+            (
+                FileOp::Create {
+                    path: shown.clone(),
+                    contents: content.to_owned(),
+                },
+                "create",
+            )
+        };
+        staged(
+            cx,
+            format!(
+                "{} {}",
+                if verb == "create" { "Create" } else { "Replace" },
+                base(&path)
+            ),
+            op,
+            serde_json::json!({"path": shown, "kind": verb}),
+            format!(
+                "Proposed to {verb} {shown} ({} characters). NOT written yet: tell the user to review it in Changes and click Apply.",
+                content.chars().count()
+            ),
+            format!("Proposed to {verb} {} (review in Changes)", base(&path)),
+        )
+    }
+}
+
+/// `edit_file(path, old_text, new_text)`: propose replacing one exact passage.
+pub struct EditFile;
+
+#[async_trait]
+impl Tool for EditFile {
+    fn name(&self) -> &'static str {
+        "edit_file"
+    }
+    fn description(&self) -> &'static str {
+        "Propose replacing one exact passage in an existing file. The user reviews and applies it."
+    }
+    fn signature(&self) -> &'static str {
+        "edit_file(path, old_text, new_text)"
+    }
+    fn required_access(&self, args: &ToolArgs) -> Vec<(PathBuf, Access)> {
+        arg_path(args)
+            .map(|p| vec![(p, Access::Write)])
+            .unwrap_or_default()
+    }
+    async fn run(&self, args: ToolArgs, cx: &ToolCx) -> Result<ToolOutput, ToolError> {
+        let given = arg_path(&args)?;
+        let old = arg_str(&args, "old_text")?;
+        let new = arg_text(&args, "new_text")?;
+        if new.chars().count() > MAX_WRITE_CHARS {
+            return Err(ToolError::Invalid(format!(
+                "new_text is longer than {MAX_WRITE_CHARS} characters."
+            )));
+        }
+        sink(cx)?;
+        let path = cx
+            .gate
+            .authorize(
+                &given,
+                Access::Write,
+                &format!("to propose an edit to {}", base(&given)),
+            )
+            .await?;
+        let meta = std::fs::metadata(&path).map_err(|e| io_err(&path, e))?;
+        if !meta.is_file() || meta.len() > MAX_FILE_BYTES {
+            return Err(ToolError::Invalid(format!(
+                "{} is not a text file I can edit.",
+                base(&path)
+            )));
+        }
+        let bytes = std::fs::read(&path).map_err(|e| io_err(&path, e))?;
+        if is_binary(&bytes) {
+            return Err(ToolError::Invalid(format!("{} is a binary file.", base(&path))));
+        }
+        let text = String::from_utf8_lossy(&bytes);
+        let mut hits = text.match_indices(old);
+        let Some((start, _)) = hits.next() else {
+            return Err(ToolError::Invalid(format!(
+                "old_text was not found in {}. Read the file again and copy the passage exactly.",
+                base(&path)
+            )));
+        };
+        if hits.next().is_some() {
+            return Err(ToolError::Invalid(format!(
+                "old_text appears more than once in {}. Include more surrounding lines so it is unique.",
+                base(&path)
+            )));
+        }
+        let (start, end) = (
+            u32::try_from(start).map_err(|_| ToolError::Invalid("File is too large.".into()))?,
+            u32::try_from(start + old.len()).map_err(|_| ToolError::Invalid("File is too large.".into()))?,
+        );
+        let shown = path.display().to_string();
+        staged(
+            cx,
+            format!("Edit {}", base(&path)),
+            FileOp::Edit {
+                path: shown.clone(),
+                base_hash: nexus_fs::hash_bytes(&bytes),
+                edits: vec![TextEdit {
+                    start,
+                    end,
+                    new_text: new.to_owned(),
+                }],
+            },
+            serde_json::json!({"path": shown, "kind": "edit"}),
+            format!(
+                "Proposed an edit to {shown}. NOT written yet: tell the user to review it in Changes and click Apply."
+            ),
+            format!("Proposed an edit to {} (review in Changes)", base(&path)),
+        )
+    }
+}
+
+/// `move_file(path, to)`: propose moving or renaming.
+pub struct MoveFile;
+
+#[async_trait]
+impl Tool for MoveFile {
+    fn name(&self) -> &'static str {
+        "move_file"
+    }
+    fn description(&self) -> &'static str {
+        "Propose moving or renaming a file or folder. The user reviews and applies it."
+    }
+    fn signature(&self) -> &'static str {
+        "move_file(path, to)"
+    }
+    fn required_access(&self, args: &ToolArgs) -> Vec<(PathBuf, Access)> {
+        let mut v = Vec::new();
+        if let Ok(p) = arg_path(args) {
+            v.push((p, Access::Move));
+        }
+        if let Ok(t) = arg_str(args, "to") {
+            v.push((PathBuf::from(t), Access::Create));
+        }
+        v
+    }
+    async fn run(&self, args: ToolArgs, cx: &ToolCx) -> Result<ToolOutput, ToolError> {
+        let from = arg_path(&args)?;
+        let to = PathBuf::from(arg_str(&args, "to")?);
+        sink(cx)?;
+        let from = cx
+            .gate
+            .authorize(&from, Access::Move, &format!("to propose moving {}", base(&from)))
+            .await?;
+        let to = cx
+            .gate
+            .authorize(
+                &to,
+                Access::Create,
+                &format!("to propose moving a file to {}", base(&to)),
+            )
+            .await?;
+        if !from.exists() {
+            return Err(ToolError::NotFound(from.display().to_string()));
+        }
+        if to.exists() {
+            return Err(ToolError::Invalid(format!("{} already exists.", to.display())));
+        }
+        let (f, t) = (from.display().to_string(), to.display().to_string());
+        staged(
+            cx,
+            format!("Move {}", base(&from)),
+            FileOp::Move {
+                from: f.clone(),
+                to: t.clone(),
+            },
+            serde_json::json!({"path": f, "to": t, "kind": "move"}),
+            format!(
+                "Proposed to move {f} to {t}. NOT moved yet: tell the user to review it in Changes and click Apply."
+            ),
+            format!("Proposed to move {} (review in Changes)", base(&from)),
+        )
+    }
+}
+
+/// `trash_file(path)`: propose moving to the system Trash (never a hard delete).
+pub struct TrashFile;
+
+#[async_trait]
+impl Tool for TrashFile {
+    fn name(&self) -> &'static str {
+        "trash_file"
+    }
+    fn description(&self) -> &'static str {
+        "Propose moving a file or folder to the Trash. The user reviews and applies it."
+    }
+    fn signature(&self) -> &'static str {
+        "trash_file(path)"
+    }
+    fn required_access(&self, args: &ToolArgs) -> Vec<(PathBuf, Access)> {
+        arg_path(args)
+            .map(|p| vec![(p, Access::Trash)])
+            .unwrap_or_default()
+    }
+    async fn run(&self, args: ToolArgs, cx: &ToolCx) -> Result<ToolOutput, ToolError> {
+        let given = arg_path(&args)?;
+        sink(cx)?;
+        let path = cx
+            .gate
+            .authorize(
+                &given,
+                Access::Trash,
+                &format!("to propose trashing {}", base(&given)),
+            )
+            .await?;
+        if !path.exists() {
+            return Err(ToolError::NotFound(path.display().to_string()));
+        }
+        let shown = path.display().to_string();
+        staged(
+            cx,
+            format!("Trash {}", base(&path)),
+            FileOp::Trash { path: shown.clone() },
+            serde_json::json!({"path": shown, "kind": "trash"}),
+            format!(
+                "Proposed to move {shown} to the Trash. NOT done yet: tell the user to review it in Changes and click Apply."
+            ),
+            format!("Proposed to trash {} (review in Changes)", base(&path)),
+        )
+    }
+}
+
+// ---- web tools (ADR-016) -------------------------------------------------------------------------
+
+fn web(cx: &ToolCx) -> Result<&Arc<dyn WebSource>, ToolError> {
+    cx.web.as_ref().ok_or(ToolError::Unavailable(
+        "Web access (it is off or you are offline; the user can turn it on in Settings → Tools)",
+    ))
+}
+
+/// `search_web(query)`: top results from a web search.
+pub struct SearchWeb;
+
+#[async_trait]
+impl Tool for SearchWeb {
+    fn name(&self) -> &'static str {
+        "search_web"
+    }
+    fn description(&self) -> &'static str {
+        "Search the web for current information. Returns titles, links and snippets."
+    }
+    fn signature(&self) -> &'static str {
+        "search_web(query)"
+    }
+    fn required_access(&self, _args: &ToolArgs) -> Vec<(PathBuf, Access)> {
+        Vec::new()
+    }
+    async fn run(&self, args: ToolArgs, cx: &ToolCx) -> Result<ToolOutput, ToolError> {
+        let query = arg_str(&args, "query")?;
+        let hits = web(cx)?
+            .search(query, 6)
+            .await
+            .map_err(|e| ToolError::Invalid(format!("Web search failed: {e}")))?;
+        if hits.is_empty() {
+            return Ok(ToolOutput {
+                llm_text: format!("No web results for “{query}”."),
+                ui: None,
+                summary: format!("Searched the web for “{query}” (no results)"),
+            });
+        }
+        let mut text = String::new();
+        for (i, h) in hits.iter().enumerate() {
+            text.push_str(&format!(
+                "{}. {}\n   {}\n   {}\n",
+                i + 1,
+                h.title,
+                h.url,
+                h.snippet
+            ));
+        }
+        let (body, _) = truncate_to_tokens(&text, cx.budget_tokens);
+        Ok(ToolOutput {
+            llm_text: format!("<web_results query=\"{query}\">\n{body}</web_results>"),
+            ui: Some(serde_json::json!({
+                "query": query,
+                "results": hits.iter().map(|h| serde_json::json!({"title": h.title, "url": h.url})).collect::<Vec<_>>()
+            })),
+            summary: format!("Searched the web for “{query}” ({} results)", hits.len()),
+        })
+    }
+}
+
+/// `fetch_url(url)`: read one web page as plain text.
+pub struct FetchUrl;
+
+#[async_trait]
+impl Tool for FetchUrl {
+    fn name(&self) -> &'static str {
+        "fetch_url"
+    }
+    fn description(&self) -> &'static str {
+        "Read one web page (a link from search_web or one the user gave) as plain text."
+    }
+    fn signature(&self) -> &'static str {
+        "fetch_url(url)"
+    }
+    fn required_access(&self, _args: &ToolArgs) -> Vec<(PathBuf, Access)> {
+        Vec::new()
+    }
+    async fn run(&self, args: ToolArgs, cx: &ToolCx) -> Result<ToolOutput, ToolError> {
+        let url = arg_str(&args, "url")?;
+        let max_chars = (f64::from(cx.budget_tokens) * 3.2) as usize;
+        let page = web(cx)?
+            .fetch(url, max_chars)
+            .await
+            .map_err(|e| ToolError::Invalid(format!("Could not read the page: {e}")))?;
+        let (body, truncated) = truncate_to_tokens(&page.text, cx.budget_tokens);
+        let note = if truncated { "\n[truncated]" } else { "" };
+        Ok(ToolOutput {
+            llm_text: format!(
+                "<web_page url=\"{}\" title=\"{}\">\n{body}{note}\n</web_page>",
+                page.url, page.title
+            ),
+            ui: Some(serde_json::json!({"url": page.url, "title": page.title})),
+            summary: format!(
+                "Read {}",
+                if page.title.is_empty() {
+                    &page.url
+                } else {
+                    &page.title
+                }
+            ),
+        })
+    }
+}
+
 /// The built-in tool set.
 pub fn builtin_tools() -> Vec<Arc<dyn Tool>> {
     vec![
@@ -1146,6 +1603,12 @@ pub fn builtin_tools() -> Vec<Arc<dyn Tool>> {
         Arc::new(FindSymbol),
         Arc::new(Calculate),
         Arc::new(Now),
+        Arc::new(WriteFile),
+        Arc::new(EditFile),
+        Arc::new(MoveFile),
+        Arc::new(TrashFile),
+        Arc::new(SearchWeb),
+        Arc::new(FetchUrl),
     ]
 }
 
@@ -1608,5 +2071,221 @@ mod tests {
         let out = FindSymbol.run(args(&[("query", "calc")]), &c).await.unwrap();
         assert!(out.llm_text.contains("function calc (a.py:1)"));
         assert!(out.llm_text.starts_with("<tool_result name=\"find_symbol\""));
+    }
+    // ---- proposing and web tools ----
+
+    #[derive(Default)]
+    struct Staged(Mutex<Vec<(String, Vec<FileOp>)>>);
+
+    impl ProposalSink for Staged {
+        fn propose(&self, title: &str, ops: Vec<FileOp>) -> Result<String, String> {
+            let mut v = self.0.lock().map_err(|e| e.to_string())?;
+            v.push((title.to_owned(), ops));
+            Ok(format!("cs{}", v.len()))
+        }
+    }
+
+    fn write_grant(e: &PermissionEngine, root: &Path) {
+        e.add_grant(NewGrant {
+            root: root.to_owned(),
+            level: GrantLevel::Full,
+            recursive: true,
+            scope: GrantScope::Session,
+            expires_at: None,
+            label: None,
+        })
+        .unwrap();
+    }
+
+    fn cx_with_sink(e: Arc<PermissionEngine>) -> (ToolCx, Arc<Staged>) {
+        let staged = Arc::new(Staged::default());
+        let mut c = cx(e);
+        c.proposals = Some(staged.clone());
+        (c, staged)
+    }
+
+    #[tokio::test]
+    async fn write_file_stages_a_create_and_never_touches_disk() {
+        let d = fixture();
+        let e = engine();
+        write_grant(&e, d.path());
+        let (c, staged) = cx_with_sink(e);
+        let target = d.path().join("new.txt");
+        let out = WriteFile
+            .run(
+                args(&[("path", target.to_str().unwrap()), ("content", "hello")]),
+                &c,
+            )
+            .await
+            .unwrap();
+        assert!(out.llm_text.contains("NOT written yet"));
+        assert!(!target.exists());
+        let ops = staged.0.lock().unwrap();
+        assert!(matches!(&ops[0].1[0], FileOp::Create { contents, .. } if contents == "hello"));
+    }
+
+    #[tokio::test]
+    async fn write_file_on_an_existing_file_carries_the_base_hash() {
+        let d = fixture();
+        let e = engine();
+        write_grant(&e, d.path());
+        let (c, staged) = cx_with_sink(e);
+        let target = d.path().join("notes.md");
+        WriteFile
+            .run(
+                args(&[("path", target.to_str().unwrap()), ("content", "new")]),
+                &c,
+            )
+            .await
+            .unwrap();
+        let ops = staged.0.lock().unwrap();
+        let expect = nexus_fs::hash_file(&target).unwrap();
+        assert!(matches!(&ops[0].1[0], FileOp::Write { base_hash: Some(h), .. } if *h == expect));
+        assert_eq!(
+            std::fs::read_to_string(&target).unwrap(),
+            "# Notes\nbuy milk\nCall Bob\n"
+        );
+    }
+
+    #[tokio::test]
+    async fn write_file_needs_a_write_grant_and_a_sink() {
+        let d = fixture();
+        let e = engine();
+        grant(&e, d.path(), true); // read-only
+        let (c, staged) = cx_with_sink(e.clone());
+        let err = WriteFile
+            .run(
+                args(&[
+                    ("path", d.path().join("x.txt").to_str().unwrap()),
+                    ("content", "a"),
+                ]),
+                &c,
+            )
+            .await
+            .unwrap_err();
+        assert!(matches!(err, ToolError::NotGranted { .. }), "{err}");
+        assert!(staged.0.lock().unwrap().is_empty());
+        let err = WriteFile
+            .run(
+                args(&[
+                    ("path", d.path().join("x.txt").to_str().unwrap()),
+                    ("content", "a"),
+                ]),
+                &cx(e),
+            )
+            .await
+            .unwrap_err();
+        assert!(matches!(err, ToolError::Unavailable(_)), "{err}");
+    }
+
+    #[tokio::test]
+    async fn edit_file_replaces_one_unique_passage() {
+        let d = fixture();
+        let e = engine();
+        write_grant(&e, d.path());
+        let (c, staged) = cx_with_sink(e);
+        let target = d.path().join("notes.md");
+        let p = target.to_str().unwrap();
+        EditFile
+            .run(
+                args(&[("path", p), ("old_text", "buy milk"), ("new_text", "buy tea")]),
+                &c,
+            )
+            .await
+            .unwrap();
+        {
+            let ops = staged.0.lock().unwrap();
+            match &ops[0].1[0] {
+                FileOp::Edit { edits, .. } => {
+                    assert_eq!((edits[0].start, edits[0].end), (8, 16));
+                    assert_eq!(edits[0].new_text, "buy tea");
+                }
+                other => panic!("{other:?}"),
+            }
+        }
+        let err = EditFile
+            .run(args(&[("path", p), ("old_text", "nope"), ("new_text", "x")]), &c)
+            .await
+            .unwrap_err();
+        assert!(err.to_string().contains("not found"));
+    }
+
+    #[tokio::test]
+    async fn edit_file_rejects_an_ambiguous_passage() {
+        let d = fixture();
+        std::fs::write(d.path().join("dup.txt"), "a\na\n").unwrap();
+        let e = engine();
+        write_grant(&e, d.path());
+        let (c, _) = cx_with_sink(e);
+        let err = EditFile
+            .run(
+                args(&[
+                    ("path", d.path().join("dup.txt").to_str().unwrap()),
+                    ("old_text", "a"),
+                    ("new_text", "b"),
+                ]),
+                &c,
+            )
+            .await
+            .unwrap_err();
+        assert!(err.to_string().contains("more than once"));
+    }
+
+    #[tokio::test]
+    async fn move_and_trash_only_stage() {
+        let d = fixture();
+        let e = engine();
+        write_grant(&e, d.path());
+        let (c, staged) = cx_with_sink(e);
+        let from = d.path().join("notes.md");
+        let to = d.path().join("renamed.md");
+        MoveFile
+            .run(
+                args(&[("path", from.to_str().unwrap()), ("to", to.to_str().unwrap())]),
+                &c,
+            )
+            .await
+            .unwrap();
+        TrashFile
+            .run(args(&[("path", from.to_str().unwrap())]), &c)
+            .await
+            .unwrap();
+        assert!(from.exists() && !to.exists());
+        assert_eq!(staged.0.lock().unwrap().len(), 2);
+    }
+
+    struct FakeWeb;
+
+    #[async_trait]
+    impl WebSource for FakeWeb {
+        async fn search(&self, query: &str, _max: usize) -> Result<Vec<WebHit>, String> {
+            Ok(vec![WebHit {
+                title: format!("About {query}"),
+                url: "https://example.org/a".into(),
+                snippet: "A snippet.".into(),
+            }])
+        }
+        async fn fetch(&self, url: &str, _max: usize) -> Result<WebPage, String> {
+            Ok(WebPage {
+                url: url.into(),
+                title: "Example".into(),
+                text: "Page text".into(),
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn web_tools_are_unavailable_until_a_source_is_set() {
+        let mut c = cx(engine());
+        let err = SearchWeb.run(args(&[("query", "rust")]), &c).await.unwrap_err();
+        assert!(matches!(err, ToolError::Unavailable(_)));
+        c.web = Some(Arc::new(FakeWeb));
+        let out = SearchWeb.run(args(&[("query", "rust")]), &c).await.unwrap();
+        assert!(out.llm_text.contains("https://example.org/a"));
+        let page = FetchUrl
+            .run(args(&[("url", "https://example.org/a")]), &c)
+            .await
+            .unwrap();
+        assert!(page.llm_text.contains("Page text"));
     }
 }

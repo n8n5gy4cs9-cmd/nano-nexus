@@ -13,6 +13,7 @@ import { useUi } from "@/stores/ui";
 
 import { AboutSection } from "./AboutSection";
 import { ShortcutsSection } from "./ShortcutsSection";
+import { ToolsSection } from "./ToolsSection";
 import { Row, Section, SelectRow, TextRow, ToggleRow } from "./fields";
 
 export const SETTINGS_KEY = ["settings"] as const;
@@ -183,6 +184,8 @@ export function SettingsPage() {
         />
         <TextRow label="Library passage budget (tokens)" type="number" value={String(num(s, "knowledge.max_tokens", 1200))} onCommit={(v) => setWhole("knowledge.max_tokens", v, 100)} />
       </Section>
+
+      <ToolsSection settings={s} set={set} />
 
       <Section title="Plugins" hint="Small add-ons for the app view. Turn any of them off here.">
         {PLUGINS.map((p) => {

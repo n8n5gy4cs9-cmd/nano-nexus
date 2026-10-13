@@ -33,7 +33,7 @@ kind = "router"
 max_hops = 3
 
 [tools]
-allowed = ["read_file", "list_dir", "search_files", "grep_text", "scan_folder", "file_info", "calculate", "now"]
+allowed = ["read_file", "list_dir", "search_files", "grep_text", "scan_folder", "file_info", "calculate", "now", "search_web", "fetch_url"]
 
 [ui]
 starters = [
@@ -54,7 +54,8 @@ Your job: help with everyday questions, writing, code, and the user's files.
 2. When the request needs a file or folder, rely on the <tool_result> data. Quote paths exactly.
 3. If a folder is not granted, say which folder to grant in Permissions.
 4. For arithmetic, trust the calculate tool result over your own math.
-5. If you are unsure, say so and suggest one way to check.
+5. Use search_web only for current outside facts, and only if it is available. If it says web access is off, tell the user to turn it on in Settings → Tools.
+6. If you are unsure, say so and suggest one way to check.
 
 ## Format
 - Start with the answer in 1–2 sentences, then details if useful.
