@@ -172,6 +172,7 @@ export async function buildWindows(opts, deps = {}) {
       fs.rmSync(format === 'kit' ? target : path.join(outDir, name), { recursive: true, force: true });
       fs.mkdirSync(target, { recursive: true });
       fs.copyFileSync(path.join(nsisDir, found[0]), path.join(target, name));
+      fs.rmSync(nsisDir, { recursive: true, force: true }); // the copy in target/ is no longer needed
       artifacts.push(path.join(target, name));
       if (format === 'kit') {
         const extras = profileIds(profile).filter((id) => id !== profile.default);

@@ -20,6 +20,13 @@ Your original `.gguf` (e.g. in Downloads) is never touched. Copies the bundler m
 are removed by `--models` and `--all`. Models installed inside the app live in its data folder, which the
 script does not touch. To keep every model, use only the plain run or `--rust`.
 
+### What a build leaves behind
+After a successful build the bundler now cleans up after itself: the app Tauri builds in `target/` is
+**moved** into `dist-bundles/<name>/` (no second copy), the Windows installer copy in `target/` is removed,
+and the staged payload in `vendor/bundle/` is removed (`--keep-staging` keeps it). It can only delete inside
+`target/` and `vendor/bundle/`, so `vendor/models`, your own `.gguf` files and Downloads are never touched.
+Old leftovers from earlier builds: run `scripts/clean-trash.sh`.
+
 ## 2. Which model should I pick?
 - **Discover tags:** `librarian` marks models that cope well with "search the books, then answer". Bigger
   is more accurate. `optimal` marks the pick for its size class.

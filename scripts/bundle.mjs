@@ -17,6 +17,7 @@
 //   --format installer|portable|kit|auto  Windows only; auto = installer, or kit when the payload is over 1.8 GB
 //   --stage-only                         prepare the payload and the Tauri overlay, do not build
 //   --yes                                do not ask before building
+//   --keep-staging                       keep vendor/bundle/<name>/ after a successful build (default: removed; it only holds links/copies)
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -46,6 +47,7 @@ export function parseArgs(argv) {
     if (a === '-h' || a === '--help') o.help = true;
     else if (a === '--stage-only') o.stageOnly = true;
     else if (a === '--yes') o.yes = true;
+    else if (a === '--keep-staging') o.keepStaging = true;
     else if (multi.has(a) || single.has(a)) {
       const v = argv[++i];
       if (v === undefined || v.startsWith('--')) fail(`${a} needs a value`);
@@ -99,6 +101,27 @@ function existingLock(id) {
   }
 }
 
+/**
+ * Delete a build leftover. Only paths inside `target/` or `vendor/bundle/` are ever removed, so your models
+ * (`vendor/models`, your own .gguf files, Downloads) cannot be touched by this, whatever is passed in.
+ */
+export function removeBuildCopy(p, root = ROOT) {
+  const abs = path.resolve(p);
+  const ok = [path.join(root, 'target'), path.join(root, 'vendor', 'bundle')].some((base) => abs.startsWith(base + path.sep));
+  if (!ok) throw new Error(`refusing to delete ${abs}: not inside target/ or vendor/bundle/`);
+  fs.rmSync(abs, { recursive: true, force: true });
+}
+
+/** Move a folder (instant on one disk); across disks copy it, then delete the original. */
+function moveDir(from, to) {
+  try {
+    fs.renameSync(from, to);
+  } catch {
+    fs.cpSync(from, to, { recursive: true });
+    removeBuildCopy(from);
+  }
+}
+
 function hostTarget() {
   return process.platform === 'darwin' ? 'mac' : process.platform === 'win32' ? 'windows' : null;
 }
@@ -123,7 +146,7 @@ function build(key, st, outDir) {
     if (!fs.existsSync(app)) fail(`Build finished but ${app} is missing`);
     const dest = path.join(outDir, 'NanoNexus.app');
     fs.rmSync(dest, { recursive: true, force: true });
-    fs.cpSync(app, dest, { recursive: true });
+    moveDir(app, dest); // the finished app lives in dist-bundles only; no second 12 GB copy stays in target/
     run('codesign', ['--force', '--deep', '--sign', '-', dest]); // ad-hoc so it launches on this Mac
     return [dest];
   }
@@ -192,6 +215,14 @@ async function main() {
         results.push(...built.artifacts);
       } else {
         results.push(...build(key, st, outDir));
+      }
+      // Built fine: the staged payload (links/copies of vendor/models) is no longer needed.
+      if (!o.keepStaging) {
+        try {
+          removeBuildCopy(st.dir);
+        } catch (e) {
+          say(`(could not remove the staged payload: ${e.message})`);
+        }
       }
     } catch (e) {
       // One target failing must not hide the others: keep what was built and say clearly what went wrong.
