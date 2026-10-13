@@ -121,15 +121,21 @@ impl Supervisor {
     }
 
     /// Last lines of the server's output (for the runtime panel and `Failed.log_tail`).
+    ///
+    /// After a failed start the dead process is gone, so fall back to the tail saved in `Failed`:
+    /// otherwise the panel would show no lines exactly when the user needs them.
     pub async fn log_tail(&self, n: usize) -> Vec<String> {
-        self.inner
-            .ctl
-            .lock()
-            .await
-            .proc
-            .as_ref()
-            .map(|p| p.log_tail(n))
-            .unwrap_or_default()
+        let live = self.inner.ctl.lock().await.proc.as_ref().map(|p| p.log_tail(n));
+        if let Some(lines) = live {
+            return lines;
+        }
+        match self.state() {
+            RuntimeState::Failed { log_tail, .. } => {
+                let skip = log_tail.len().saturating_sub(n);
+                log_tail.into_iter().skip(skip).collect()
+            }
+            _ => Vec::new(),
+        }
     }
 
     /// Start the server and wait until it is `Ready` (or fails). Any running server is stopped first.

@@ -110,6 +110,14 @@ async fn early_exit_fails_with_log_tail() {
 }
 
 #[tokio::test]
+async fn log_tail_still_works_after_a_failed_start() {
+    let sup = Supervisor::new(None);
+    assert!(sup.start(cfg("exit_early")).await.is_err());
+    let lines = sup.log_tail(50).await;
+    assert!(lines.iter().any(|l| l.contains("simulated crash")), "{lines:?}");
+}
+
+#[tokio::test]
 async fn bind_failure_retries_on_a_new_port() {
     let dir = tempfile::tempdir().unwrap();
     let marker = dir.path().join("marker");
