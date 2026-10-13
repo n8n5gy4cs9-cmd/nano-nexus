@@ -31,6 +31,7 @@ pre{background:#0e0d13;color:#d8d8e6;border-radius:10px;padding:12px;max-height:
   <div id="chosen"></div>
   <div class="mut" style="margin-top:10px">Catalog models (downloaded for you):</div><div id="cat"></div>
   <div class="mut" style="margin-top:10px">Default model on first launch:</div><select id="def"></select>
+  <div id="space" class="mut" style="margin-top:10px"></div>
 </div>
 
 <h2>3 · Reference libraries (optional)</h2>
@@ -80,14 +81,25 @@ function renderChosen() {
 }
 const slug = s => s.toLowerCase().replace(/[^a-z0-9.]+/g, '-').replace(/^-+|-+$/g, '') || 'model';
 const gid = g => slug(g.file.replace(/\.gguf$/i, ''));
+const catBytes = {};
+/** Disk needed: models sit once in vendor/models and once inside each finished app; building needs room for one more copy while it runs. */
+function updateSpace() {
+  const M = state.ggufs.reduce((n, g) => n + (g.size || 0), 0) + [...state.catalog].reduce((n, c) => n + (catBytes[c] || 0), 0);
+  const t = document.querySelector('input[name=t]:checked')?.value || 'mac';
+  const mac = t === 'mac' || t === 'all', win = t.startsWith('windows') || t === 'all';
+  const kept = M * (1 + (mac ? 1 : 0) + (win ? 1 : 0));
+  const peak = M * (mac && win ? 4 : win ? 3 : 2);
+  $('space').textContent = M ? `Models selected: ${gb(M)}. Disk space needed: about ${gb(peak)} free while building, about ${gb(kept)} stays afterwards (models + finished app${mac && win ? 's' : ''}). Models you already downloaded are not downloaded again.` : '';
+}
 function renderDefault() {
   save();
+  updateSpace();
   const opts = [...state.ggufs.map(g => [gid(g), g.name || g.file]), ...[...state.catalog].map(c => [c, c])];
   const cur = $('def').value;
   $('def').innerHTML = opts.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
   if (opts.some(o => o[0] === cur)) $('def').value = cur;
 }
-function addGguf(e) { if (!state.ggufs.some(g => g.path === e.path)) state.ggufs.push({ path: e.path, file: e.name, name: e.name.replace(/\.gguf$/i, '') }); renderChosen(); }
+function addGguf(e) { if (!state.ggufs.some(g => g.path === e.path)) state.ggufs.push({ path: e.path, file: e.name, size: e.size || 0, name: e.name.replace(/\.gguf$/i, '') }); renderChosen(); }
 
 function browser(el, dir, pickFiles, onPick) {
   api('/api/ls?dir=' + encodeURIComponent(dir)).then(r => {
@@ -106,12 +118,13 @@ function browser(el, dir, pickFiles, onPick) {
 api('/api/state').catch(() => null).then(s => { if (s) saved = s; return api('/api/info'); }).then(info => {
   $('dl').innerHTML = info.downloadsGguf.length ? '' : '<div class="mut">No .gguf files found in ' + info.downloads + '</div>';
   info.downloadsGguf.forEach(e => { const b = document.createElement('label'); b.innerHTML = `<input type="checkbox"> ${e.name} <span class="mut">${gb(e.size)}</span>`; b.querySelector('input').onchange = ev => { if (ev.target.checked) addGguf(e); else { state.ggufs = state.ggufs.filter(g => g.path !== e.path); renderChosen(); } }; $('dl').append(b); });
-  info.catalog.forEach(m => { const b = document.createElement('label'); b.innerHTML = `<input type="checkbox"> ${m.name} <span class="mut">${m.quant ?? ''}</span>`; b.querySelector('input').onchange = ev => { ev.target.checked ? state.catalog.add(m.id) : state.catalog.delete(m.id); renderDefault(); }; $('cat').append(b); });
+  info.catalog.forEach(m => { catBytes[m.id] = m.bytes || 0; const b = document.createElement('label'); b.innerHTML = `<input type="checkbox"> ${m.name} <span class="mut">${m.quant ?? ''} · ${gb(m.bytes)}${m.ram ? ' · needs ~' + m.ram + ' GB RAM' : ''}</span>`; b.querySelector('input').onchange = ev => { ev.target.checked ? state.catalog.add(m.id) : state.catalog.delete(m.id); renderDefault(); }; $('cat').append(b); });
   try { if (saved) {
     $('name').value = saved.name || $('name').value;
     state.ggufs = (saved.ggufs || []).filter(g => g.path);
+    state.ggufs.forEach(g => { const m = info.downloadsGguf.find(e => e.path === g.path); if (m) g.size = m.size; });
     state.books = saved.books || [];
-    (saved.catalog || []).forEach(c => state.catalog.add(c));
+    (saved.catalog || []).filter(c => info.catalog.some(m => m.id === c)).forEach(c => state.catalog.add(c)); // ignore models that were removed from the catalog
     $('fmt').value = saved.fmt || 'auto';
     document.querySelectorAll('#cat input').forEach((i, n) => { i.checked = state.catalog.has(info.catalog[n].id); });
     document.querySelectorAll('#dl input').forEach((i, n) => { i.checked = state.ggufs.some(g => g.path === info.downloadsGguf[n].path); });
@@ -120,6 +133,8 @@ api('/api/state').catch(() => null).then(s => { if (s) saved = s; return api('/a
   const mac = info.platform === 'darwin';
   document.querySelector(`input[name=t][value=${saved?.target && (mac || saved.target !== 'mac') ? saved.target : (mac ? 'mac' : 'windows')}]`).checked = true;
   if (!mac) document.querySelector('input[name=t][value=mac]').disabled = true;
+  document.querySelectorAll('input[name=t]').forEach(r => r.addEventListener('change', () => { updateSpace(); save(); }));
+  updateSpace();
   ready = true; // everything is restored: from now on every change is saved
   $('browseG').onclick = () => browser($('browserG'), info.downloads, true, addGguf);
   $('browseK').onclick = () => browser($('browserK'), info.home, false, p => { if ((p === info.downloads || p === info.home) && !confirm(p + ' is a very large folder and all of it would be copied into the app. Use it anyway?')) return; if (!state.books.includes(p)) state.books.push(p); renderBooks(); });

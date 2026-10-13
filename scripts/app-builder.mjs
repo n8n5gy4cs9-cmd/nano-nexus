@@ -134,6 +134,8 @@ export function startServer({ port = DEFAULT_PORT, open = true } = {}) {
           name: m.name,
           quant: m.quant,
           params_b: m.params_b,
+          bytes: m.approx_bytes,
+          ram: m.min_ram_gb ?? null,
         }));
         const downloads = path.join(os.homedir(), 'Downloads');
         return json(res, 200, {
