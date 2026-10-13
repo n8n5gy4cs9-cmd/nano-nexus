@@ -6,27 +6,35 @@
 #   scripts/clean-trash.sh --models     also the extra models in vendor/models (imported/downloaded ones);
 #                                       KEEPS the default model that scripts/run.sh downloaded
 #   scripts/clean-trash.sh --all        --models + target/ (all Rust build output; next build is slow)
+#   scripts/clean-trash.sh --rust       Rust leftovers only: debug builds + incremental caches + old bundle copies;
+#                                       KEEPS target/release so the next release build stays fast; never touches models
 #   scripts/clean-trash.sh --default-model   also remove that default model (run.sh re-downloads it)
 #   scripts/clean-trash.sh --yes        do not ask
 #   scripts/clean-trash.sh --dry-run    only show what would go
 set -euo pipefail
 cd "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-MODELS=0; ALL=0; YES=0; DRY=0; DEFAULT=0
+MODELS=0; ALL=0; YES=0; DRY=0; DEFAULT=0; RUST=0
 for a in "$@"; do
   case "$a" in
     --models) MODELS=1 ;;
+    --rust) RUST=1 ;;
     --all) ALL=1; MODELS=1 ;;
     --default-model) MODELS=1; DEFAULT=1 ;;
     --yes|-y) YES=1 ;;
     --dry-run) DRY=1 ;;
-    -h|--help) sed -n '2,12p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,14p' "$0"; exit 0 ;;
     *) echo "unknown option: $a" >&2; exit 2 ;;
   esac
 done
 
 TARGETS=(vendor/bundle apps/desktop/src-tauri/gen apps/desktop/dist-web)
 for d in target/release/bundle target/*/release/bundle; do [ -d "$d" ] && TARGETS+=("$d"); done
+# --rust: debug builds and incremental caches are the big, useless part of target/ (release stays).
+if [ "$RUST" = 1 ]; then
+  for d in target/debug target/*/debug; do [ -d "$d" ] && TARGETS+=("$d"); done
+  while IFS= read -r d; do TARGETS+=("$d"); done < <(find target -type d -name incremental -prune 2>/dev/null | grep -v '/debug/' || true)
+fi
 # Models: keep the default (index.json "default", fetched by run.sh) unless --default-model.
 KEEPID=""
 if [ "$MODELS" = 1 ] && [ "$DEFAULT" = 0 ] && [ -f vendor/models/index.json ]; then
