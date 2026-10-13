@@ -216,7 +216,7 @@ export function CatalogCardView({
           </Tooltip>
         ) : null}
         {e.isDefault ? <Badge tone="success">Default</Badge> : null}
-        {e.tags.includes("librarian") ? <Badge tone="accent">Librarian</Badge> : null}
+        {e.tags?.includes("librarian") ? <Badge tone="accent">Librarian</Badge> : null}
       </div>
       <CapabilityChips caps={e.capabilities} />
       <p className="truncate text-caption text-faint" title={e.license}>
