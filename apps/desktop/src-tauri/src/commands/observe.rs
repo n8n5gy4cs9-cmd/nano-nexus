@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use nexus_observe::{ObserveView, ActivitySnapshot};
+use nexus_observe::{ActivitySnapshot, ObserveView};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 use tauri::State;

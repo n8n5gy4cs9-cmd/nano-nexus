@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
 import type { Settings } from "@/bindings";
+import { SourcesPanel } from "@/features/activity/SourcesPanel";
 import { Button, Skeleton } from "@/components/ui";
 import { api, type SettingValue } from "@/lib/api";
 import { toIpcException } from "@/lib/ipc";
@@ -195,6 +196,14 @@ export function SettingsPage() {
       </Section>
 
       <ToolsSection settings={s} set={set} />
+
+      {IS_WEB ? null : (
+        <Section title="Activity" hint="The Activity page shows what is running. It only reads, and never keeps your prompts, replies, commands or file contents.">
+          <div className="py-3">
+            <SourcesPanel />
+          </div>
+        </Section>
+      )}
 
       <Section title="Plugins" hint="Small add-ons for the app view. Turn any of them off here.">
         {PLUGINS.map((p) => {

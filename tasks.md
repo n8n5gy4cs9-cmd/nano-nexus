@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 217/254 tasks done (85%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 221/254 tasks done (87%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -318,10 +318,10 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T19.09** Privacy tests: canary strings never reach snapshots/logs/replay; sources off opens no external file (fake home); desktop-only guard in `nexus-share` (2026-10-19) — `tests/privacy.rs` + `nexus-share` allow-list test (`observe_*` never remote)
 - [x] **T19.10** Demo dataset generator (synthetic 3 projects / 19 agents) used by tests, the UI "Show demo" button and screenshots (2026-10-19) — `demo.rs` (19 agents, 4 running, 1 stalled, 1 errored, 1 conflict)
 - [x] **T19.11** App `service::observe` + commands (`observe_snapshot`, `observe_replay`, `observe_set_source`) + `observe:snapshot` event (2 Hz) + attention notifications (rate-limited) (2026-10-19) — `nexus_observe::Hub` (tested in the crate) + `service::observe` + `commands::observe` (`observe_snapshot`, `observe_replay`, `observe_demo`, `observe_watch`; settings change via `settings_set`), `observe:snapshot` event only while the page is open, chat turns and tool calls reported from `PersistingSink`; app crate compiles, `bindings.ts` regenerated; exported types are prefixed (`Activity*`) to avoid name clashes
-- [ ] **T19.12** Frontend: `api.ts` facade, store, hooks; `lib/activity-layout.ts` (deterministic radial layout) + tests
-- [ ] **T19.13** Canvas renderer: DPR-aware nodes/edges, particle streams (adaptive count), pan/zoom/fit, light/dark tokens, reduced motion, hidden-page pause
-- [ ] **T19.14** Activity page: stats strip, legend, detail panel (model, tokens, tool, run time, errors), conflict chips, empty/consent/drift states, nav + palette entry + Settings → Activity (per-source switches)
-- [ ] **T19.15** Replay UI: LIVE / REPLAY toggle, scrubber over the last N hours, play/pause, speed
+- [x] **T19.12** Frontend: `api.ts` facade, store, hooks; `lib/activity-layout.ts` (deterministic radial layout) + tests (2026-10-19) — `api.observe.*`, `features/activity/useObserve.ts`, `lib/activity-layout.ts` (golden-angle layout: existing nodes never move when others appear; no-overlap test)
+- [x] **T19.13** Canvas renderer: DPR-aware nodes/edges, particle streams (adaptive count), pan/zoom/fit, light/dark tokens, reduced motion, hidden-page pause (2026-10-19) — `GraphCanvas.tsx` + `lib/activity-particles.ts` (≤1500 specks, quality drops when frames exceed budget); pause when the page is hidden; static dashes under reduced motion; palette read from the `--act-*` tokens; label collision avoidance. Checked in headless Chromium against demo data, dark and light
+- [x] **T19.14** Activity page: stats strip, legend, detail panel (model, tokens, tool, run time, errors), conflict chips, empty/consent/drift states, nav + palette entry + Settings → Activity (per-source switches) (2026-10-19) — `ActivityPage.tsx`, `DetailPanel.tsx`, `SourcesPanel.tsx` (consent dialog before Claude Code / Codex are read), nav entry (`/activity`, desktop only), Settings → Activity, drift notice. Palette lists it via `NAV`
+- [x] **T19.15** Replay UI: LIVE / REPLAY toggle, scrubber over the last N hours, play/pause, speed (2026-10-19) — `ReplayBar.tsx`: scrubber over the replay range, play/pause, 1×/4×/16×/60×, back to live
 - [x] **T19.16** Terminal view `examples/top.rs` (`cargo run -p nexus-observe --example top`) + test of the renderer (2026-10-19) — `examples/top.rs` + `render::table`
 - [ ] **T19.17** Read-only MCP stdio server `examples/mcp.rs` (`list_agents`, `get_agent`, `list_conflicts`) + protocol test
 - [ ] **T19.18** Docs: `guide.html` Activity section, `docs/PLAN.md` row, README mention

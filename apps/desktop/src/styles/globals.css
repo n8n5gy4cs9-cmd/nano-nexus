@@ -22,6 +22,11 @@
   --color-info: var(--info);
   --color-ring: var(--ring);
   --color-code: var(--code-bg);
+  --color-act-bg: var(--act-bg);
+  --color-act-running: var(--act-running);
+  --color-act-idle: var(--act-idle);
+  --color-act-stalled: var(--act-stalled);
+  --color-act-errored: var(--act-errored);
   --radius-chip: var(--radius-chip);
   --radius-button: var(--radius-button);
   --radius-card: var(--radius-card);

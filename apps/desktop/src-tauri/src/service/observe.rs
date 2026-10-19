@@ -8,7 +8,7 @@ use std::time::Duration;
 
 use nexus_core::error::NexusError;
 use nexus_core::events::{NotificationAction, NotificationLevel};
-use nexus_observe::{Hub, ObserveView, Obs, ActivitySnapshot, Switches, selfsrc};
+use nexus_observe::{ActivitySnapshot, Hub, Obs, ObserveView, Switches, selfsrc};
 use nexus_store::NewNotification;
 
 use crate::state::{AppCtx, AppEvent};
@@ -45,7 +45,10 @@ pub fn record(ctx: &AppCtx, obs: impl IntoIterator<Item = Obs>) {
 }
 
 pub fn chat_started(ctx: &AppCtx, conversation: &str, assistant: &str, model: &str) {
-    record(ctx, selfsrc::chat_started(conversation, assistant, model, now_ms()));
+    record(
+        ctx,
+        selfsrc::chat_started(conversation, assistant, model, now_ms()),
+    );
 }
 
 pub fn chat_finished(ctx: &AppCtx, conversation: &str, tokens_prompt: u32, tokens_out: u32, ok: bool) {
@@ -65,7 +68,16 @@ pub fn chat_finished(ctx: &AppCtx, conversation: &str, tokens_prompt: u32, token
 }
 
 pub fn tool_started(ctx: &AppCtx, conversation: &str, call_id: &str, tool: &str) {
-    record(ctx, [selfsrc::tool_started(conversation, call_id, tool, Vec::new(), now_ms())]);
+    record(
+        ctx,
+        [selfsrc::tool_started(
+            conversation,
+            call_id,
+            tool,
+            Vec::new(),
+            now_ms(),
+        )],
+    );
 }
 
 pub fn tool_finished(ctx: &AppCtx, conversation: &str, call_id: &str, ok: bool) {

@@ -1,4 +1,5 @@
 import {
+  Activity,
   Code2,
   CircleHelp,
   Download,
@@ -17,6 +18,7 @@ import { Navigate, createHashRouter, type RouteObject } from "react-router-dom";
 import { AppShell } from "@/components/shell/AppShell";
 import { ChatView } from "@/features/chat/ChatView";
 import { AssistantsPage } from "@/features/assistants/AssistantsPage";
+import { ActivityPage } from "@/features/activity/ActivityPage";
 import { AnalyzerPage } from "@/features/analyzer/AnalyzerPage";
 import { ReportPage } from "@/features/analyzer/ReportPage";
 import { ChangesPage } from "@/features/changes/ChangesPage";
@@ -52,6 +54,7 @@ export const NAV: NavSection[] = [
   { path: "/changes", label: "Changes", icon: History, tagline: "Review, apply, and undo planned changes.", digit: 7 },
   { path: "/permissions", label: "Permissions", icon: Shield, tagline: "Choose which folders NanoNexus can use.", digit: 8 },
   { path: "/library", label: "Library", icon: Library, tagline: "Offline reference books the assistant can search and cite.", digit: 9 },
+  { path: "/activity", label: "Activity", icon: Activity, tagline: "Watch what is running: this app, Claude Code, and Codex." },
 ];
 
 export const HELP_SECTION: NavSection = {
@@ -68,7 +71,7 @@ export const SETTINGS_SECTION: NavSection = {
   tagline: "Appearance, runtime, models, and privacy.",
 };
 
-const DESKTOP_ONLY = new Set(["/rename", "/editor", "/changes", "/permissions", "/models", "/library"]);
+const DESKTOP_ONLY = new Set(["/rename", "/editor", "/changes", "/permissions", "/models", "/library", "/activity"]);
 
 function pageFor(s: NavSection) {
   if (IS_WEB && DESKTOP_ONLY.has(s.path)) return <DesktopOnly title={s.label} />;
@@ -80,6 +83,7 @@ function pageFor(s: NavSection) {
   if (s.path === "/changes") return <ChangesPage />;
   if (s.path === "/permissions") return <PermissionsPage />;
   if (s.path === "/library") return <LibraryPage />;
+  if (s.path === "/activity") return <ActivityPage />;
   if (s.path === "/rename") return <RenamePage />;
   if (s.path === "/help") return <HelpPage />;
   if (s.path === "/settings") return <SettingsPage />;

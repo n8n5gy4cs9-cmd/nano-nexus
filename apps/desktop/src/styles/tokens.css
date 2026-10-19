@@ -26,6 +26,14 @@
   --shadow-1: 0 1px 2px oklch(0 0 0 / 0.35);
   --shadow-2: 0 8px 24px oklch(0 0 0 / 0.35), 0 1px 0 oklch(1 0 0 / 0.04) inset;
   --code-bg: oklch(0.18 0.012 275);
+  /* Activity graph (M19): the canvas and the four agent states. */
+  --act-bg: oklch(0.135 0.022 268);
+  --act-running: oklch(0.82 0.14 80);
+  --act-idle: oklch(0.62 0.022 270);
+  --act-stalled: oklch(0.76 0.15 52);
+  --act-errored: oklch(0.7 0.2 25);
+  --act-stream: oklch(0.93 0.02 85);
+  --act-ring: oklch(0.42 0.03 270);
 }
 
 :root[data-theme="light"] {
@@ -50,6 +58,13 @@
   --code-bg: oklch(0.975 0.004 275);
   --shadow-1: 0 1px 2px oklch(0 0 0 / 0.06);
   --shadow-2: 0 8px 24px oklch(0 0 0 / 0.08);
+  --act-bg: oklch(0.975 0.006 270);
+  --act-running: oklch(0.66 0.15 70);
+  --act-idle: oklch(0.6 0.02 270);
+  --act-stalled: oklch(0.62 0.17 45);
+  --act-errored: oklch(0.58 0.21 25);
+  --act-stream: oklch(0.45 0.05 75);
+  --act-ring: oklch(0.72 0.02 270);
 }
 
 /* Accent choices (Settings → Appearance). Each swaps --accent / --accent-2 / --ring. */

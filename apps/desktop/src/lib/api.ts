@@ -40,6 +40,8 @@ import type {
   NotificationPayload,
   RuntimeState,
   Settings,
+  ActivitySnapshot,
+  ObserveView,
 } from "@/bindings";
 
 import type {
@@ -161,6 +163,16 @@ export const api = {
     cancel: (id: string) => getTransport().call<boolean>("job_cancel", { id }),
     /** Subscribe to `job:update`. */
     onUpdate: (handler: (job: JobSummary) => void): Promise<Unsubscribe> => getTransport().on<JobSummary>("job:update", handler),
+  },
+  observe: {
+    snapshot: () => getTransport().call<ObserveView>("observe_snapshot"),
+    /** The replay frame nearest before `atMs` (`null` when there is no history). */
+    replay: (atMs: number) => getTransport().call<ActivitySnapshot | null>("observe_replay", { atMs }),
+    demo: (on: boolean) => getTransport().call<ObserveView>("observe_demo", { on }),
+    /** Tell the backend the page is open (live updates every 2 s) or closed. */
+    watch: (on: boolean) => getTransport().call<null>("observe_watch", { on }),
+    /** Subscribe to `observe:snapshot`. */
+    onSnapshot: (handler: (v: ObserveView) => void): Promise<Unsubscribe> => getTransport().on<ObserveView>("observe:snapshot", handler),
   },
   notifications: {
     list: (limit: number) => getTransport().call<NotificationPayload[]>("notifications_list", { limit }),

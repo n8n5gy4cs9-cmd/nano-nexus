@@ -15,6 +15,7 @@ pub mod jobs;
 pub mod knowledge;
 pub mod models;
 pub mod notifications;
+pub mod observe;
 pub mod permissions;
 pub mod pipelines;
 pub mod rename;
@@ -22,7 +23,6 @@ pub mod runtime;
 pub mod settings;
 pub mod share;
 pub mod sink;
-pub mod observe;
 pub mod watches;
 
 use nexus_core::settings::SharePolicy;
