@@ -3402,6 +3402,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-observe"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "specta",
+ "tempfile",
+ "tracing",
+]
+
+[[package]]
 name = "nexus-share"
 version = "0.1.0"
 dependencies = [

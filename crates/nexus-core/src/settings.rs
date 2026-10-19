@@ -141,6 +141,21 @@ pub struct Settings {
     /// Duo assistant: model id used for hard questions. Empty = the active model.
     #[serde(rename = "duo.strong_model_id")]
     pub duo_strong_model_id: String,
+    /// Activity page (M19, ADR-017): show NanoNexus' own activity. On by default (it is our own data).
+    #[serde(rename = "observe.nanonexus")]
+    pub observe_nanonexus: bool,
+    /// Activity page: read Claude Code's transcript files (`~/.claude`), read-only, metadata only. Opt-in.
+    #[serde(rename = "observe.claude_code")]
+    pub observe_claude_code: bool,
+    /// Activity page: read Codex's session files (`~/.codex`), read-only, metadata only. Opt-in.
+    #[serde(rename = "observe.codex")]
+    pub observe_codex: bool,
+    /// How many hours back the Activity page looks (and keeps for replay), 1–48.
+    #[serde(rename = "observe.window_hours")]
+    pub observe_window_hours: u32,
+    /// Notify when an observed agent stalls, errors, or two agents edit the same file.
+    #[serde(rename = "observe.alerts")]
+    pub observe_alerts: bool,
 }
 
 impl Default for Settings {
@@ -190,6 +205,11 @@ impl Default for Settings {
             models_use_prompt_hints: true,
             duo_light_model_id: String::new(),
             duo_strong_model_id: String::new(),
+            observe_nanonexus: true,
+            observe_claude_code: false,
+            observe_codex: false,
+            observe_window_hours: 6,
+            observe_alerts: true,
         }
     }
 }
@@ -291,6 +311,14 @@ mod tests {
         assert!(s.notification_kind_enabled("anything"));
         assert!(!s.tools_web_enabled);
         assert!(!s.tool_disabled("agent", "write_file"));
+    }
+
+    #[test]
+    fn activity_reads_other_tools_only_when_opted_in() {
+        let s = Settings::default();
+        assert!(s.observe_nanonexus);
+        assert!(!s.observe_claude_code && !s.observe_codex);
+        assert_eq!(s.observe_window_hours, 6);
     }
 
     #[test]

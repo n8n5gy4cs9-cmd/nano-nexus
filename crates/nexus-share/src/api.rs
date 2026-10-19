@@ -141,6 +141,22 @@ mod tests {
     }
 
     #[test]
+    fn activity_is_desktop_only() {
+        // ADR-017: the Activity page reads other tools' transcripts; it is never reachable remotely.
+        for cmd in [
+            "observe_snapshot",
+            "observe_replay",
+            "observe_set_source",
+            "observe_demo",
+        ] {
+            for p in [SharePolicy::ChatOnly, SharePolicy::ChatRead, SharePolicy::Full] {
+                assert!(authorize(p, cmd).is_err(), "{cmd}");
+            }
+        }
+        assert!(!PUSH_EVENTS.iter().any(|e| e.starts_with("observe")));
+    }
+
+    #[test]
     fn streaming_commands_are_allowed_for_chat() {
         for c in STREAMING {
             assert!(authorize(SharePolicy::ChatOnly, c).is_ok());

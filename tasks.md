@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 206/254 tasks done (81%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 216/254 tasks done (85%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -308,21 +308,21 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 
 ## M19: Activity Observatory (live agent dashboard) · [spec](docs/milestones/M19-activity.md)
 - [x] **T19.01** Plan: ADR-017, `docs/architecture/OBSERVE.md`, `docs/milestones/M19-activity.md`, these tasks (2026-10-19)
-- [ ] **T19.02** Crate `nexus-observe`: workspace member, `Source`/`Status`/`Obs`/`Snapshot` types (serde + specta), settings `observe.*` in `nexus-core`
-- [ ] **T19.03** Claude Code parser (`~/.claude/projects`, subagents, usage dedupe by `message.id`, edit-tool file paths only) + fixtures + tests
-- [ ] **T19.04** Codex parser (`rollout-*.jsonl`, cumulative token deltas, function calls, errors/aborts) + fixtures + tests
-- [ ] **T19.05** Tailer: discovery (mtime window, cap), per-file offsets, partial lines, truncation reset, 2 MB first-read, read-only, symlink-safe + tests
-- [ ] **T19.06** Aggregator: status rules, tokens, tasks/events/uptime totals, project/agent graph, file-conflict detection, drift counter + tests
-- [ ] **T19.07** Replay ring buffer (10 s frames, `frame_at`) + tests
-- [ ] **T19.08** NanoNexus self-source: `Observer::record_self` fed from chat turns, tool calls, jobs, runtime state (service layer hooks) + tests
-- [ ] **T19.09** Privacy tests: canary strings never reach snapshots/logs/replay; sources off opens no external file (fake home); desktop-only guard in `nexus-share`
-- [ ] **T19.10** Demo dataset generator (synthetic 3 projects / 19 agents) used by tests, the UI "Show demo" button and screenshots
+- [x] **T19.02** Crate `nexus-observe`: workspace member, `Source`/`Status`/`Obs`/`Snapshot` types (serde + specta), settings `observe.*` in `nexus-core` (2026-10-19) — crate `nexus-observe` + `observe.*` settings (nanonexus on; claude_code/codex off; window_hours 6; alerts)
+- [x] **T19.03** Claude Code parser (`~/.claude/projects`, subagents, usage dedupe by `message.id`, edit-tool file paths only) + fixtures + tests (2026-10-19) — `claude.rs`; streamed usage counted once per `message.id`; verified against a real transcript
+- [x] **T19.04** Codex parser (`rollout-*.jsonl`, cumulative token deltas, function calls, errors/aborts) + fixtures + tests (2026-10-19) — `codex.rs`; cumulative `token_count` → deltas, `apply_patch` headers → paths only; formats from memory of Codex rollouts (no real Codex logs here)
+- [x] **T19.05** Tailer: discovery (mtime window, cap), per-file offsets, partial lines, truncation reset, 2 MB first-read, read-only, symlink-safe + tests (2026-10-19) — `tail.rs`
+- [x] **T19.06** Aggregator: status rules, tokens, tasks/events/uptime totals, project/agent graph, file-conflict detection, drift counter + tests (2026-10-19) — `aggregate.rs`; stall limits 3 min (10 min with an open tool); failed tool calls count as errors but only agent errors show `Errored`
+- [x] **T19.07** Replay ring buffer (10 s frames, `frame_at`) + tests (2026-10-19) — `replay.rs` incl. backfill from the start-up tail
+- [x] **T19.08** NanoNexus self-source: `Observer::record_self` fed from chat turns, tool calls, jobs, runtime state (service layer hooks) + tests (2026-10-19) — `selfsrc.rs` constructors + `ObsKind::Title` (own source only); wiring into the service layer is T19.11
+- [x] **T19.09** Privacy tests: canary strings never reach snapshots/logs/replay; sources off opens no external file (fake home); desktop-only guard in `nexus-share` (2026-10-19) — `tests/privacy.rs` + `nexus-share` allow-list test (`observe_*` never remote)
+- [x] **T19.10** Demo dataset generator (synthetic 3 projects / 19 agents) used by tests, the UI "Show demo" button and screenshots (2026-10-19) — `demo.rs` (19 agents, 4 running, 1 stalled, 1 errored, 1 conflict)
 - [ ] **T19.11** App `service::observe` + commands (`observe_snapshot`, `observe_replay`, `observe_set_source`) + `observe:snapshot` event (2 Hz) + attention notifications (rate-limited)
 - [ ] **T19.12** Frontend: `api.ts` facade, store, hooks; `lib/activity-layout.ts` (deterministic radial layout) + tests
 - [ ] **T19.13** Canvas renderer: DPR-aware nodes/edges, particle streams (adaptive count), pan/zoom/fit, light/dark tokens, reduced motion, hidden-page pause
 - [ ] **T19.14** Activity page: stats strip, legend, detail panel (model, tokens, tool, run time, errors), conflict chips, empty/consent/drift states, nav + palette entry + Settings → Activity (per-source switches)
 - [ ] **T19.15** Replay UI: LIVE / REPLAY toggle, scrubber over the last N hours, play/pause, speed
-- [ ] **T19.16** Terminal view `examples/top.rs` (`cargo run -p nexus-observe --example top`) + test of the renderer
+- [x] **T19.16** Terminal view `examples/top.rs` (`cargo run -p nexus-observe --example top`) + test of the renderer (2026-10-19) — `examples/top.rs` + `render::table`
 - [ ] **T19.17** Read-only MCP stdio server `examples/mcp.rs` (`list_agents`, `get_agent`, `list_conflicts`) + protocol test
 - [ ] **T19.18** Docs: `guide.html` Activity section, `docs/PLAN.md` row, README mention
 - [ ] ⭐ **T19.19** 🍎 Exit check: real Claude Code + Codex sessions on the Mac, conflict demo, 60 fps with 20 agents, privacy canary green
