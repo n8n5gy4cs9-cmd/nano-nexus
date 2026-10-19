@@ -6,30 +6,34 @@ use specta::Type;
 /// Where an agent runs.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, Type)]
 #[serde(rename_all = "snake_case")]
-pub enum Source {
+pub enum ActivitySource {
     NanoNexus,
     ClaudeCode,
     Codex,
 }
 
-impl Source {
-    pub const ALL: [Source; 3] = [Source::NanoNexus, Source::ClaudeCode, Source::Codex];
+impl ActivitySource {
+    pub const ALL: [ActivitySource; 3] = [
+        ActivitySource::NanoNexus,
+        ActivitySource::ClaudeCode,
+        ActivitySource::Codex,
+    ];
 
     /// Stable lowercase id used in ids and logs.
     pub fn id(self) -> &'static str {
         match self {
-            Source::NanoNexus => "nanonexus",
-            Source::ClaudeCode => "claude_code",
-            Source::Codex => "codex",
+            ActivitySource::NanoNexus => "nanonexus",
+            ActivitySource::ClaudeCode => "claude_code",
+            ActivitySource::Codex => "codex",
         }
     }
 
     /// Display name.
     pub fn label(self) -> &'static str {
         match self {
-            Source::NanoNexus => "NanoNexus",
-            Source::ClaudeCode => "Claude Code",
-            Source::Codex => "Codex",
+            ActivitySource::NanoNexus => "NanoNexus",
+            ActivitySource::ClaudeCode => "Claude Code",
+            ActivitySource::Codex => "Codex",
         }
     }
 }
@@ -37,7 +41,7 @@ impl Source {
 /// Derived from timing, never read from a log.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, Type)]
 #[serde(rename_all = "snake_case")]
-pub enum Status {
+pub enum AgentStatus {
     Running,
     Idle,
     Stalled,
@@ -53,20 +57,20 @@ pub enum Role {
 
 /// Token counts of one message (a delta) or of an agent (a total).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
-pub struct TokenCount {
+pub struct TokenTotals {
     pub input: u64,
     pub output: u64,
     pub cache_read: u64,
     pub cache_write: u64,
 }
 
-impl TokenCount {
+impl TokenTotals {
     /// Tokens the model actually had to process or produce (cache reads are shown separately).
     pub fn new_tokens(&self) -> u64 {
         self.input + self.output + self.cache_write
     }
 
-    pub fn add(&mut self, o: &TokenCount) {
+    pub fn add(&mut self, o: &TokenTotals) {
         self.input += o.input;
         self.output += o.output;
         self.cache_read += o.cache_read;
@@ -85,7 +89,7 @@ pub enum ObsKind {
     /// A display name. Only NanoNexus' own source (and the demo) sets one: transcript parsers never do,
     /// because the titles in Claude Code / Codex files are made of the user's text.
     Title(String),
-    Tokens(TokenCount),
+    Tokens(TokenTotals),
     /// A tool call began. `files` is only filled for edit/write tools (the conflict signal).
     ToolStart {
         id: String,
@@ -106,7 +110,7 @@ pub enum ObsKind {
 /// One privacy-reduced observation.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Obs {
-    pub source: Source,
+    pub source: ActivitySource,
     /// Session id (shared by an agent and its subagents).
     pub session: String,
     /// Agent id, unique inside the source; equals `session` for the main agent.
@@ -134,13 +138,13 @@ pub trait LineParser: Send {
 
 /// A transcript line the parser could not make sense of (format drift).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
-pub struct Drift {
+pub struct LogDrift {
     pub lines: u64,
     pub bad: u64,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Type)]
-pub struct Totals {
+pub struct ActivityTotals {
     pub tasks: u32,
     pub tasks_done: u32,
     pub events: u64,
@@ -157,14 +161,14 @@ pub struct AgentView {
     /// `source:agent`, unique across sources.
     pub id: String,
     pub label: String,
-    pub source: Source,
+    pub source: ActivitySource,
     pub project_id: String,
     pub parent: Option<String>,
     pub model: Option<String>,
-    pub status: Status,
+    pub status: AgentStatus,
     /// The tool it is inside right now.
     pub tool: Option<String>,
-    pub tokens: TokenCount,
+    pub tokens: TokenTotals,
     pub started_ms: i64,
     pub last_ms: i64,
     pub events: u64,
@@ -181,7 +185,7 @@ pub struct ProjectView {
     pub id: String,
     /// Last two path components.
     pub label: String,
-    pub source: Source,
+    pub source: ActivitySource,
     pub agents: u32,
     pub running: u32,
     pub new_tokens: u64,
@@ -190,7 +194,7 @@ pub struct ProjectView {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Type)]
 pub struct SourceView {
-    pub source: Source,
+    pub source: ActivitySource,
     pub label: String,
     pub enabled: bool,
     pub agents: u32,
@@ -209,14 +213,14 @@ pub struct ConflictView {
 
 /// The whole picture at one moment (also the replay frame).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Type)]
-pub struct Snapshot {
+pub struct ActivitySnapshot {
     pub at_ms: i64,
-    pub totals: Totals,
+    pub totals: ActivityTotals,
     pub sources: Vec<SourceView>,
     pub projects: Vec<ProjectView>,
     pub agents: Vec<AgentView>,
     pub conflicts: Vec<ConflictView>,
-    pub drift: Drift,
+    pub drift: LogDrift,
 }
 
 /// Last two components of a path, for display (`/home/me/code/app` → `code/app`).
@@ -291,7 +295,7 @@ mod tests {
 
     #[test]
     fn new_tokens_exclude_cache_reads() {
-        let t = TokenCount {
+        let t = TokenTotals {
             input: 2,
             output: 3,
             cache_read: 100,

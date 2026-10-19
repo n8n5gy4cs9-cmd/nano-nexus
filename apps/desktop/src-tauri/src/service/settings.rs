@@ -54,6 +54,9 @@ pub fn set(ctx: &AppCtx, caller: &Caller, key: &str, value: SettingValue) -> Res
     if let Ok(mut guard) = ctx.settings.write() {
         *guard = next.clone();
     }
+    if key.starts_with("observe.") {
+        super::observe::apply_settings(ctx);
+    }
     Ok(next)
 }
 

@@ -91,6 +91,11 @@ fn bridge_app_events(app: &tauri::AppHandle) {
                         tracing::warn!("could not emit job:update: {e}");
                     }
                 }
+                state::AppEvent::Observe(v) => {
+                    if let Err(e) = commands::observe::ObserveSnapshot(*v).emit(&app) {
+                        tracing::warn!("could not emit observe:snapshot: {e}");
+                    }
+                }
                 state::AppEvent::Notify(n) => {
                     if let Err(e) = notify::notify(&app, n) {
                         tracing::warn!("could not show a notification: {e}");
@@ -199,6 +204,7 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         renames: Default::default(),
         jobs,
         watches: Default::default(),
+        observe: Default::default(),
         registry,
         journal,
         audit,
@@ -223,6 +229,7 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let kb_ctx: Ctx = (*app.state::<Ctx>()).clone();
     tauri::async_runtime::spawn(async move { service::knowledge::sync_bundled(&kb_ctx).await });
     tauri::async_runtime::spawn(service::watches::run_scheduler((*app.state::<Ctx>()).clone()));
+    tauri::async_runtime::spawn(service::observe::run_loop((*app.state::<Ctx>()).clone()));
     runtime::start_in_background(app.handle());
     exit_on_signals(app.handle());
     Ok(())

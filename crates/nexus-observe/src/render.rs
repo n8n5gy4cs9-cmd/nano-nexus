@@ -1,8 +1,8 @@
-//! A plain-text view of a [`Snapshot`], for the terminal (`examples/top.rs`) and for tests (T19.16).
+//! A plain-text view of a [`ActivitySnapshot`], for the terminal (`examples/top.rs`) and for tests (T19.16).
 
 use std::fmt::Write;
 
-use crate::model::{AgentView, Snapshot, Status};
+use crate::model::{ActivitySnapshot, AgentStatus, AgentView};
 
 /// `4.2M`, `13.5k`, `812`.
 pub fn fmt_tokens(n: u64) -> String {
@@ -25,21 +25,21 @@ pub fn fmt_duration(ms: i64) -> String {
     }
 }
 
-fn glyph(s: Status) -> &'static str {
+fn glyph(s: AgentStatus) -> &'static str {
     match s {
-        Status::Running => "●",
-        Status::Idle => "○",
-        Status::Stalled => "◌",
-        Status::Errored => "✖",
+        AgentStatus::Running => "●",
+        AgentStatus::Idle => "○",
+        AgentStatus::Stalled => "◌",
+        AgentStatus::Errored => "✖",
     }
 }
 
-fn status_word(s: Status) -> &'static str {
+fn status_word(s: AgentStatus) -> &'static str {
     match s {
-        Status::Running => "running",
-        Status::Idle => "idle",
-        Status::Stalled => "stalled",
-        Status::Errored => "errored",
+        AgentStatus::Running => "running",
+        AgentStatus::Idle => "idle",
+        AgentStatus::Stalled => "stalled",
+        AgentStatus::Errored => "errored",
     }
 }
 
@@ -61,7 +61,7 @@ fn row(a: &AgentView, now_ms: i64) -> String {
 }
 
 /// Header, one block per project, conflicts last.
-pub fn table(s: &Snapshot) -> String {
+pub fn table(s: &ActivitySnapshot) -> String {
     let mut o = String::new();
     let t = &s.totals;
     let _ = writeln!(

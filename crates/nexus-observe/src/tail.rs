@@ -10,10 +10,13 @@ use std::path::{Path, PathBuf};
 
 use crate::claude::ClaudeParser;
 use crate::codex::CodexParser;
-use crate::model::{Drift, LineParser, Obs, Source};
+use crate::model::{ActivitySource, LineParser, LogDrift, Obs};
 
 /// On first sight of a file only its last 2 MB are read, so a restart is not blind but never slow.
 const INITIAL_TAIL: u64 = 2 * 1024 * 1024;
+/// Files beyond the most recent `RECENT_FULL` get a much shorter first read (a restart must stay cheap).
+const RECENT_FULL: usize = 40;
+const OLD_TAIL: u64 = 128 * 1024;
 /// Upper bound of bytes read from one file in one poll (the rest comes next poll).
 const MAX_PER_POLL: u64 = 8 * 1024 * 1024;
 /// A line longer than this is skipped unparsed.
@@ -25,13 +28,13 @@ const DISCOVER_EVERY_MS: i64 = 5_000;
 /// One folder to watch.
 #[derive(Clone, Debug)]
 pub struct Root {
-    pub source: Source,
+    pub source: ActivitySource,
     /// `~/.claude/projects` or `~/.codex/sessions`.
     pub dir: PathBuf,
 }
 
 struct FileState {
-    source: Source,
+    source: ActivitySource,
     parser: Box<dyn LineParser>,
     offset: u64,
     partial: Vec<u8>,
@@ -45,7 +48,7 @@ pub struct Tailer {
     window_ms: i64,
     files: HashMap<PathBuf, FileState>,
     last_discovery_ms: i64,
-    pub drift: Drift,
+    pub drift: LogDrift,
 }
 
 /// `(path, mtime_ms, len)` of a candidate file.
@@ -90,12 +93,12 @@ fn fallback_session(path: &Path) -> String {
 }
 
 impl FileState {
-    fn new(source: Source, path: &Path, len: u64) -> Self {
+    fn new(source: ActivitySource, path: &Path, len: u64, tail: u64) -> Self {
         let parser: Box<dyn LineParser> = match source {
-            Source::Codex => Box::new(CodexParser::new(&fallback_session(path))),
+            ActivitySource::Codex => Box::new(CodexParser::new(&fallback_session(path))),
             _ => Box::new(ClaudeParser::new()),
         };
-        let start = len.saturating_sub(INITIAL_TAIL);
+        let start = len.saturating_sub(tail);
         Self {
             source,
             parser,
@@ -106,10 +109,10 @@ impl FileState {
     }
 
     fn reset(&mut self, path: &Path) {
-        *self = FileState::new(self.source, path, 0);
+        *self = FileState::new(self.source, path, 0, INITIAL_TAIL);
     }
 
-    fn feed(&mut self, bytes: &[u8], now_ms: i64, out: &mut Vec<Obs>, drift: &mut Drift) {
+    fn feed(&mut self, bytes: &[u8], now_ms: i64, out: &mut Vec<Obs>, drift: &mut LogDrift) {
         for chunk in bytes.split_inclusive(|b| *b == b'\n') {
             if chunk.last() == Some(&b'\n') {
                 if self.skipping {
@@ -146,7 +149,7 @@ impl Tailer {
             window_ms,
             files: HashMap::new(),
             last_discovery_ms: i64::MIN / 2,
-            drift: Drift::default(),
+            drift: LogDrift::default(),
         }
     }
 
@@ -166,7 +169,7 @@ impl Tailer {
     }
 
     fn discover(&mut self, now_ms: i64) {
-        let mut found: Vec<(Source, Found)> = Vec::new();
+        let mut found: Vec<(ActivitySource, Found)> = Vec::new();
         let mut budget = MAX_VISITED;
         for r in &self.roots {
             // Canonicalise each time: the folder may appear later, or be a link the owner set up.
@@ -181,10 +184,11 @@ impl Tailer {
         found.truncate(MAX_FILES);
         let keep: std::collections::HashSet<&PathBuf> = found.iter().map(|(_, (p, _, _))| p).collect();
         self.files.retain(|p, _| keep.contains(p));
-        for (source, (path, _, len)) in found {
+        for (i, (source, (path, _, len))) in found.into_iter().enumerate() {
+            let tail = if i < RECENT_FULL { INITIAL_TAIL } else { OLD_TAIL };
             self.files
                 .entry(path.clone())
-                .or_insert_with(|| FileState::new(source, &path, len));
+                .or_insert_with(|| FileState::new(source, &path, len, tail));
         }
     }
 
@@ -267,7 +271,7 @@ mod tests {
     fn tailer(d: &tempfile::TempDir) -> Tailer {
         Tailer::new(
             vec![Root {
-                source: Source::ClaudeCode,
+                source: ActivitySource::ClaudeCode,
                 dir: d.path().join("projects"),
             }],
             6 * 3_600_000,
@@ -328,7 +332,7 @@ mod tests {
         fs::write(proj.join("s1.jsonl"), format!("garbage\n{}", line(1))).unwrap();
         let mut t = tailer(&d);
         assert_eq!(t.poll(now()).len(), 1);
-        assert_eq!(t.drift, Drift { lines: 2, bad: 1 });
+        assert_eq!(t.drift, LogDrift { lines: 2, bad: 1 });
     }
 
     #[test]
@@ -368,7 +372,7 @@ mod tests {
         .unwrap();
         let mut t = Tailer::new(
             vec![Root {
-                source: Source::Codex,
+                source: ActivitySource::Codex,
                 dir: d.path().join("sessions"),
             }],
             6 * 3_600_000,
@@ -376,7 +380,7 @@ mod tests {
         let got = t.poll(now());
         assert_eq!(got.len(), 1);
         assert_eq!(got[0].session, uuid);
-        assert_eq!(got[0].source, Source::Codex);
+        assert_eq!(got[0].source, ActivitySource::Codex);
     }
 
     #[test]

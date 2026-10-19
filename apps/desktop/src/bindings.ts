@@ -111,6 +111,22 @@ export const commands = {
 	jobsList: (limit: number) => typedError<JobSummary[], IpcError>(__TAURI_INVOKE("jobs_list", { limit })),
 	/**  Cancel a running job; `false` when it already ended. */
 	jobCancel: (id: string) => typedError<boolean, IpcError>(__TAURI_INVOKE("job_cancel", { id })),
+	/**  The latest picture of what is running. */
+	observeSnapshot: () => typedError<ObserveView, IpcError>(__TAURI_INVOKE("observe_snapshot")),
+	/**  The frame nearest before `at_ms` (replay). */
+	observeReplay: (atMs: number | null) => typedError<{
+	at_ms: number,
+	totals: ActivityTotals,
+	sources: SourceView[],
+	projects: ProjectView[],
+	agents: AgentView[],
+	conflicts: ConflictView[],
+	drift: LogDrift,
+} | null, IpcError>(__TAURI_INVOKE("observe_replay", { atMs })),
+	/**  Show synthetic demo data instead of real activity. */
+	observeDemo: (on: boolean) => typedError<ObserveView, IpcError>(__TAURI_INVOKE("observe_demo", { on })),
+	/**  The page opened (`true`) or closed (`false`): controls live updates. */
+	observeWatch: (on: boolean) => typedError<null, IpcError>(__TAURI_INVOKE("observe_watch", { on })),
 	watchesList: () => typedError<WatchView[], IpcError>(__TAURI_INVOKE("watches_list")),
 	/**  `schedule`: `daily | weekly | on_change`. */
 	watchCreate: (root: string, schedule: string) => typedError<WatchView, IpcError>(__TAURI_INVOKE("watch_create", { root, schedule })),
@@ -216,6 +232,8 @@ export const commands = {
 	kbSearch: (query: string, libraryIds: string[] | null, k: number) => typedError<Passage[], IpcError>(__TAURI_INVOKE("kb_search", { query, libraryIds, k })),
 	/**  One passage in full (a clicked citation). */
 	kbPassage: (chunkId: number) => typedError<Passage, IpcError>(__TAURI_INVOKE("kb_passage", { chunkId })),
+	/**  The original text of a passage's document (rendered / raw views). Text formats only. */
+	kbDocumentSource: (chunkId: number) => typedError<KbDocumentSource, IpcError>(__TAURI_INVOKE("kb_document_source", { chunkId })),
 };
 
 /** Events */
@@ -227,6 +245,7 @@ export const events = {
 	modelChanged: makeEvent<ModelChanged>("model:changed"),
 	modelsListChanged: makeEvent<ModelsListChanged>("models:list_changed"),
 	notificationNew: makeEvent<NotificationNew>("notification:new"),
+	observeSnapshot: makeEvent<ObserveSnapshot>("observe:snapshot"),
 	permissionRequest: makeEvent<PermissionRequested>("permission:request"),
 	runtimeStatus: makeEvent<RuntimeStatus>("runtime:status"),
 	shareStatus: makeEvent<ShareStatusChanged>("share:status"),
@@ -252,6 +271,32 @@ export type ActivateResult = {
 	warning: string | null,
 };
 
+/**  The whole picture at one moment (also the replay frame). */
+export type ActivitySnapshot = {
+	at_ms: number,
+	totals: ActivityTotals,
+	sources: SourceView[],
+	projects: ProjectView[],
+	agents: AgentView[],
+	conflicts: ConflictView[],
+	drift: LogDrift,
+};
+
+/**  Where an agent runs. */
+export type ActivitySource = "nano_nexus" | "claude_code" | "codex";
+
+export type ActivityTotals = {
+	tasks: number,
+	tasks_done: number,
+	events: number,
+	active: number,
+	agents: number,
+	/**  Milliseconds since the oldest visible agent started. */
+	uptime_ms: number,
+	new_tokens: number,
+	cache_read_tokens: number,
+};
+
 export type AgeBuckets = {
 	last_7d: AgeStat,
 	last_30d: AgeStat,
@@ -263,6 +308,31 @@ export type AgeBuckets = {
 export type AgeStat = {
 	files: number,
 	bytes: number,
+};
+
+/**  Derived from timing, never read from a log. */
+export type AgentStatus = "running" | "idle" | "stalled" | "errored";
+
+export type AgentView = {
+	/**  `source:agent`, unique across sources. */
+	id: string,
+	label: string,
+	source: ActivitySource,
+	project_id: string,
+	parent: string | null,
+	model: string | null,
+	status: AgentStatus,
+	/**  The tool it is inside right now. */
+	tool: string | null,
+	tokens: TokenTotals,
+	started_ms: number,
+	last_ms: number,
+	events: number,
+	messages: number,
+	/**  Failed tool calls plus agent errors. */
+	errors: number,
+	/**  Events per second over the last 10 s: drives the particle streams. */
+	events_per_s: number | null,
 };
 
 /**  Static facts about this install. */
@@ -559,6 +629,14 @@ export type ConflictKind =
 "denied" | 
 /**  Malformed: overlapping edits, bad offsets, the same path twice, and so on. */
 "invalid";
+
+export type ConflictView = {
+	/**  Last two components of the file path. */
+	path_label: string,
+	/**  Ids (`source:agent`) of the agents touching the file. */
+	agents: string[],
+	since_ms: number,
+};
 
 export type ContextSpec = {
 	/**  `text | file | folder | selection | none` */
@@ -939,6 +1017,16 @@ export type JunkHit = {
 	regenerable: boolean,
 };
 
+/**  The original text of a library document (for the rendered / raw views). */
+export type KbDocumentSource = {
+	/**  Lower-case file extension: `html`, `md`, `txt`, ... */
+	kind: string,
+	path: string,
+	content: string,
+	/**  The file was longer than the cap and `content` is cut. */
+	truncated: boolean,
+};
+
 /**  What an index run did. */
 export type KbIndexResult = {
 	library_id: string,
@@ -990,6 +1078,12 @@ export type LibrarySource =
 "bundled" | 
 /**  Added by the user. */
 "user";
+
+/**  A transcript line the parser could not make sense of (format drift). */
+export type LogDrift = {
+	lines: number,
+	bad: number,
+};
 
 /**  How well a name matched the query (best first). */
 export type MatchKind = "exact" | "prefix" | "substring" | "fuzzy";
@@ -1100,6 +1194,22 @@ export type NotificationPayload = {
 	created_at: number,
 };
 
+/**  Global event `observe:snapshot`, about every 2 s while the Activity page is open. */
+export type ObserveSnapshot = ObserveView;
+
+/**  What the Activity page renders. */
+export type ObserveView = {
+	snapshot: ActivitySnapshot,
+	/**  Replay range (first and last frame), when there is history. */
+	replay_from: number | null,
+	replay_to: number | null,
+	/**  Synthetic data is showing. */
+	demo: boolean,
+	/**  The agent folders exist on this computer (so the UI can offer to turn them on). */
+	claude_found: boolean,
+	codex_found: boolean,
+};
+
 /**  One protected macOS folder and whether the OS lets us in. */
 export type OsFolderStatus = {
 	path: string,
@@ -1202,6 +1312,18 @@ export type PermissionsSpec = {
 };
 
 export type Phase = "preparing" | "downloading" | "verifying" | "finalizing";
+
+export type ProjectView = {
+	/**  `source:cwd`. */
+	id: string,
+	/**  Last two path components. */
+	label: string,
+	source: ActivitySource,
+	agents: number,
+	running: number,
+	new_tokens: number,
+	last_ms: number,
+};
 
 export type PromptSpec = {
 	system: string,
@@ -1423,6 +1545,10 @@ export type Settings = {
 	 *  computer unless the user turns this on.
 	 */
 	"tools.web_enabled"?: boolean,
+	/**
+	 *  Opt in: write the files an assistant proposes as soon as it proposes them (through the same journaled,
+	 *  undoable apply as the Changes page). Off = the change waits for the Apply button in the chat or in Changes.
+	 */
 	"chat.auto_apply_proposals"?: boolean,
 	/**
 	 *  Tools the user turned off for one assistant: assistant id → tool names. A tool can only be
@@ -1433,6 +1559,16 @@ export type Settings = {
 	"duo.light_model_id"?: string,
 	/**  Duo assistant: model id used for hard questions. Empty = the active model. */
 	"duo.strong_model_id"?: string,
+	/**  Activity page (M19, ADR-017): show NanoNexus' own activity. On by default (it is our own data). */
+	"observe.nanonexus"?: boolean,
+	/**  Activity page: read Claude Code's transcript files (`~/.claude`), read-only, metadata only. Opt-in. */
+	"observe.claude_code"?: boolean,
+	/**  Activity page: read Codex's session files (`~/.codex`), read-only, metadata only. Opt-in. */
+	"observe.codex"?: boolean,
+	/**  How many hours back the Activity page looks (and keeps for replay), 1–48. */
+	"observe.window_hours"?: number,
+	/**  Notify when an observed agent stalls, errors, or two agents edit the same file. */
+	"observe.alerts"?: boolean,
 };
 
 /**  A paired LAN device (the token itself is never stored or shown, only its hash is kept). */
@@ -1470,6 +1606,15 @@ export type ShareStatusChanged = ShareStatus;
 /**  Where an assistant came from. */
 export type Source = "builtin" | "user";
 
+export type SourceView = {
+	source: ActivitySource,
+	label: string,
+	enabled: boolean,
+	agents: number,
+	running: number,
+	last_ms: number | null,
+};
+
 /**  A symbol id (index into [`CodeIndex::symbols`]). */
 export type SymbolId = number;
 
@@ -1489,6 +1634,14 @@ export type Theme = "light" | "dark" | "system";
 
 /**  Prompt size state for the builder's meter: green <= 350, amber <= 450, red above. */
 export type TokenLevel = "green" | "amber" | "red";
+
+/**  Token counts of one message (a delta) or of an agent (a total). */
+export type TokenTotals = {
+	input: number,
+	output: number,
+	cache_read: number,
+	cache_write: number,
+};
 
 export type ToolsSpec = {
 	allowed?: string[],

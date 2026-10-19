@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 216/254 tasks done (85%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 217/254 tasks done (85%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -317,7 +317,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T19.08** NanoNexus self-source: `Observer::record_self` fed from chat turns, tool calls, jobs, runtime state (service layer hooks) + tests (2026-10-19) — `selfsrc.rs` constructors + `ObsKind::Title` (own source only); wiring into the service layer is T19.11
 - [x] **T19.09** Privacy tests: canary strings never reach snapshots/logs/replay; sources off opens no external file (fake home); desktop-only guard in `nexus-share` (2026-10-19) — `tests/privacy.rs` + `nexus-share` allow-list test (`observe_*` never remote)
 - [x] **T19.10** Demo dataset generator (synthetic 3 projects / 19 agents) used by tests, the UI "Show demo" button and screenshots (2026-10-19) — `demo.rs` (19 agents, 4 running, 1 stalled, 1 errored, 1 conflict)
-- [ ] **T19.11** App `service::observe` + commands (`observe_snapshot`, `observe_replay`, `observe_set_source`) + `observe:snapshot` event (2 Hz) + attention notifications (rate-limited)
+- [x] **T19.11** App `service::observe` + commands (`observe_snapshot`, `observe_replay`, `observe_set_source`) + `observe:snapshot` event (2 Hz) + attention notifications (rate-limited) (2026-10-19) — `nexus_observe::Hub` (tested in the crate) + `service::observe` + `commands::observe` (`observe_snapshot`, `observe_replay`, `observe_demo`, `observe_watch`; settings change via `settings_set`), `observe:snapshot` event only while the page is open, chat turns and tool calls reported from `PersistingSink`; app crate compiles, `bindings.ts` regenerated; exported types are prefixed (`Activity*`) to avoid name clashes
 - [ ] **T19.12** Frontend: `api.ts` facade, store, hooks; `lib/activity-layout.ts` (deterministic radial layout) + tests
 - [ ] **T19.13** Canvas renderer: DPR-aware nodes/edges, particle streams (adaptive count), pan/zoom/fit, light/dark tokens, reduced motion, hidden-page pause
 - [ ] **T19.14** Activity page: stats strip, legend, detail panel (model, tokens, tool, run time, errors), conflict chips, empty/consent/drift states, nav + palette entry + Settings → Activity (per-source switches)

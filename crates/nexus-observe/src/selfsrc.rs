@@ -1,14 +1,14 @@
 //! NanoNexus' own activity as observations (OBSERVE.md §1). The app service calls these from the places
 //! where a chat turn, a tool call or a job starts and ends. Nothing here takes text, only ids and names.
 
-use crate::model::{Obs, ObsKind, Role, Source, TokenCount};
+use crate::model::{ActivitySource, Obs, ObsKind, Role, TokenTotals};
 
 /// The project label under which all NanoNexus agents appear.
 pub const PROJECT: &str = "NanoNexus";
 
 fn base(agent: &str, parent: Option<&str>, at_ms: i64, kind: ObsKind) -> Obs {
     Obs {
-        source: Source::NanoNexus,
+        source: ActivitySource::NanoNexus,
         session: parent.unwrap_or(agent).to_string(),
         agent: agent.to_string(),
         parent: parent.map(str::to_string),
@@ -29,7 +29,7 @@ pub fn chat_started(conversation: &str, assistant: &str, model: &str, at_ms: i64
 }
 
 /// A chunk of generated tokens (prompt tokens once, then output tokens).
-pub fn chat_tokens(conversation: &str, tokens: TokenCount, at_ms: i64) -> Obs {
+pub fn chat_tokens(conversation: &str, tokens: TokenTotals, at_ms: i64) -> Obs {
     base(
         &format!("chat-{conversation}"),
         None,
@@ -113,7 +113,7 @@ pub fn job_finished(job: &str, ok: bool, at_ms: i64) -> Vec<Obs> {
 mod tests {
     use super::*;
     use crate::aggregate::{Aggregator, Config};
-    use crate::model::Status;
+    use crate::model::AgentStatus;
 
     #[test]
     fn a_chat_turn_runs_then_goes_idle() {
@@ -126,7 +126,7 @@ mod tests {
         g.ingest(tool_finished("c1", "call1", true, t0 + 200));
         g.ingest(chat_tokens(
             "c1",
-            TokenCount {
+            TokenTotals {
                 input: 300,
                 output: 40,
                 ..Default::default()
@@ -134,12 +134,12 @@ mod tests {
             t0 + 300,
         ));
         let s = g.snapshot(t0 + 1_000);
-        assert_eq!(s.agents[0].status, Status::Running);
-        assert_eq!(s.agents[0].source, Source::NanoNexus);
+        assert_eq!(s.agents[0].status, AgentStatus::Running);
+        assert_eq!(s.agents[0].source, ActivitySource::NanoNexus);
         assert_eq!(s.agents[0].label, "Chat · Nexus");
         assert_eq!(s.totals.new_tokens, 340);
         g.ingest(chat_finished("c1", true, t0 + 2_000));
-        assert_eq!(g.snapshot(t0 + 3_000).agents[0].status, Status::Idle);
+        assert_eq!(g.snapshot(t0 + 3_000).agents[0].status, AgentStatus::Idle);
     }
 
     #[test]
@@ -153,6 +153,6 @@ mod tests {
         for o in job_finished("j1", false, t0 + 50) {
             g.ingest(o);
         }
-        assert_eq!(g.snapshot(t0 + 60).agents[0].status, Status::Errored);
+        assert_eq!(g.snapshot(t0 + 60).agents[0].status, AgentStatus::Errored);
     }
 }

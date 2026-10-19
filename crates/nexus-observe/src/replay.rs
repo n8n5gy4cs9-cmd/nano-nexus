@@ -4,7 +4,7 @@
 use std::collections::VecDeque;
 
 use crate::aggregate::{Aggregator, Config};
-use crate::model::{Obs, Snapshot};
+use crate::model::{ActivitySnapshot, Obs};
 
 /// Smallest spacing between frames.
 const MIN_STEP_MS: i64 = 10_000;
@@ -12,7 +12,7 @@ const MIN_STEP_MS: i64 = 10_000;
 const TARGET_FRAMES: i64 = 2_000;
 
 pub struct Replay {
-    frames: VecDeque<Snapshot>,
+    frames: VecDeque<ActivitySnapshot>,
     step_ms: i64,
     window_ms: i64,
 }
@@ -39,7 +39,7 @@ impl Replay {
     }
 
     /// Store `snap` if a full step has passed since the last frame.
-    pub fn push(&mut self, snap: Snapshot) {
+    pub fn push(&mut self, snap: ActivitySnapshot) {
         if self
             .frames
             .back()
@@ -60,7 +60,7 @@ impl Replay {
     }
 
     /// The newest frame at or before `t_ms` (the oldest one if `t_ms` is before them all).
-    pub fn frame_at(&self, t_ms: i64) -> Option<&Snapshot> {
+    pub fn frame_at(&self, t_ms: i64) -> Option<&ActivitySnapshot> {
         let i = self.frames.partition_point(|f| f.at_ms <= t_ms);
         self.frames.get(i.saturating_sub(1))
     }
@@ -89,9 +89,9 @@ impl Replay {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{ObsKind, Role, Source};
+    use crate::model::{ActivitySource, ObsKind, Role};
 
-    fn snap(at: i64) -> Snapshot {
+    fn snap(at: i64) -> ActivitySnapshot {
         Aggregator::new(Config::default()).snapshot(at)
     }
 
@@ -126,7 +126,7 @@ mod tests {
     fn backfill_rebuilds_history_from_observations() {
         let now = 1_800_000_000_000;
         let mk = |at, kind| Obs {
-            source: Source::Codex,
+            source: ActivitySource::Codex,
             session: "s".into(),
             agent: "s".into(),
             parent: None,

@@ -6,7 +6,7 @@ use std::path::PathBuf;
 
 use crate::aggregate::{Aggregator, Config};
 use crate::demo::DemoFeed;
-use crate::model::{Obs, Snapshot, Source, Status};
+use crate::model::{ActivitySnapshot, ActivitySource, AgentStatus, Obs};
 use crate::replay::Replay;
 use crate::tail::{Root, Tailer};
 
@@ -32,7 +32,7 @@ pub enum AttentionKind {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Attention {
     pub kind: AttentionKind,
-    pub source: Source,
+    pub source: ActivitySource,
     /// Agent label or file label.
     pub subject: String,
     pub project: String,
@@ -66,7 +66,7 @@ pub struct Observer {
     pending: Vec<Obs>,
     demo: Option<DemoFeed>,
     demo_started: bool,
-    prev_status: HashMap<String, Status>,
+    prev_status: HashMap<String, AgentStatus>,
     prev_conflicts: HashSet<String>,
     primed: bool,
 }
@@ -82,13 +82,13 @@ fn roots(cfg: &ObserverConfig) -> Vec<Root> {
     }
     if let Some(r) = &cfg.claude_root {
         v.push(Root {
-            source: Source::ClaudeCode,
+            source: ActivitySource::ClaudeCode,
             dir: r.join("projects"),
         });
     }
     if let Some(r) = &cfg.codex_root {
         v.push(Root {
-            source: Source::Codex,
+            source: ActivitySource::Codex,
             dir: r.join("sessions"),
         });
     }
@@ -137,17 +137,17 @@ impl Observer {
         let claude_on = cfg.claude_root.is_some() && !cfg.demo;
         let codex_on = cfg.codex_root.is_some() && !cfg.demo;
         if !claude_on {
-            self.agg.clear_source(Source::ClaudeCode);
+            self.agg.clear_source(ActivitySource::ClaudeCode);
         }
         if !codex_on {
-            self.agg.clear_source(Source::Codex);
+            self.agg.clear_source(ActivitySource::Codex);
         }
         if !cfg.nanonexus {
-            self.agg.clear_source(Source::NanoNexus);
+            self.agg.clear_source(ActivitySource::NanoNexus);
         }
         if demo_changed {
             // Demo data replaces everything; leaving demo mode starts clean.
-            for s in Source::ALL {
+            for s in ActivitySource::ALL {
                 self.agg.clear_source(s);
             }
             self.replay = Replay::new(w);
@@ -155,9 +155,11 @@ impl Observer {
             self.demo_started = false;
             self.primed = false;
         }
-        self.agg.set_enabled(Source::NanoNexus, cfg.nanonexus || cfg.demo);
-        self.agg.set_enabled(Source::ClaudeCode, claude_on || cfg.demo);
-        self.agg.set_enabled(Source::Codex, codex_on || cfg.demo);
+        self.agg
+            .set_enabled(ActivitySource::NanoNexus, cfg.nanonexus || cfg.demo);
+        self.agg
+            .set_enabled(ActivitySource::ClaudeCode, claude_on || cfg.demo);
+        self.agg.set_enabled(ActivitySource::Codex, codex_on || cfg.demo);
         self.tailer.set_roots(roots(&cfg));
         self.cfg = cfg;
     }
@@ -179,7 +181,7 @@ impl Observer {
     }
 
     /// Read new events, update the picture, return it with anything that needs attention.
-    pub fn poll(&mut self, now_ms: i64) -> (Snapshot, Vec<Attention>) {
+    pub fn poll(&mut self, now_ms: i64) -> (ActivitySnapshot, Vec<Attention>) {
         let mut obs: Vec<Obs> = Vec::new();
         if let Some(d) = self.demo.as_mut() {
             if !self.demo_started {
@@ -209,7 +211,7 @@ impl Observer {
     }
 
     /// Replay frame for `t_ms` and the available range.
-    pub fn frame_at(&self, t_ms: i64) -> Option<Snapshot> {
+    pub fn frame_at(&self, t_ms: i64) -> Option<ActivitySnapshot> {
         self.replay.frame_at(t_ms).cloned()
     }
 
@@ -222,7 +224,7 @@ impl Observer {
         self.replay.range()
     }
 
-    fn attention(&mut self, snap: &Snapshot) -> Vec<Attention> {
+    fn attention(&mut self, snap: &ActivitySnapshot) -> Vec<Attention> {
         let project_of = |id: &str| -> String {
             snap.projects
                 .iter()
@@ -236,8 +238,8 @@ impl Observer {
             status.insert(a.id.clone(), a.status);
             let was = self.prev_status.get(&a.id).copied();
             let kind = match (was, a.status) {
-                (Some(w), Status::Stalled) if w != Status::Stalled => Some(AttentionKind::Stalled),
-                (Some(w), Status::Errored) if w != Status::Errored => Some(AttentionKind::Errored),
+                (Some(w), AgentStatus::Stalled) if w != AgentStatus::Stalled => Some(AttentionKind::Stalled),
+                (Some(w), AgentStatus::Errored) if w != AgentStatus::Errored => Some(AttentionKind::Errored),
                 _ => None,
             };
             if let Some(kind) = kind
@@ -262,7 +264,7 @@ impl Observer {
                     .map(|a| (a.source, project_of(&a.project_id)));
                 out.push(Attention {
                     kind: AttentionKind::Conflict,
-                    source: src.as_ref().map_or(Source::ClaudeCode, |s| s.0),
+                    source: src.as_ref().map_or(ActivitySource::ClaudeCode, |s| s.0),
                     subject: c.path_label.clone(),
                     project: src.map(|s| s.1).unwrap_or_default(),
                 });
@@ -371,7 +373,7 @@ mod tests {
     fn replay_is_rebuilt_from_the_first_batch() {
         let mut o = Observer::new(cfg());
         o.record_self(Obs {
-            source: Source::NanoNexus,
+            source: ActivitySource::NanoNexus,
             session: "s".into(),
             agent: "s".into(),
             parent: None,

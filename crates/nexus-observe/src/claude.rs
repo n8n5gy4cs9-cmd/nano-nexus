@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet};
 
 use serde_json::Value;
 
-use crate::model::{LineParser, Obs, ObsKind, Parsed, Role, Source, TokenCount};
+use crate::model::{ActivitySource, LineParser, Obs, ObsKind, Parsed, Role, TokenTotals};
 use crate::timefmt::parse_rfc3339_ms;
 
 /// Tools that change a file, and the input key that holds its path.
@@ -22,7 +22,7 @@ const MAX_REMEMBERED: usize = 4000;
 /// Per-file state: usage already counted per API message (a streamed message spans several lines).
 #[derive(Default)]
 pub struct ClaudeParser {
-    usage: HashMap<String, TokenCount>,
+    usage: HashMap<String, TokenTotals>,
     tools: HashSet<String>,
 }
 
@@ -72,7 +72,7 @@ impl LineParser for ClaudeParser {
             .unwrap_or(now_ms);
         let project = v.get("cwd").and_then(Value::as_str).unwrap_or("").to_string();
         let mk = |kind: ObsKind| Obs {
-            source: Source::ClaudeCode,
+            source: ActivitySource::ClaudeCode,
             session: session.to_string(),
             agent: agent.clone(),
             parent: parent.clone(),
@@ -117,7 +117,7 @@ impl ClaudeParser {
             self.usage.entry(msg_id.to_string()).or_default();
         }
         if let Some(usage) = m.get("usage") {
-            let now = TokenCount {
+            let now = TokenTotals {
                 input: u(usage, "input_tokens"),
                 output: u(usage, "output_tokens"),
                 cache_read: u(usage, "cache_read_input_tokens"),
@@ -125,7 +125,7 @@ impl ClaudeParser {
             };
             // A streamed message repeats its usage on every line: count each field once, by its maximum.
             let seen = self.usage.entry(msg_id.to_string()).or_default();
-            let delta = TokenCount {
+            let delta = TokenTotals {
                 input: now.input.saturating_sub(seen.input),
                 output: now.output.saturating_sub(seen.output),
                 cache_read: now.cache_read.saturating_sub(seen.cache_read),
@@ -135,7 +135,7 @@ impl ClaudeParser {
             seen.output = seen.output.max(now.output);
             seen.cache_read = seen.cache_read.max(now.cache_read);
             seen.cache_write = seen.cache_write.max(now.cache_write);
-            if delta != TokenCount::default() {
+            if delta != TokenTotals::default() {
                 out.push(mk(ObsKind::Tokens(delta)));
             }
         }
@@ -233,7 +233,7 @@ mod tests {
         let mut p = ClaudeParser::new();
         let body = r#""type":"assistant","message":{"id":"m1","model":"claude-opus-5-5","content":[{"type":"text","text":"hi"}],"stop_reason":null,"usage":{"input_tokens":2,"output_tokens":10,"cache_read_input_tokens":100,"cache_creation_input_tokens":5}}"#;
         let first = parse(&mut p, body);
-        assert!(first.contains(&ObsKind::Tokens(TokenCount {
+        assert!(first.contains(&ObsKind::Tokens(TokenTotals {
             input: 2,
             output: 10,
             cache_read: 100,
@@ -251,7 +251,7 @@ mod tests {
             &mut p,
             r#""type":"assistant","message":{"id":"m1","model":"claude-opus-5-5","content":[],"stop_reason":"end_turn","usage":{"input_tokens":2,"output_tokens":25,"cache_read_input_tokens":100,"cache_creation_input_tokens":5}}"#,
         );
-        assert!(last.contains(&ObsKind::Tokens(TokenCount {
+        assert!(last.contains(&ObsKind::Tokens(TokenTotals {
             output: 15,
             ..Default::default()
         })));

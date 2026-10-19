@@ -2,7 +2,7 @@
 //! conflict. Used by tests, the UI's "Show demo" button and screenshots, so no real project ever appears
 //! in them (T19.10).
 
-use crate::model::{Obs, ObsKind, Role, Source, TokenCount};
+use crate::model::{ActivitySource, Obs, ObsKind, Role, TokenTotals};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Mood {
@@ -245,7 +245,7 @@ impl Rng {
 
 fn obs(spec: &Spec, at_ms: i64, kind: ObsKind) -> Obs {
     Obs {
-        source: Source::ClaudeCode,
+        source: ActivitySource::ClaudeCode,
         session: spec.parent.unwrap_or(spec.session).to_string(),
         agent: spec.session.to_string(),
         parent: spec.parent.map(str::to_string),
@@ -358,7 +358,7 @@ impl DemoFeed {
         out.push(obs(
             sp,
             t + 1,
-            ObsKind::Tokens(TokenCount {
+            ObsKind::Tokens(TokenTotals {
                 input: 40 + self.rng.below(400),
                 output: 150 + self.rng.below(900),
                 cache_read: 20_000 + self.rng.below(60_000),
@@ -390,7 +390,7 @@ impl DemoFeed {
 mod tests {
     use super::*;
     use crate::aggregate::{Aggregator, Config};
-    use crate::model::Status;
+    use crate::model::AgentStatus;
 
     const NOW: i64 = 1_800_000_000_000;
 
@@ -422,12 +422,24 @@ mod tests {
             "{:?}",
             s.agents.iter().map(|a| (&a.id, a.status)).collect::<Vec<_>>()
         );
-        assert_eq!(s.agents.iter().filter(|a| a.status == Status::Stalled).count(), 1);
-        assert_eq!(s.agents.iter().filter(|a| a.status == Status::Errored).count(), 1);
+        assert_eq!(
+            s.agents
+                .iter()
+                .filter(|a| a.status == AgentStatus::Stalled)
+                .count(),
+            1
+        );
+        assert_eq!(
+            s.agents
+                .iter()
+                .filter(|a| a.status == AgentStatus::Errored)
+                .count(),
+            1
+        );
         assert_eq!(s.conflicts.len(), 1);
         assert_eq!(s.conflicts[0].path_label, "cart/Cart.tsx");
         assert!(s.totals.new_tokens > 100_000);
-        assert_eq!(s.sources[Source::ClaudeCode as usize].agents, 19);
+        assert_eq!(s.sources[ActivitySource::ClaudeCode as usize].agents, 19);
     }
 
     #[test]
@@ -436,7 +448,10 @@ mod tests {
         let s = g.snapshot(t);
         assert_eq!(s.totals.active, 4);
         assert_eq!(
-            s.agents.iter().filter(|a| a.status == Status::Errored).count(),
+            s.agents
+                .iter()
+                .filter(|a| a.status == AgentStatus::Errored)
+                .count(),
             1,
             "errors are re-raised"
         );

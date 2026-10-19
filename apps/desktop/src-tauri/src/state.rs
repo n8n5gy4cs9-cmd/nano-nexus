@@ -85,6 +85,8 @@ pub enum AppEvent {
     ShareStatus(nexus_core::share::ShareStatus),
     /// A job started, progressed, or ended (already throttled by the registry).
     JobUpdate(nexus_core::events::JobSummary),
+    /// A fresh Activity picture (only while the page is open).
+    Observe(Box<nexus_observe::ObserveView>),
 }
 
 /// Everything services need. Later milestones add jobs, permissions, and the assistant registry.
@@ -111,6 +113,8 @@ pub struct AppState {
     pub jobs: nexus_store::JobRegistry,
     /// Folder watches: file watchers and runs in flight.
     pub watches: crate::service::watches::WatchRuntime,
+    /// Activity page: the observer and whether the page is open (M19).
+    pub observe: crate::service::observe::ObserveRuntime,
     /// Built-in and user assistants.
     pub registry: RwLock<nexus_agent::registry::Registry>,
     /// The only writer of user files (apply / undo with backups).
@@ -241,6 +245,7 @@ impl AppState {
             renames: Default::default(),
             jobs,
             watches: Default::default(),
+            observe: Default::default(),
             registry,
             journal,
             audit,

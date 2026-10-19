@@ -9,6 +9,7 @@ pub mod aggregate;
 pub mod claude;
 pub mod codex;
 pub mod demo;
+pub mod hub;
 pub mod model;
 pub mod observer;
 pub mod render;
@@ -18,9 +19,10 @@ pub mod tail;
 pub mod timefmt;
 
 pub use aggregate::{Aggregator, Config};
+pub use hub::{Alert, Hub, ObserveView, Switches};
 pub use model::{
-    AgentView, ConflictView, Drift, Obs, ObsKind, ProjectView, Role, Snapshot, Source, SourceView, Status,
-    TokenCount, Totals,
+    ActivitySnapshot, ActivitySource, ActivityTotals, AgentStatus, AgentView, ConflictView, LogDrift, Obs,
+    ObsKind, ProjectView, Role, SourceView, TokenTotals,
 };
 pub use observer::{Attention, AttentionKind, Observer, ObserverConfig};
 pub use replay::Replay;

@@ -1,10 +1,10 @@
-//! Folds observations into agent state and renders a [`Snapshot`] (OBSERVE.md §5, §6).
+//! Folds observations into agent state and renders a [`ActivitySnapshot`] (OBSERVE.md §5, §6).
 
 use std::collections::{BTreeMap, HashMap, VecDeque};
 
 use crate::model::{
-    AgentView, ConflictView, Drift, Obs, ObsKind, ProjectView, Snapshot, Source, SourceView, Status,
-    TokenCount, Totals, base_name, short_model, short_path,
+    ActivitySnapshot, ActivitySource, ActivityTotals, AgentStatus, AgentView, ConflictView, LogDrift, Obs,
+    ObsKind, ProjectView, SourceView, TokenTotals, base_name, short_model, short_path,
 };
 
 /// Timing rules. Defaults are the ones in OBSERVE.md §5.
@@ -43,7 +43,7 @@ struct OpenTool {
 }
 
 struct AgentState {
-    source: Source,
+    source: ActivitySource,
     agent: String,
     parent: Option<String>,
     project: String,
@@ -51,7 +51,7 @@ struct AgentState {
     title: Option<String>,
     started_ms: i64,
     last_ms: i64,
-    tokens: TokenCount,
+    tokens: TokenTotals,
     events: u64,
     messages: u32,
     errors: u32,
@@ -97,12 +97,12 @@ impl AgentState {
         }
     }
 
-    fn status(&self, now: i64, cfg: &Config) -> Status {
+    fn status(&self, now: i64, cfg: &Config) -> AgentStatus {
         if self.errored_at.is_some_and(|e| now - e < cfg.error_ms) {
-            return Status::Errored;
+            return AgentStatus::Errored;
         }
         if !self.in_turn {
-            return Status::Idle;
+            return AgentStatus::Idle;
         }
         let age = now - self.last_ms;
         let limit = if self.open.is_empty() {
@@ -111,11 +111,11 @@ impl AgentState {
             cfg.stall_tool_ms
         };
         if age < limit {
-            Status::Running
+            AgentStatus::Running
         } else if age < cfg.abandon_ms {
-            Status::Stalled
+            AgentStatus::Stalled
         } else {
-            Status::Idle
+            AgentStatus::Idle
         }
     }
 
@@ -161,7 +161,7 @@ pub struct Aggregator {
     cfg: Config,
     agents: BTreeMap<String, AgentState>,
     enabled: [bool; 3],
-    pub drift: Drift,
+    pub drift: LogDrift,
 }
 
 impl Aggregator {
@@ -170,7 +170,7 @@ impl Aggregator {
             cfg,
             agents: BTreeMap::new(),
             enabled: [true; 3],
-            drift: Drift::default(),
+            drift: LogDrift::default(),
         }
     }
 
@@ -183,7 +183,7 @@ impl Aggregator {
     }
 
     /// Which sources the UI shows as switched on (display only).
-    pub fn set_enabled(&mut self, source: Source, on: bool) {
+    pub fn set_enabled(&mut self, source: ActivitySource, on: bool) {
         self.enabled[source as usize] = on;
     }
 
@@ -192,7 +192,7 @@ impl Aggregator {
     }
 
     /// Forget a whole source (it was switched off).
-    pub fn clear_source(&mut self, source: Source) {
+    pub fn clear_source(&mut self, source: ActivitySource) {
         self.agents.retain(|_, a| a.source != source);
     }
 
@@ -207,7 +207,7 @@ impl Aggregator {
             title: None,
             started_ms: o.at_ms,
             last_ms: o.at_ms,
-            tokens: TokenCount::default(),
+            tokens: TokenTotals::default(),
             events: 0,
             messages: 0,
             errors: 0,
@@ -282,7 +282,7 @@ impl Aggregator {
         self.agents.retain(|_, a| a.last_ms >= cutoff);
     }
 
-    pub fn snapshot(&self, now_ms: i64) -> Snapshot {
+    pub fn snapshot(&self, now_ms: i64) -> ActivitySnapshot {
         let cutoff = now_ms - self.cfg.window_ms;
         let visible: Vec<&AgentState> = self
             .agents
@@ -335,13 +335,13 @@ impl Aggregator {
                     last_ms: 0,
                 });
             p.agents += 1;
-            if v.status == Status::Running {
+            if v.status == AgentStatus::Running {
                 p.running += 1;
             }
             p.new_tokens += v.tokens.new_tokens();
             p.last_ms = p.last_ms.max(v.last_ms);
         }
-        let sources = Source::ALL
+        let sources = ActivitySource::ALL
             .iter()
             .map(|s| {
                 let mine: Vec<&AgentView> = agents.iter().filter(|a| a.source == *s).collect();
@@ -350,16 +350,16 @@ impl Aggregator {
                     label: s.label().to_string(),
                     enabled: self.enabled[*s as usize],
                     agents: mine.len() as u32,
-                    running: mine.iter().filter(|a| a.status == Status::Running).count() as u32,
+                    running: mine.iter().filter(|a| a.status == AgentStatus::Running).count() as u32,
                     last_ms: mine.iter().map(|a| a.last_ms).max(),
                 }
             })
             .collect();
-        let totals = Totals {
+        let totals = ActivityTotals {
             tasks: agents.len() as u32,
-            tasks_done: agents.iter().filter(|a| a.status == Status::Idle).count() as u32,
+            tasks_done: agents.iter().filter(|a| a.status == AgentStatus::Idle).count() as u32,
             events: agents.iter().map(|a| a.events).sum(),
-            active: agents.iter().filter(|a| a.status == Status::Running).count() as u32,
+            active: agents.iter().filter(|a| a.status == AgentStatus::Running).count() as u32,
             agents: agents.len() as u32,
             uptime_ms: agents
                 .iter()
@@ -369,7 +369,7 @@ impl Aggregator {
             new_tokens: agents.iter().map(|a| a.tokens.new_tokens()).sum(),
             cache_read_tokens: agents.iter().map(|a| a.tokens.cache_read).sum(),
         };
-        Snapshot {
+        ActivitySnapshot {
             at_ms: now_ms,
             totals,
             sources,
@@ -422,7 +422,7 @@ mod tests {
 
     fn obs(agent: &str, at: i64, kind: ObsKind) -> Obs {
         Obs {
-            source: Source::ClaudeCode,
+            source: ActivitySource::ClaudeCode,
             session: agent.split('/').next().unwrap_or(agent).into(),
             agent: agent.into(),
             parent: agent.split_once('/').map(|(s, _)| s.to_string()),
@@ -440,7 +440,7 @@ mod tests {
         }
     }
 
-    fn status_of(agg: &Aggregator, now: i64, id: &str) -> Status {
+    fn status_of(agg: &Aggregator, now: i64, id: &str) -> AgentStatus {
         agg.snapshot(now)
             .agents
             .iter()
@@ -453,20 +453,32 @@ mod tests {
     fn running_then_stalled_then_idle() {
         let mut g = Aggregator::new(Config::default());
         g.ingest(obs("s1", T0, ObsKind::Message(Role::User)));
-        assert_eq!(status_of(&g, T0 + 5_000, "claude_code:s1"), Status::Running);
-        assert_eq!(status_of(&g, T0 + 170_000, "claude_code:s1"), Status::Running);
-        assert_eq!(status_of(&g, T0 + 190_000, "claude_code:s1"), Status::Stalled);
-        assert_eq!(status_of(&g, T0 + 3_700_000, "claude_code:s1"), Status::Idle);
+        assert_eq!(status_of(&g, T0 + 5_000, "claude_code:s1"), AgentStatus::Running);
+        assert_eq!(
+            status_of(&g, T0 + 170_000, "claude_code:s1"),
+            AgentStatus::Running
+        );
+        assert_eq!(
+            status_of(&g, T0 + 190_000, "claude_code:s1"),
+            AgentStatus::Stalled
+        );
+        assert_eq!(status_of(&g, T0 + 3_700_000, "claude_code:s1"), AgentStatus::Idle);
         g.ingest(obs("s1", T0 + 4_000, ObsKind::End));
-        assert_eq!(status_of(&g, T0 + 190_000, "claude_code:s1"), Status::Idle);
+        assert_eq!(status_of(&g, T0 + 190_000, "claude_code:s1"), AgentStatus::Idle);
     }
 
     #[test]
     fn open_tools_get_a_longer_leash() {
         let mut g = Aggregator::new(Config::default());
         g.ingest(obs("s1", T0, tool("t1", "Bash", &[])));
-        assert_eq!(status_of(&g, T0 + 300_000, "claude_code:s1"), Status::Running);
-        assert_eq!(status_of(&g, T0 + 700_000, "claude_code:s1"), Status::Stalled);
+        assert_eq!(
+            status_of(&g, T0 + 300_000, "claude_code:s1"),
+            AgentStatus::Running
+        );
+        assert_eq!(
+            status_of(&g, T0 + 700_000, "claude_code:s1"),
+            AgentStatus::Stalled
+        );
         g.ingest(obs(
             "s1",
             T0 + 10_000,
@@ -476,7 +488,10 @@ mod tests {
             },
         ));
         // Tool closed at +10 s: the 3-minute leash now applies.
-        assert_eq!(status_of(&g, T0 + 200_000, "claude_code:s1"), Status::Stalled);
+        assert_eq!(
+            status_of(&g, T0 + 200_000, "claude_code:s1"),
+            AgentStatus::Stalled
+        );
     }
 
     #[test]
@@ -484,10 +499,10 @@ mod tests {
         let mut g = Aggregator::new(Config::default());
         g.ingest(obs("s1", T0, ObsKind::Message(Role::User)));
         g.ingest(obs("s1", T0 + 1_000, ObsKind::Error));
-        assert_eq!(status_of(&g, T0 + 5_000, "claude_code:s1"), Status::Errored);
-        assert_eq!(status_of(&g, T0 + 200_000, "claude_code:s1"), Status::Idle);
+        assert_eq!(status_of(&g, T0 + 5_000, "claude_code:s1"), AgentStatus::Errored);
+        assert_eq!(status_of(&g, T0 + 200_000, "claude_code:s1"), AgentStatus::Idle);
         g.ingest(obs("s1", T0 + 6_000, ObsKind::Message(Role::Assistant)));
-        assert_eq!(status_of(&g, T0 + 7_000, "claude_code:s1"), Status::Running);
+        assert_eq!(status_of(&g, T0 + 7_000, "claude_code:s1"), AgentStatus::Running);
         let snap = g.snapshot(T0 + 7_000);
         assert_eq!(snap.agents[0].errors, 1);
     }
@@ -506,7 +521,7 @@ mod tests {
         ));
         let s = g.snapshot(T0 + 2_000);
         assert_eq!(s.agents[0].errors, 1);
-        assert_eq!(s.agents[0].status, Status::Running);
+        assert_eq!(s.agents[0].status, AgentStatus::Running);
     }
 
     #[test]
@@ -547,7 +562,7 @@ mod tests {
         let mut g = Aggregator::new(Config::default());
         g.ingest(obs("a", T0, tool("t1", "apply_patch", &["src/x.rs"])));
         let mut b = obs("b", T0 + 10, tool("t2", "Edit", &["/home/me/app/src/x.rs"]));
-        b.source = Source::Codex;
+        b.source = ActivitySource::Codex;
         g.ingest(b);
         assert_eq!(g.snapshot(T0 + 20).conflicts.len(), 1, "across sources too");
     }
@@ -559,7 +574,7 @@ mod tests {
         g.ingest(obs(
             "s1",
             T0 + 10,
-            ObsKind::Tokens(TokenCount {
+            ObsKind::Tokens(TokenTotals {
                 input: 1,
                 output: 2,
                 cache_read: 50,

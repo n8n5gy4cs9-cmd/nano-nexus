@@ -28,6 +28,7 @@ nexus-models = { path = "../../../crates/nexus-models" }
 nexus-llm = { path = "../../../crates/nexus-llm" }
 nexus-store = { path = "../../../crates/nexus-store" }
 nexus-share = { path = "../../../crates/nexus-share" }
+nexus-observe = { path = "../../../crates/nexus-observe" }
 tokio-util.workspace = true
 futures-util.workspace = true
 serde.workspace = true

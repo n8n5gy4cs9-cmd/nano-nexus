@@ -6,7 +6,7 @@ use tauri_specta::{Builder, collect_commands, collect_events};
 
 use crate::commands::{
     analyzer, app, assistants, attachments, chat, conversations, editor, fs, jobs, knowledge, models,
-    notifications, permissions, rename, runtime, settings, share, watches,
+    notifications, observe, permissions, rename, runtime, settings, share, watches,
 };
 
 /// All commands and events.
@@ -83,6 +83,10 @@ pub fn builder() -> Builder<tauri::Wry> {
             analyzer::report_cleanup_plan,
             jobs::jobs_list,
             jobs::job_cancel,
+            observe::observe_snapshot,
+            observe::observe_replay,
+            observe::observe_demo,
+            observe::observe_watch,
             watches::watches_list,
             watches::watch_create,
             watches::watch_set_enabled,
@@ -156,7 +160,8 @@ pub fn builder() -> Builder<tauri::Wry> {
             permissions::PermissionRequested,
             chat::ConversationUpdated,
             share::ShareStatusChanged,
-            jobs::JobUpdate
+            jobs::JobUpdate,
+            observe::ObserveSnapshot
         ])
         // Timestamps (ms) and byte counts stay far below 2^53, so numbers are exact.
         .dangerously_cast_bigints_to_number()

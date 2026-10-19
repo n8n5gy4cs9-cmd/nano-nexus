@@ -3,7 +3,7 @@
 
 use serde_json::Value;
 
-use crate::model::{LineParser, Obs, ObsKind, Parsed, Role, Source, TokenCount};
+use crate::model::{ActivitySource, LineParser, Obs, ObsKind, Parsed, Role, TokenTotals};
 use crate::timefmt::parse_rfc3339_ms;
 
 /// Tool names that edit files by patch.
@@ -14,7 +14,7 @@ pub struct CodexParser {
     session: String,
     parent: Option<String>,
     project: String,
-    last_total: TokenCount,
+    last_total: TokenTotals,
 }
 
 impl CodexParser {
@@ -25,7 +25,7 @@ impl CodexParser {
             session: fallback_session.to_string(),
             parent: None,
             project: String::new(),
-            last_total: TokenCount::default(),
+            last_total: TokenTotals::default(),
         }
     }
 }
@@ -158,7 +158,7 @@ impl LineParser for CodexParser {
                 "token_count" => {
                     if let Some(t) = p.pointer("/info/total_token_usage") {
                         let cached = n(t, "cached_input_tokens");
-                        let total = TokenCount {
+                        let total = TokenTotals {
                             input: n(t, "input_tokens").saturating_sub(cached),
                             output: n(t, "output_tokens"),
                             cache_read: cached,
@@ -167,15 +167,15 @@ impl LineParser for CodexParser {
                         let prev = self.last_total;
                         // A smaller total means the counter restarted: take it as the delta.
                         let restarted = total.output < prev.output;
-                        let base = if restarted { TokenCount::default() } else { prev };
-                        let delta = TokenCount {
+                        let base = if restarted { TokenTotals::default() } else { prev };
+                        let delta = TokenTotals {
                             input: total.input.saturating_sub(base.input),
                             output: total.output.saturating_sub(base.output),
                             cache_read: total.cache_read.saturating_sub(base.cache_read),
                             cache_write: 0,
                         };
                         self.last_total = total;
-                        if delta != TokenCount::default() {
+                        if delta != TokenTotals::default() {
                             kinds.push(ObsKind::Tokens(delta));
                         }
                     }
@@ -195,7 +195,7 @@ impl LineParser for CodexParser {
         let obs = kinds
             .into_iter()
             .map(|kind| Obs {
-                source: Source::Codex,
+                source: ActivitySource::Codex,
                 session: self.session.clone(),
                 agent: self.session.clone(),
                 parent: self.parent.clone(),
@@ -240,7 +240,7 @@ mod tests {
         );
         assert_eq!(
             a,
-            vec![ObsKind::Tokens(TokenCount {
+            vec![ObsKind::Tokens(TokenTotals {
                 input: 400,
                 output: 50,
                 cache_read: 600,
@@ -253,7 +253,7 @@ mod tests {
         );
         assert_eq!(
             b,
-            vec![ObsKind::Tokens(TokenCount {
+            vec![ObsKind::Tokens(TokenTotals {
                 input: 200,
                 output: 30,
                 cache_read: 300,

@@ -3163,6 +3163,7 @@ dependencies = [
  "nexus-knowledge",
  "nexus-llm",
  "nexus-models",
+ "nexus-observe",
  "nexus-share",
  "nexus-store",
  "serde",

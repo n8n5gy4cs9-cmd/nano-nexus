@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 use nexus_observe::claude::ClaudeParser;
 use nexus_observe::codex::CodexParser;
 use nexus_observe::model::LineParser;
-use nexus_observe::{Observer, ObserverConfig, Source};
+use nexus_observe::{ActivitySource, Observer, ObserverConfig};
 
 fn fixtures() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures")
@@ -100,8 +100,8 @@ fn snapshots_replay_frames_and_json_are_canary_free() {
     let (snap, _) = o.poll(NOW);
     assert_eq!(o.tracked_files(), 3);
     assert_eq!(snap.totals.agents, 3, "main + subagent + codex");
-    assert_eq!(snap.sources[Source::ClaudeCode as usize].agents, 2);
-    assert_eq!(snap.sources[Source::Codex as usize].agents, 1);
+    assert_eq!(snap.sources[ActivitySource::ClaudeCode as usize].agents, 2);
+    assert_eq!(snap.sources[ActivitySource::Codex as usize].agents, 1);
     // Tokens: Claude m1 counted once (3+45... final max 120 out, 3 in, 200 write) + m2 + subagent.
     let cc = snap.agents.iter().find(|a| a.id == "claude_code:cc-1").unwrap();
     assert_eq!(cc.tokens.input, 3 + 4);
@@ -149,8 +149,8 @@ fn switched_off_sources_are_never_opened() {
     let mut o = observer(home.path(), false, true);
     let (snap, _) = o.poll(NOW);
     assert_eq!(o.tracked_files(), 1);
-    assert_eq!(snap.sources[Source::ClaudeCode as usize].agents, 0);
-    assert_eq!(snap.sources[Source::Codex as usize].agents, 1);
+    assert_eq!(snap.sources[ActivitySource::ClaudeCode as usize].agents, 0);
+    assert_eq!(snap.sources[ActivitySource::Codex as usize].agents, 1);
     // Switching a source off forgets it at once.
     o.apply_config(ObserverConfig {
         window_hours: 6,

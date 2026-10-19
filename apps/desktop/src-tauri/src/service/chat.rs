@@ -183,6 +183,8 @@ pub struct PersistingSink {
     id: MessageId,
     every: Duration,
     buf: Mutex<Buffer>,
+    /// Activity page (M19): the app context and conversation id, when this turn reports its tool calls.
+    observe: Option<(Ctx, String)>,
 }
 
 struct Buffer {
@@ -206,7 +208,14 @@ impl PersistingSink {
                 last_flush: Instant::now(),
                 tools: Vec::new(),
             }),
+            observe: None,
         }
+    }
+
+    /// Report this turn's tool calls to the Activity page (names and outcomes only).
+    pub fn with_observe(mut self, ctx: Ctx, conversation: String) -> Self {
+        self.observe = Some((ctx, conversation));
+        self
     }
 
     /// The tool calls seen so far as a JSON array, or `None` when there were none.
@@ -218,6 +227,8 @@ impl PersistingSink {
 
 impl Sink<ChatEvent> for PersistingSink {
     fn send(&self, event: ChatEvent) -> bool {
+        // (call id, tool, result) for the Activity page; `None` result = the call just started.
+        let mut seen: Option<(String, String, Option<bool>)> = None;
         if let Ok(mut b) = self.buf.lock() {
             let dirty = match &event {
                 ChatEvent::Content { delta } => {
@@ -233,17 +244,20 @@ impl Sink<ChatEvent> for PersistingSink {
                         .unwrap_or(serde_json::Value::Null);
                     b.tools
                         .push(serde_json::json!({"tool": tool, "args": args, "summary": null, "ok": null}));
+                    seen = Some((format!("{}-{}", self.id, b.tools.len()), tool.clone(), None));
                     false
                 }
                 ChatEvent::ToolResult { tool, summary, ok } => {
-                    if let Some(t) = b
+                    if let Some((i, t)) = b
                         .tools
                         .iter_mut()
+                        .enumerate()
                         .rev()
-                        .find(|t| t["tool"] == tool.as_str() && t["ok"].is_null())
+                        .find(|(_, t)| t["tool"] == tool.as_str() && t["ok"].is_null())
                     {
                         t["summary"] = serde_json::Value::String(summary.clone());
                         t["ok"] = serde_json::Value::Bool(*ok);
+                        seen = Some((format!("{}-{}", self.id, i + 1), tool.clone(), Some(*ok)));
                     }
                     false
                 }
@@ -255,6 +269,12 @@ impl Sink<ChatEvent> for PersistingSink {
                     tracing::warn!("could not persist streaming message: {e}");
                 }
                 b.last_flush = Instant::now();
+            }
+        }
+        if let (Some((ctx, conv)), Some((call, tool, result))) = (&self.observe, seen) {
+            match result {
+                None => super::observe::tool_started(ctx, conv, &call, &tool),
+                Some(ok) => super::observe::tool_finished(ctx, conv, &call, ok),
             }
         }
         self.inner.send(event)
@@ -519,6 +539,7 @@ fn start_turn(
     let ctx = Arc::clone(ctx);
     let assistant_id = placeholder.id.clone();
     let conv_id = conv.id.clone();
+    let observe_model = model_id.clone().unwrap_or_else(|| "model".into());
     let attachments = user.attachments.clone();
     tokio::spawn(async move {
         // engine -> persist (raw, ordered) -> coalesce (16 ms / 32 chars) -> UI
@@ -528,7 +549,9 @@ fn start_turn(
             ctx.store.clone(),
             assistant_id.clone(),
             PERSIST_EVERY,
-        );
+        )
+        .with_observe(ctx.clone(), conv_id.to_string());
+        super::observe::chat_started(&ctx, conv_id.as_str(), &assistant_slug, &observe_model);
         persisting.send(ChatEvent::Started {
             assistant_message_id: assistant_id.clone(),
         });
@@ -697,6 +720,13 @@ fn start_turn(
             let _ = ctx.store.set_attachment_tokens(&a.id, *tokens);
         }
         ctx.chats.finish(&assistant_id);
+        super::observe::chat_finished(
+            &ctx,
+            conv_id.as_str(),
+            outcome.tokens_prompt.unwrap_or(0),
+            outcome.tokens_out.unwrap_or(0),
+            outcome.status != MessageStatus::Error,
+        );
         if outcome.status == MessageStatus::Done {
             after_turn(&ctx, &conv_id, &outcome);
         }
