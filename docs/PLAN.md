@@ -26,6 +26,7 @@
 | **M14** | [LAN Share + mobile web UI](milestones/M14-lan-share.md) | 📡 Start/Stop sharing on :9889, QR pairing, phone chats with your assistants | M04, M06, M08, M11 | L |
 | **M15** | [Polish](milestones/M15-polish.md) | ⌘K palette, onboarding, shortcuts, Quick Ask, tray, a11y, perf, assistant evals | all | L |
 | **M16** | [Optional extensions](milestones/M16-optional.md) | Linux, custom endpoint, embeddings RAG, vision, voice, notarization/signing | M13 | — |
+| **M19** | [Activity Observatory](milestones/M19-activity.md) | Live graph of NanoNexus, Claude Code and Codex activity: models, tokens, tools, conflicts, replay | M03, M11 | L |
 
 Sizes: S ≈ ½ day · M ≈ 1–2 days · L ≈ 3–5 days · XL ≈ 1–2 weeks (one focused developer + AI).
 

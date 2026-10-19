@@ -302,3 +302,41 @@ network, with a simple start/stop button and a settings page. The default port i
 
 **Alternatives.** Expose llama-server directly (no auth model, no assistants, unsafe) · a
 separate web app (duplicate UI work) · Tauri remote/IPC over the network (not supported).
+
+---
+
+## ADR-017: Activity Observatory: passive, read-only, metadata-only agent monitoring
+**Status:** Accepted · 2026-10-19
+
+**Context.** The owner wants a live dashboard (like the "AOS-1" Claude Code activity graph) that shows
+what is running: NanoNexus' own work, and optionally Claude Code and Codex sessions on the same
+computer: which model, tokens, current tool, run time, stalled or errored agents, and two agents
+touching the same file.
+
+**Decision.**
+- New library crate `crates/nexus-observe`, UI page **Activity** (`/activity`).
+- **Passive:** external agents are observed by *tailing the transcript files they already write*
+  (`~/.claude/projects/**.jsonl` incl. `subagents/`, `~/.codex/sessions/**/rollout-*.jsonl`).
+  No hooks, no changes to their config, no network, no code injected into them.
+- **Read-only and metadata-only:** parsers extract event *kinds, counts, model names, token usage,
+  tool names, timestamps and file paths of edit tools* and **discard everything else at parse time**.
+  Prompts, assistant text, shell commands, tool inputs/outputs and file contents are never stored,
+  logged, sent over IPC, or placed in the replay buffer. A canary test enforces this (T19.09).
+- **Opt-in:** NanoNexus' own activity is on by default (it is our data). Claude Code and Codex are
+  **off until the owner enables each in Settings → Activity** (it reads outside the granted folders,
+  so ADR-010's "in-app grants" model needs an explicit consent for these two fixed, read-only locations).
+  The reads are confined to those two roots (canonicalised, no symlink escape) and use the OS file API
+  directly, not the LLM file tools. The LLM can never see these sources.
+- **In-memory by default:** the replay buffer lives in RAM (a few hours, downsampled). Nothing new is
+  written to SQLite, so there is no migration. File paths are kept in memory only.
+- **Desktop-only:** not exposed through LAN Share (LAN-SHARE §3 unchanged); the route is guarded like
+  the other desktop-only pages.
+- **Optional extras:** a terminal view (`examples/top.rs`) and a **read-only MCP server** over stdio so
+  an agent can ask "what else is running / is anyone editing this file?". Both reuse the same crate.
+
+**Alternatives.** Claude Code hooks (needs editing the user's settings and doesn't cover Codex) ·
+OpenTelemetry export (needs setup per tool) · storing events in SQLite (privacy and migration cost for no
+need) · a separate Electron/Node app (second codebase).
+
+**Consequences.** Log formats are not a stable API: parsers are tolerant (unknown lines are skipped,
+never fatal), have fixtures, and a "format drift" counter shows in the UI when many lines fail to parse.

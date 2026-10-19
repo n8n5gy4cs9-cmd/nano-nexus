@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 205/236 tasks done (86%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 206/254 tasks done (81%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -305,3 +305,25 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T18.03** Show the chosen tier on the message ("light" / "strong") and a "Use strong model" button on light answers (2026-10-11) — `AssistantMessage` gets `tier` + `onUseStrong`; `ChatView` derives the tier by comparing the stored `model_id` with `duo.light_model_id` / `duo.strong_model_id` (no badge when unset or equal); the button regenerates with Think harder, which Duo always routes to the strong model. **Frontend written but not linted/typechecked/tested (owner asked for no runs); no component test added yet**
 - [ ] **T18.04** (v0.2) Run both models at the same time (second `Supervisor` + port, memory check via `MemoryInfo`) to remove swap latency
 - [ ] **T18.05** (v0.2) Optional model-based classifier (light model scores difficulty 1–5) and automatic escalation when the light answer looks unsure
+
+## M19: Activity Observatory (live agent dashboard) · [spec](docs/milestones/M19-activity.md)
+- [x] **T19.01** Plan: ADR-017, `docs/architecture/OBSERVE.md`, `docs/milestones/M19-activity.md`, these tasks (2026-10-19)
+- [ ] **T19.02** Crate `nexus-observe`: workspace member, `Source`/`Status`/`Obs`/`Snapshot` types (serde + specta), settings `observe.*` in `nexus-core`
+- [ ] **T19.03** Claude Code parser (`~/.claude/projects`, subagents, usage dedupe by `message.id`, edit-tool file paths only) + fixtures + tests
+- [ ] **T19.04** Codex parser (`rollout-*.jsonl`, cumulative token deltas, function calls, errors/aborts) + fixtures + tests
+- [ ] **T19.05** Tailer: discovery (mtime window, cap), per-file offsets, partial lines, truncation reset, 2 MB first-read, read-only, symlink-safe + tests
+- [ ] **T19.06** Aggregator: status rules, tokens, tasks/events/uptime totals, project/agent graph, file-conflict detection, drift counter + tests
+- [ ] **T19.07** Replay ring buffer (10 s frames, `frame_at`) + tests
+- [ ] **T19.08** NanoNexus self-source: `Observer::record_self` fed from chat turns, tool calls, jobs, runtime state (service layer hooks) + tests
+- [ ] **T19.09** Privacy tests: canary strings never reach snapshots/logs/replay; sources off opens no external file (fake home); desktop-only guard in `nexus-share`
+- [ ] **T19.10** Demo dataset generator (synthetic 3 projects / 19 agents) used by tests, the UI "Show demo" button and screenshots
+- [ ] **T19.11** App `service::observe` + commands (`observe_snapshot`, `observe_replay`, `observe_set_source`) + `observe:snapshot` event (2 Hz) + attention notifications (rate-limited)
+- [ ] **T19.12** Frontend: `api.ts` facade, store, hooks; `lib/activity-layout.ts` (deterministic radial layout) + tests
+- [ ] **T19.13** Canvas renderer: DPR-aware nodes/edges, particle streams (adaptive count), pan/zoom/fit, light/dark tokens, reduced motion, hidden-page pause
+- [ ] **T19.14** Activity page: stats strip, legend, detail panel (model, tokens, tool, run time, errors), conflict chips, empty/consent/drift states, nav + palette entry + Settings → Activity (per-source switches)
+- [ ] **T19.15** Replay UI: LIVE / REPLAY toggle, scrubber over the last N hours, play/pause, speed
+- [ ] **T19.16** Terminal view `examples/top.rs` (`cargo run -p nexus-observe --example top`) + test of the renderer
+- [ ] **T19.17** Read-only MCP stdio server `examples/mcp.rs` (`list_agents`, `get_agent`, `list_conflicts`) + protocol test
+- [ ] **T19.18** Docs: `guide.html` Activity section, `docs/PLAN.md` row, README mention
+- [ ] ⭐ **T19.19** 🍎 Exit check: real Claude Code + Codex sessions on the Mac, conflict demo, 60 fps with 20 agents, privacy canary green
+
