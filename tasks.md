@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 221/254 tasks done (87%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 223/254 tasks done (87%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -323,7 +323,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T19.14** Activity page: stats strip, legend, detail panel (model, tokens, tool, run time, errors), conflict chips, empty/consent/drift states, nav + palette entry + Settings → Activity (per-source switches) (2026-10-19) — `ActivityPage.tsx`, `DetailPanel.tsx`, `SourcesPanel.tsx` (consent dialog before Claude Code / Codex are read), nav entry (`/activity`, desktop only), Settings → Activity, drift notice. Palette lists it via `NAV`
 - [x] **T19.15** Replay UI: LIVE / REPLAY toggle, scrubber over the last N hours, play/pause, speed (2026-10-19) — `ReplayBar.tsx`: scrubber over the replay range, play/pause, 1×/4×/16×/60×, back to live
 - [x] **T19.16** Terminal view `examples/top.rs` (`cargo run -p nexus-observe --example top`) + test of the renderer (2026-10-19) — `examples/top.rs` + `render::table`
-- [ ] **T19.17** Read-only MCP stdio server `examples/mcp.rs` (`list_agents`, `get_agent`, `list_conflicts`) + protocol test
-- [ ] **T19.18** Docs: `guide.html` Activity section, `docs/PLAN.md` row, README mention
+- [x] **T19.17** Read-only MCP stdio server `examples/mcp.rs` (`list_agents`, `get_agent`, `list_conflicts`) + protocol test (2026-10-19) — `mcp.rs` + `examples/mcp.rs` (initialize, tools/list, tools/call; all tools read-only; `--demo`)
+- [x] **T19.18** Docs: `guide.html` Activity section, `docs/PLAN.md` row, README mention (2026-10-19) — guide.html “Activity” section, DATA-AND-IPC commands/settings, OBSERVE.md synced with the build, README, PLAN row (T19.01)
 - [ ] ⭐ **T19.19** 🍎 Exit check: real Claude Code + Codex sessions on the Mac, conflict demo, 60 fps with 20 agents, privacy canary green
 

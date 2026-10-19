@@ -115,6 +115,7 @@
   <ol>
     <li><a href="#dummies">★ For beginners: start here</a></li>
     <li><a href="#duo">★ Duo: two models in one chat</a></li>
+    <li><a href="#activity">★ Activity: see what is running</a></li>
     <li><a href="#overview">Overview (building the app)</a></li>
     <li><a href="#quick">★ Quick start: bundle my model + books</a></li>
     <li><a href="#setup">1 · One-time setup (Mac)</a></li>
@@ -275,6 +276,32 @@
   <li>Both models cannot run at the same time yet (that needs more memory and is planned), so a switch always costs a load time.</li>
   <li>Duo does not use tools (it cannot read your folders). For folders use <b>Nexus</b> or <b>Folder Scout</b>.</li>
 </ul>
+
+<h2 id="activity">★ Activity: see what is running <span class="badge b-now">Available now</span></h2>
+<p>The <b>Activity</b> page (left sidebar) draws everything that is running as a live graph: NanoNexus' own chats and jobs and, if you want, <b>Claude Code</b> and <b>Codex</b> sessions on the same computer. Each tool is a hub, each project a node around it, each agent or subagent a dot. Gold dots are working, grey ones are idle, orange ones look stuck, red ones hit an error. Dust streams flow from busy agents to their project and on to the hub.</p>
+<h3>Step by step</h3>
+<ol>
+  <li>Open <b>Activity</b>. With nothing running it offers <b>Show demo data</b>, a made-up set of 19 agents, so you can look around first.</li>
+  <li>Click <b>Sources</b> and switch on <b>Claude Code</b> and/or <b>Codex</b>. NanoNexus asks once, in plain words, before it reads anything. (NanoNexus' own activity is on by default.)</li>
+  <li>Start a session in a terminal. It appears within a few seconds. Click a dot to see its model, current tool, tokens, run time and errors. Click a project or hub to list its agents.</li>
+  <li><b>Replay</b> scrubs back through the last few hours (6 by default, up to 48 in Settings → Activity). Pause, or play at 1×, 4×, 16× or 60×.</li>
+  <li>Drag to move, scroll to zoom, <b>Fit</b> (or the 0 key) to see everything again. The Dark/Light button switches the whole app.</li>
+</ol>
+<h3>What it reads, and what it never keeps</h3>
+<ul>
+  <li>It only <b>reads</b> the log files the tools already write (<code>~/.claude/projects</code>, <code>~/.codex/sessions</code>; <code>CLAUDE_CONFIG_DIR</code> and <code>CODEX_HOME</code> are honoured). It changes nothing in them and installs nothing into those tools.</li>
+  <li>It keeps event types, counts, model names, token counts, tool names, times, and the <i>names</i> of files that editing tools touch (to spot two agents on one file). It never keeps your prompts, the answers, shell commands or file contents. A test with planted secrets checks this.</li>
+  <li>History lives only in memory; nothing new is saved to disk. Nothing is sent anywhere, and the page is <b>not</b> available over LAN Share.</li>
+  <li>Switch a tool off and everything known about it is forgotten at once.</li>
+</ul>
+<h3>Alerts</h3>
+<p>With <b>Tell me when an agent needs attention</b> on (Sources panel), you get a notification when an agent looks stuck (no news for about 3 minutes, 10 with a tool running), hits an error, or two agents edit the same file. Repeats are limited. Turn the <i>Activity</i> kind off under Settings → Notifications to silence them.</p>
+<h3>In the terminal, and for your agents</h3>
+<ul>
+  <li><code>cargo run -p nexus-observe --example top</code> prints the same picture as a table (<code>--demo</code> for fake data, <code>--once</code> for one frame).</li>
+  <li>A read-only <b>MCP server</b> lets Claude ask what else is running or whether a file is being edited by two agents: <code>claude mcp add nanonexus-activity -- cargo run -q -p nexus-observe --example mcp</code>. Tools: <code>summary</code>, <code>list_agents</code>, <code>get_agent</code>, <code>list_conflicts</code>.</li>
+</ul>
+<div class="note"><strong>If something is missing</strong>The tools' log formats are not a promise. If many lines cannot be read, the page says so. Claude Code subagents and Codex sessions appear as soon as they write a line; an agent with no news for more than the history window disappears.</div>
 
 <h2 id="overview">Overview</h2>
 <div class="cards">

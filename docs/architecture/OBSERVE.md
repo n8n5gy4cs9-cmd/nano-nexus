@@ -15,10 +15,10 @@ raw log text and returns nothing but the fields below; everything else is droppe
 
 ## 2. Types (all `serde` + `specta::Type`)
 ```rust
-enum Source { NanoNexus, ClaudeCode, Codex }
-enum Status { Running, Idle, Stalled, Errored }          // derived, never stored in logs
+enum ActivitySource { NanoNexus, ClaudeCode, Codex }     // exported to TS with the `Activity*` prefix
+enum AgentStatus { Running, Idle, Stalled, Errored }     // derived, never stored in logs
 struct Obs {                      // one observation, privacy-reduced
-    source: Source, session: String, agent: String,      // agent == session for the main agent
+    source: ActivitySource, session: String, agent: String,      // agent == session for the main agent
     parent: Option<String>,       // subagent -> parent agent id
     project: String,              // cwd (display: last two path components)
     at_ms: i64,
@@ -27,9 +27,10 @@ struct Obs {                      // one observation, privacy-reduced
 enum ObsKind {
     Start { model: Option<String> },
     Model(String),
-    Tokens { input: u64, output: u64, cache_read: u64, cache_write: u64 }, // a delta for one message
-    ToolStart { tool: String, file: Option<String> },    // `file` only for edit/write tools
-    ToolEnd { tool: String, ok: bool },
+    Title(String),                // display name; only NanoNexus' own source and the demo set it
+    Tokens(TokenTotals),                                   // a delta: input, output, cache_read, cache_write
+    ToolStart { id: String, tool: String, files: Vec<String> }, // `files` only for edit/write tools
+    ToolEnd { id: String, ok: bool },
     Message { role: Role },                               // user | assistant (no text)
     Error,                                                // tool error, API error, aborted turn
     End,
@@ -37,8 +38,8 @@ enum ObsKind {
 ```
 What is **never** in `Obs`: prompt/assistant text, bash commands, tool inputs other than the single
 `file` path of an edit tool, tool results, file contents, env, API keys. Task titles in the graph are
-the tool-free label `"<Model short name> · <N> msgs"` unless the source supplies a title field that is
-metadata (Claude Code `summary` records are *not* used, they contain text).
+`"<Model short name> · <last 4 of the id>"` (subagents: `Subagent · …`). Only NanoNexus' own source sets a
+`Title` (the assistant or job name). Claude Code `summary` records and Codex titles are *not* used: they contain text.
 
 ## 3. Source formats (observed; tolerate drift)
 **Claude Code** (`~/.claude/projects/<slug>/<sessionId>.jsonl`, subagents in `<sessionId>/subagents/agent-*.jsonl`
@@ -61,23 +62,34 @@ Roots: `CLAUDE_CONFIG_DIR` (default `~/.claude`) and `CODEX_HOME` (default `~/.c
 - Unparseable lines increment `drift_lines`; the UI shows a notice when `drift_lines/total > 5 %`.
 
 ## 5. Aggregator rules
-- **Status:** `Errored` if the last obs is `Error` and < 2 min old (or an open tool ended `ok=false` with no later obs);
-  `Running` if any obs in the last 20 s **or** a tool is open and the last obs is < 5 min old;
-  `Stalled` if a tool is open or the last message was from the user and nothing arrived for ≥ 5 min (and < 60 min);
-  otherwise `Idle`. Agents idle for > `window_hours` drop off the graph.
-- **Tokens:** totals are per agent, per project, per source; "new tokens" = input + output + cache_write (cache reads shown separately).
-- **File conflict:** two *different agents* (any source) have an open or recent (≤ 2 min) edit-tool obs on the same
-  canonical path → one `Conflict { path_label, agents[] }`, cleared 2 min after the last obs. Same agent twice is not a conflict.
-  Paths are compared after lexical normalisation (case-insensitive on Windows/macOS) and are shown as the last two components.
-- **Graph:** `root` (source or "All sources") → `projects` → `agents` (subagents nested under their parent agent).
+- **Status** (derived from timing only):
+  `Errored` if the last `Error` is < 2 min old and nothing progressed since (any later message, tool start clears it);
+  else `Idle` if the agent is not in a turn (a turn starts with a user/assistant message or a tool start and ends with `End` or `Error`);
+  else, in a turn: silent for < 3 min (< 10 min while a tool is open) = `Running`; then `Stalled` up to 60 min of silence; after that `Idle`.
+  A failed *tool call* (`ToolEnd ok=false`) only raises the agent's `errors` counter, it does not make the agent `Errored`.
+- **Dashboard numbers:** `tasks` = visible agents, `tasks_done` = those that are `Idle`, `active` = `Running`, `events` = observations
+  counted, `uptime` = now − start of the oldest visible agent, `new_tokens` = input + output + cache_write (cache reads separate).
+- **File conflict:** two *different agents* (any source) have an open or recent (≤ 2 min) edit-tool touch on the same path → one
+  conflict, gone 2 min after the last touch. Relative paths (Codex patches) resolve against the agent's cwd; paths are normalised
+  lexically (`.`/`..`, separators, case-insensitive on Windows/macOS) and shown as the last two components.
+- **Graph:** hub per source → projects → agents. Layout is deterministic (golden-angle placement in order of first appearance), so
+  nodes do not jump when others appear.
+- **Alerts** (`Observer::attention`): transitions into `Stalled`/`Errored` and new conflicts, never on the first poll; `Hub` limits to one per
+  subject per 10 min and one per 30 s overall.
 
 ## 6. Snapshot (UI) and replay
-`Snapshot { at_ms, totals{tasks,tasks_done,events,active,agents,uptime_ms,new_tokens}, sources[], projects[], agents[], conflicts[], drift }`
+`ActivitySnapshot { at_ms, totals{tasks,tasks_done,events,active,agents,uptime_ms,new_tokens,cache_read_tokens}, sources[], projects[], agents[], conflicts[], drift }`
 plus per-agent `{id,label,source,project,parent,model,status,tool,tokens,started_ms,last_ms,errors}`.
 Replay keeps one compact frame per 10 s for `window_hours` (≈ 2 200 frames × ~2 KB at 20 agents) and answers `frame_at(t)`.
 Particle streams are a **UI effect** driven by `events_per_s` on each edge; the crate only exposes rates.
 
-## 7. Privacy and safety tests (T19.09)
+## 7. Where things live
+`nexus-observe`: `claude.rs`, `codex.rs` (parsers) · `tail.rs` · `aggregate.rs` · `replay.rs` · `observer.rs` (tail + aggregate + replay + attention) ·
+`hub.rs` (one lock, view, alert limits: what the app calls) · `selfsrc.rs` · `demo.rs` · `render.rs` (terminal table) · `mcp.rs`.
+App: `service/observe.rs` (settings → `Hub`, 2 s poll loop only while the page is open or a source is on, notifications), `commands/observe.rs`
+(`observe_snapshot|replay|demo|watch`, event `observe:snapshot`). UI: `features/activity/*`, `lib/activity-layout.ts`, `lib/activity-particles.ts`.
+
+## 8. Privacy and safety tests (T19.09)
 1. Canary test: a fixture full of strings like `SECRET_PROMPT`, `rm -rf /`, `sk-ant-…` must not appear in any
    `Snapshot`, `Obs` debug output, log line (tracing capture), or replay frame.
 2. Roots are canonicalised; a symlink pointing outside is not followed.

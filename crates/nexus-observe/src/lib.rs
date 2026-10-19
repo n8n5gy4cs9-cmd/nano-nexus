@@ -10,6 +10,7 @@ pub mod claude;
 pub mod codex;
 pub mod demo;
 pub mod hub;
+pub mod mcp;
 pub mod model;
 pub mod observer;
 pub mod render;

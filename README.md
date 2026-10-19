@@ -45,7 +45,7 @@ nano-nexus/
 ├─ schemas/                  ← JSON Schemas (assistant spec, LLM outputs, catalog, lock files)
 ├─ catalog/models.json       ← curated model catalog for the Download view
 ├─ scripts/                  ← doctor, progress, runtime build, model fetch
-├─ crates/                   ← Rust library crates (nexus-*)          [M0+]
+├─ crates/                   ← Rust library crates (nexus-*, incl. nexus-observe for the Activity page) [M0+]
 ├─ apps/desktop/             ← Tauri app (src-tauri) + React UI (src)  [M3+]
 └─ vendor/                   ← (gitignored) llama.cpp build + model files, produced locally
 ```
