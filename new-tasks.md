@@ -1,5 +1,18 @@
 # Remaining repair work — 2026-10-22
 
+## New owner-reported regressions
+
+- [x] **Repeated Apply cards for one file (T06.25, 2026-10-22).** One Agent turn
+  can no longer stage another mutation for a canonical target while its first
+  proposal awaits Apply, even if MiniCPM varies the content or path spelling.
+  Distinct files remain eligible for separate proposals. This does not complete
+  the multi-file project workflow or its verification requirements below.
+- [ ] **Runaway repeated answers and invented translation context.** MiniCPM
+  repeated a fabricated “Kilo” explanation for a short Polyglot question about
+  “Kulo”. Add a bounded streaming repetition stop across assistants, make the
+  Polyglot behavior honest about unknown source language/context, and verify
+  actual MiniCPM output. Preserve valid repeated data/code and record model limits.
+
 This supplements `tasks.md`; it does not replace milestone contracts. Current repair phase
 ends at T06.18. Read `handoff.md` before continuing.
 

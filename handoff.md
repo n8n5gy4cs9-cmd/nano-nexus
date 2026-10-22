@@ -1,5 +1,15 @@
 # Latest session boundary — 2026-10-22
 
+T06.25 addresses the owner-reported five Apply cards for one file: scripted
+write decisions with varied content reproduced two proposals before the fix.
+The router now tracks canonical pending targets (including move destinations)
+and stops a second proposal for the same target while preserving Apply/Undo.
+Focused regression passed. Full scripts/check.sh passed: 81 app tests
+(2 ignored), 155 agent unit tests, 151 frontend tests. Log:
+`/tmp/nano-nexus-check-pending-target-final.log`.
+Unfinished work remains in new-tasks.md, including the repeated Polyglot answer,
+all-model quality, folder coding, defaults, skills, Duo and older-PC testing.
+
 Four implementation commits plus T06.24 evidence audit on main in this session: T07.12 safe model-reference removal,
 T07.13 reference-first imports + Read consent, T06.19 isolated specialist assignment/bounded
 refusal recovery + stronger semantic/manual Apply/Undo tests, T06.23 deterministic percentage

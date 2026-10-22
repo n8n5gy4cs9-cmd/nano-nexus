@@ -101,6 +101,12 @@ attachments (list of {kind, path, tokens}), tools (list of {name, signature, des
 `[preamble + system_prompt] + [rolling summary] + [history] + [attachments block] + user` → stream.
 
 ### 3.2 `router` (bounded tool use, max 3 hops)
+
+When a file-changing tool stages a proposal, the router records its canonical
+source and destination targets for that turn. A later decision targeting any
+pending path stops before staging another card, including varied content or
+path aliases. Changes to other paths can still be proposed; applied operations
+remain eligible for later edits. Apply, preview and Undo stay with Journal.
 ```
 for hop in 0..max_hops:
    if !needs_tools_heuristic(input, attachments) && hop == 0: break      // skip router for small talk

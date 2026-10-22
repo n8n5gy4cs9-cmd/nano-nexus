@@ -764,6 +764,9 @@ pub async fn run_router(
     allowed_actions.extend(req.allowed_tools.iter().cloned());
     let schema = router_schema(&req.allowed_tools);
     let mut seen = HashSet::new();
+    // A proposal remains unapplied until the user accepts its change card. Keep later
+    // model decisions from staging another version of that same target in this turn.
+    let mut pending_targets = HashSet::new();
     let needs_change = file_change_requested(req.user_text, &req.allowed_tools);
     let mut completion_reasked = false;
     outcome.stopped = "max_hops".into();
@@ -909,6 +912,11 @@ pub async fn run_router(
                 break;
             }
         };
+        let targets = mutation_targets(&call);
+        if targets.iter().any(|path| pending_targets.contains(path)) {
+            outcome.stopped = "pending_apply".into();
+            break;
+        }
         if !seen.insert(call.key()) {
             outcome.stopped = "repeat".into();
             break;
@@ -937,6 +945,9 @@ pub async fn run_router(
         cx_run.reason = format!("to run {}", call.tool);
         let run = match tool.run(call.args, &cx_run).await {
             Ok(o) => {
+                if o.ui.as_ref().and_then(|u| u["state"].as_str()) == Some("planned") {
+                    pending_targets.extend(targets);
+                }
                 // A proposed change gets its own clickable chip that opens Changes, where Apply is.
                 if let Some(id) = o.ui.as_ref().and_then(|u| u["change_set"].as_str()) {
                     sink.send(ChatEvent::ToolCall {
@@ -997,6 +1008,18 @@ pub async fn run_router(
         outcome.stopped = "incomplete".into();
     }
     outcome
+}
+
+fn mutation_targets(call: &ResolvedCall) -> Vec<PathBuf> {
+    if !is_file_change(&call.tool) {
+        return Vec::new();
+    }
+    ["path", "to"]
+        .into_iter()
+        .filter_map(|key| call.args.get(key).and_then(Value::as_str))
+        .filter_map(|path| nexus_fs::canonicalize(Path::new(path)).ok())
+        .map(nexus_fs::CanonicalPath::into_path_buf)
+        .collect()
 }
 
 fn tool_error_summary(tool: &str, e: &ToolError) -> String {
@@ -1536,6 +1559,83 @@ mod tests {
             self.0.lock().map_err(|e| e.to_string())?.extend(ops);
             Ok("proposal-test".into())
         }
+    }
+
+    #[tokio::test]
+    async fn pending_target_cannot_receive_duplicate_proposals_with_different_content() {
+        let (d, _) = setup(false);
+        let engine = Arc::new(PermissionEngine::new(
+            DenyList::default(),
+            Arc::new(MemoryAudit::default()),
+        ));
+        engine
+            .add_grant(NewGrant {
+                root: d.path().to_owned(),
+                level: GrantLevel::Full,
+                recursive: true,
+                scope: GrantScope::Session,
+                expires_at: None,
+                label: None,
+            })
+            .unwrap();
+        let mut cx = ToolCx::new(Arc::new(EngineGatekeeper::new(engine, "agent", None)));
+        let proposals = Arc::new(CaptureProposal(Mutex::new(Vec::new())));
+        cx.proposals = Some(proposals.clone());
+        let actions = ["console.log('Hello world');\n", "console.log(\"Hello world\");\n"]
+            .into_iter()
+            .map(|content| {
+                Some(RouterAction {
+                    action: "write_file".into(),
+                    path: Some("helloWorld.js".into()),
+                    content: Some(content.into()),
+                    ..Default::default()
+                })
+            })
+            .collect();
+        let llm = Scripted::new(actions);
+        let mut request = req("Write helloWorld.js with JavaScript hello world", d.path());
+        request.allowed_tools.push("write_file".into());
+        let outcome = run_router(
+            request,
+            &llm,
+            &builtin_tools(),
+            &cx,
+            &VecSink::<ChatEvent>::default(),
+            CancellationToken::new(),
+        )
+        .await;
+        assert_eq!(
+            proposals.0.lock().unwrap().len(),
+            1,
+            "one target must produce one pending change card"
+        );
+        assert_eq!(outcome.runs.iter().filter(|r| r.tool == "write_file").count(), 1);
+        assert!(
+            !d.path().join("helloWorld.js").exists(),
+            "the user must still Apply"
+        );
+    }
+
+    #[test]
+    fn mutation_targets_resolve_aliases_and_move_destinations() {
+        let d = tempfile::tempdir().unwrap();
+        let path = d.path().join("hello.js");
+        let mut args = ToolArgs::new();
+        args.insert("path".into(), json!(d.path().join("./hello.js")));
+        args.insert("to".into(), json!(d.path().join("renamed.js")));
+        let targets = mutation_targets(&ResolvedCall {
+            tool: "move_file".into(),
+            args,
+        });
+        assert_eq!(
+            targets,
+            vec![
+                nexus_fs::canonicalize(&path).unwrap().into_path_buf(),
+                nexus_fs::canonicalize(&d.path().join("renamed.js"))
+                    .unwrap()
+                    .into_path_buf(),
+            ]
+        );
     }
 
     struct ReadThenWrite;
