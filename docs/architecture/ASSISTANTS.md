@@ -116,7 +116,11 @@ stream final answer with all tool results in context
 name, a filename with an extension, or keywords (file, folder, directory, scan, read, open, pdf,
 log, csv, size, find, list, how many) in English, or if the assistant has
 `workflow.always_route = true`. This skips a model call for chit-chat, which roughly halves
-latency.
+latency. Arithmetic intents with numbers/operators/math words also route when `calculate` is
+available. Current date/time questions observe `now` directly when available. For explicit
+file-change imperatives with a path, one bounded completion correction may replace a premature
+answer or repeated observation with the relevant next tool; the repeated call is not executed
+again. Incomplete changes are reported deterministically instead of claiming success.
 
 **Router action schema** (built dynamically; a union of flat action objects, see R9):
 ```json

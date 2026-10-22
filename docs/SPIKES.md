@@ -111,3 +111,21 @@ _Pending._
   omitted facts, invented agenda detail, long answers, and incorrect off-by-one diagnosis.
   The golden checks were not weakened. MiniCPM can still echo internal markup in final wording
   despite correct file operations. Tool execution success is not a claim of perfect model output.
+
+## Tool intent and completion (2026-10-22, T06.17)
+
+- Reproduced missing arithmetic routing: `needs_tools_for("What is 18% of 2450?")` skipped
+  the available calculator. Numeric arithmetic intents now route; the live Nexus service calls
+  `calculate` with `18/100*2450` and answers 441.
+- Clock intent routing alone still let MiniCPM claim it lacked real-time access. Current clock
+  requests now execute the available `now` tool directly before answering.
+- A repeat MiniCPM run stopped/repeated a read before editing and falsely claimed completion.
+  A deterministic repeated-read regression failed before repair. For explicit file-change
+  imperatives, one action-specific completion correction replaces the premature answer or
+  repeated observation; duplicate tool calls remain unexecuted. Explanation questions are excluded.
+  If the task still has no successful proposal/apply, the service reports incompletion without
+  generating a success claim.
+- Live default-model test passes all six scenarios (create, read/edit, Reviewer consultation,
+  calculator, UTC clock, Duo create), checking exact file contents and successful tool traces.
+  Full `scripts/check.sh` passes. Final wording can still echo fake tool markup; a factual
+  receipt is the next repair, distinct from the now-verified execution.

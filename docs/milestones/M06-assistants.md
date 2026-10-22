@@ -92,3 +92,18 @@ objects requires each action's arguments during decoding, and Rust validates req
 before a correction retry. Add a conditional write example (skip empty example pairs when a
 feature is absent), retain invalid-decision errors in final context, and tag plain tool statuses
 consistently. Keep the original prompt budgets, grants, loop guards, and journal behavior.
+
+T06.17 repairs the intent gate for non-file tools. Arithmetic requests containing numbers and
+operators/percentage/math words must route when `calculate` is available; current time/date
+requests must route when `now` is available. Do not enable disabled tools. Keep general small
+talk gated off. Add a failing intent regression and extend the ignored live chat-service test
+to require successful calculator/clock tool traces and a grounded numeric answer.
+
+T06.17 also handles a repeated live-model failure: MiniCPM may stop after reading a file or
+repeat that read without performing the requested edit. For explicit file-change imperatives
+with a path/filename, permit one bounded completion correction. Constrain that correction to
+relevant actions (read first for an unobserved edit; edit/write for an observed edit; move or
+trash only for those explicit requests). Do not execute a repeated call twice. If no change
+was proposed/applied, return a deterministic incomplete report rather than a generated success
+claim. Explanatory questions and general writing do not trigger this correction.
+Current clock questions call the available `now` tool directly before the final answer.

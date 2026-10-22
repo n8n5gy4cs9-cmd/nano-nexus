@@ -647,6 +647,16 @@ fn start_turn(
             };
             let llm = SchedulerRouter(Arc::new(ctx.scheduler.clone()));
             let routed = run_router(request, &llm, &builtin_tools(), &cx, &persisting, cancel.clone()).await;
+            if routed.stopped == "incomplete" {
+                let reason = routed
+                    .runs
+                    .last()
+                    .map(|r| r.summary.as_str())
+                    .unwrap_or("The model stopped before choosing a file-changing tool.");
+                early_text = Some(format!(
+                    "No file change was proposed or applied. The assistant stopped before completing the requested change. Last step: {reason}."
+                ));
+            }
             if !routed.runs.is_empty() {
                 input.system_prompt.push_str("\nThe tool steps below have already finished. Report the observed results and any required Apply action. Do not print tool calls or promise future tool execution.");
             }
@@ -1082,6 +1092,18 @@ mod tests {
             let events = live_turn(&ctx, "agent", "Ask Reviewer to review this supplied Python code: def average(xs): return sum(xs)/len(xs). The requirement is to return None for empty input. Consult the reviewer specialist and summarize its finding briefly.".into()).await?;
             if !events.iter().any(|e| matches!(e, ChatEvent::ToolResult { tool, ok: true, .. } if tool == "ask_assistant")) {
                 return Err("Agent did not consult Reviewer successfully".into());
+            }
+            let calculation = live_turn(&ctx, "nexus", "What is 18% of 2450?".into()).await?;
+            if !calculation.iter().any(|e| matches!(e, ChatEvent::ToolResult { tool, ok: true, .. } if tool == "calculate")) {
+                return Err("Nexus did not use calculate for arithmetic".into());
+            }
+            let answer: String = calculation.iter().filter_map(|e| match e {
+                ChatEvent::Content { delta } => Some(delta.as_str()), _ => None,
+            }).collect();
+            if !answer.contains("441") { return Err(format!("Nexus arithmetic answer was not grounded: {answer}")); }
+            let clock = live_turn(&ctx, "nexus", "What is the current date and time in UTC?".into()).await?;
+            if !clock.iter().any(|e| matches!(e, ChatEvent::ToolResult { tool, ok: true, .. } if tool == "now")) {
+                return Err("Nexus did not use now for the current clock time".into());
             }
             let duo_file = work.join("duo.txt");
             live_turn(&ctx, "duo", format!(

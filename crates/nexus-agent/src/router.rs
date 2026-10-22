@@ -332,13 +332,104 @@ pub fn needs_tools_for(
         .split(|c: char| !c.is_alphanumeric())
         .filter(|w| !w.is_empty())
         .collect();
-    (has(&["write_file", "edit_file", "move_file", "trash_file"])
-        && WRITE_WORDS.iter().any(|w| words.contains(w)))
+    let arithmetic = input.chars().any(|c| c.is_ascii_digit())
+        && (input
+            .chars()
+            .any(|c| matches!(c, '+' | '-' | '*' | '/' | '^' | '%' | '×' | '÷'))
+            || [
+                "calculate",
+                "percent",
+                "percentage",
+                "sum",
+                "multiply",
+                "divide",
+                "plus",
+                "minus",
+                "times",
+            ]
+            .iter()
+            .any(|w| words.contains(w)));
+
+    (has(&["calculate"]) && arithmetic)
+        || (has(&["now"]) && clock_requested(input))
+        || (has(&["write_file", "edit_file", "move_file", "trash_file"])
+            && WRITE_WORDS.iter().any(|w| words.contains(w)))
         || (has(&["ask_assistant"])
             && ["plan", "review", "planner", "reviewer", "delegate", "consult"]
                 .iter()
                 .any(|w| words.contains(w)))
         || (has(&["search_web", "fetch_url"]) && WEB_PHRASES.iter().any(|p| lower.contains(p)))
+}
+
+fn clock_requested(input: &str) -> bool {
+    let lower = input.to_lowercase();
+    let words: Vec<&str> = lower
+        .split(|c: char| !c.is_alphanumeric())
+        .filter(|w| !w.is_empty())
+        .collect();
+    ((words.contains(&"time") || words.contains(&"date") || words.contains(&"day"))
+        && ["current", "now", "today"].iter().any(|w| words.contains(w)))
+        || lower.contains("what time")
+        || lower.contains("what date")
+}
+
+/// Conservative completion guard for explicit file-change instructions, not general writing questions.
+fn file_change_requested(input: &str, allowed: &[String]) -> bool {
+    let lower = input.to_lowercase();
+    let text = lower.trim().strip_prefix("please ").unwrap_or(lower.trim());
+    let text = text
+        .strip_prefix("can you ")
+        .or_else(|| text.strip_prefix("could you "))
+        .unwrap_or(text);
+    let path = input.contains("~/")
+        || input.split_whitespace().any(|w| w.starts_with('/'))
+        || input.split_whitespace().any(looks_like_filename);
+    let imperative = [
+        "create ", "write ", "save ", "edit ", "change ", "update ", "append ", "replace ", "move ",
+        "rename ", "delete ", "trash ", "remove ",
+    ]
+    .iter()
+    .any(|w| text.starts_with(w))
+        || (text.starts_with("read ")
+            && [" and change ", " and edit ", " and replace "]
+                .iter()
+                .any(|w| text.contains(w)));
+    path && imperative && allowed.iter().any(|t| is_file_change(t))
+}
+
+fn completion_tools(input: &str, allowed: &[String], has_read: bool) -> Vec<String> {
+    let lower = input.to_lowercase();
+    let text = lower.trim().strip_prefix("please ").unwrap_or(lower.trim());
+    let text = text
+        .strip_prefix("can you ")
+        .or_else(|| text.strip_prefix("could you "))
+        .unwrap_or(text);
+    let edit = ["read ", "edit ", "change ", "update ", "append ", "replace "]
+        .iter()
+        .any(|w| text.starts_with(w));
+    let tools: &[&str] = if edit && !has_read && allowed.iter().any(|t| t == "read_file") {
+        &["read_file"]
+    } else if edit {
+        &["edit_file", "write_file"]
+    } else if text.starts_with("move ") || text.starts_with("rename ") {
+        &["move_file"]
+    } else if ["delete ", "trash ", "remove "]
+        .iter()
+        .any(|w| text.starts_with(w))
+    {
+        &["trash_file"]
+    } else {
+        &["write_file"]
+    };
+    allowed
+        .iter()
+        .filter(|t| tools.contains(&t.as_str()))
+        .cloned()
+        .collect()
+}
+
+fn is_file_change(tool: &str) -> bool {
+    matches!(tool, "write_file" | "edit_file" | "move_file" | "trash_file")
 }
 
 /// A validated call ready to run.
@@ -518,7 +609,7 @@ pub struct ToolRun {
 #[derive(Clone, Debug, Default, PartialEq, Serialize)]
 pub struct RouterOutcome {
     pub runs: Vec<ToolRun>,
-    /// Why the loop ended: `skipped`, `answer`, `repeat`, `invalid`, `max_hops`, `cancelled`.
+    /// Why the loop ended: `skipped`, `answer`, `repeat`, `invalid`, `incomplete`, `max_hops`, `cancelled`.
     pub stopped: String,
 }
 
@@ -612,6 +703,8 @@ pub async fn run_router(
     allowed_actions.extend(req.allowed_tools.iter().cloned());
     let schema = router_schema(&req.allowed_tools);
     let mut seen = HashSet::new();
+    let needs_change = file_change_requested(req.user_text, &req.allowed_tools);
+    let mut completion_reasked = false;
     outcome.stopped = "max_hops".into();
 
     for _hop in 0..req.max_hops.max(1) {
@@ -663,14 +756,20 @@ pub async fn run_router(
             && req.allowed_tools.len() == 1
             && req.allowed_tools[0] == "kb_search"
             && !req.user_text.trim().is_empty();
-        let decision = if forced_library_search {
+        let forced_clock = outcome.runs.is_empty() && has_tool("now") && clock_requested(req.user_text);
+        let mut decision = if forced_clock {
+            RouterAction {
+                action: "now".into(),
+                ..RouterAction::default()
+            }
+        } else if forced_library_search {
             RouterAction {
                 action: "kb_search".into(),
                 query: Some(req.user_text.trim().to_owned()),
                 ..RouterAction::default()
             }
         } else {
-            llm.decide(msgs, &schema, &allowed_actions, max_tokens, cancel.clone())
+            llm.decide(msgs.clone(), &schema, &allowed_actions, max_tokens, cancel.clone())
                 .await
                 .unwrap_or_else(|| {
                     outcome.runs.push(ToolRun {
@@ -681,6 +780,34 @@ pub async fn run_router(
                     RouterAction::answer()
                 })
         };
+        let repeated = resolve_action(&decision, &req.allowed_tools, &req.home, &roots)
+            .ok()
+            .is_some_and(|call| seen.contains(&call.key()));
+        if (decision.action == "answer" || repeated)
+            && needs_change
+            && !completion_reasked
+            && !outcome.runs.iter().any(|r| r.ok && is_file_change(&r.tool))
+            && !cancel.is_cancelled()
+        {
+            completion_reasked = true;
+            let required = completion_tools(
+                req.user_text,
+                &req.allowed_tools,
+                outcome.runs.iter().any(|r| r.ok && r.tool == "read_file"),
+            );
+            let mut required_schema = router_schema(&required);
+            if let Some(variants) = required_schema["anyOf"].as_array_mut() {
+                variants.retain(|v| v["properties"]["action"]["enum"][0] != "answer");
+            }
+            if !required.is_empty() {
+                msgs.push(ChatMessage::assistant("{\"action\":\"answer\"}"));
+                msgs.push(ChatMessage::user("Completion check: the user explicitly requested a file change, but no file-changing tool has succeeded. Reading is not completion. Choose the required next tool with its complete arguments."));
+                decision = llm
+                    .decide(msgs, &required_schema, &required, max_tokens, cancel.clone())
+                    .await
+                    .unwrap_or_else(RouterAction::answer);
+            }
+        }
         if decision.action == "answer" {
             outcome.stopped = "answer".into();
             break;
@@ -775,6 +902,10 @@ pub async fn run_router(
             outcome.stopped = "answer".into();
             break;
         }
+    }
+    if needs_change && !cancel.is_cancelled() && !outcome.runs.iter().any(|r| r.ok && is_file_change(&r.tool))
+    {
+        outcome.stopped = "incomplete".into();
     }
     outcome
 }
@@ -991,6 +1122,29 @@ mod tests {
         assert!(errors.iter().any(|e| e.contains("content")));
         action.content = Some(String::new());
         assert!(action.validate(&ctx).is_ok(), "creating an empty file is valid");
+    }
+
+    #[test]
+    fn arithmetic_and_clock_requests_route_to_their_available_tools() {
+        assert!(needs_tools_for(
+            "What is 18% of 2450?",
+            &[],
+            false,
+            &["calculate".into()]
+        ));
+        assert!(needs_tools_for(
+            "What time is it now in UTC?",
+            &[],
+            false,
+            &["now".into()]
+        ));
+        assert!(!needs_tools_for("What is 18% of 2450?", &[], false, &[]));
+        assert!(!needs_tools_for(
+            "Explain async functions",
+            &[],
+            false,
+            &["calculate".into(), "now".into()]
+        ));
     }
 
     #[test]
@@ -1416,6 +1570,117 @@ mod tests {
         assert_eq!(o.stopped, "max_hops");
         assert_eq!(o.runs.len(), 3);
         assert_eq!(llm.calls(), 3);
+    }
+
+    #[tokio::test]
+    async fn clock_queries_observe_the_real_clock_before_answering() {
+        let (d, cx) = setup(false);
+        let llm = Scripted::new(vec![Some(RouterAction::answer())]);
+        let mut request = req("What is the current time in UTC?", d.path());
+        request.allowed_tools = vec!["now".into()];
+        let outcome = run_router(
+            request,
+            &llm,
+            &builtin_tools(),
+            &cx,
+            &VecSink::<ChatEvent>::default(),
+            CancellationToken::new(),
+        )
+        .await;
+        assert_eq!(outcome.runs.len(), 1);
+        assert_eq!(outcome.runs[0].tool, "now");
+        assert!(outcome.runs[0].ok && outcome.runs[0].llm_text.contains("UTC"));
+        assert_eq!(llm.calls(), 1, "clock lookup itself needs no model decision");
+    }
+
+    #[tokio::test]
+    async fn a_repeated_read_before_an_edit_gets_a_completion_correction() {
+        let (d, cx) = setup(true);
+        let path = d.path().join("notes.md").display().to_string();
+        let llm = Scripted::new(vec![
+            act("read_file", Some(&path), None),
+            act("read_file", Some(&path), None),
+            Some(RouterAction {
+                action: "write_file".into(),
+                path: Some(path.clone()),
+                content: Some("new notes".into()),
+                ..Default::default()
+            }),
+            Some(RouterAction::answer()),
+        ]);
+        let mut request = req("Read notes.md and change the text", d.path());
+        request.allowed_tools = vec!["read_file".into(), "write_file".into()];
+        let sink = VecSink::<ChatEvent>::default();
+        run_router(
+            request,
+            &llm,
+            &builtin_tools(),
+            &cx,
+            &sink,
+            CancellationToken::new(),
+        )
+        .await;
+        assert!(
+            sink.events()
+                .iter()
+                .any(|e| matches!(e, ChatEvent::ToolCall { tool, .. } if tool == "write_file")),
+            "a repeated observation must not silently abandon an explicit pending edit"
+        );
+        assert_eq!(
+            sink.events()
+                .iter()
+                .filter(|e| matches!(e, ChatEvent::ToolCall { tool, .. } if tool == "read_file"))
+                .count(),
+            1,
+            "the repeated read itself must not execute twice"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_premature_file_completion_gets_one_bounded_correction() {
+        let (d, cx) = setup(true);
+        let target = d.path().join("new.txt");
+        let llm = Scripted::new(vec![
+            Some(RouterAction::answer()),
+            Some(RouterAction {
+                action: "write_file".into(),
+                path: Some(target.display().to_string()),
+                content: Some("hello".into()),
+                ..Default::default()
+            }),
+            Some(RouterAction::answer()),
+        ]);
+        let mut request = req("Create new.txt containing hello", d.path());
+        request.allowed_tools = vec!["write_file".into()];
+        let sink = VecSink::<ChatEvent>::default();
+        let out = run_router(
+            request,
+            &llm,
+            &builtin_tools(),
+            &cx,
+            &sink,
+            CancellationToken::new(),
+        )
+        .await;
+        assert!(
+            sink.events()
+                .iter()
+                .any(|e| matches!(e, ChatEvent::ToolCall { tool, .. } if tool == "write_file"))
+        );
+        assert_eq!(
+            out.stopped, "incomplete",
+            "no proposal backend means no successful change"
+        );
+        assert_eq!(llm.calls(), 3, "one correction; no unbounded retry loop");
+        assert!(!target.exists());
+        assert!(!file_change_requested(
+            "Explain how to edit new.txt",
+            &["edit_file".into()]
+        ));
+        assert!(!file_change_requested(
+            "Write a poem about spring",
+            &["write_file".into()]
+        ));
     }
 
     #[tokio::test]
