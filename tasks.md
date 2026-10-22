@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 232/268 tasks done (86%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 233/269 tasks done (86%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -139,10 +139,12 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T06.17** Repair tool intent/completion: arithmetic and clock routing, one bounded correction for premature/repeated reads before file changes, and truthful incomplete status; real chat-service coverage (2026-10-22). Intent and repeated-read regressions failed before repair; six live MiniCPM scenarios and full scripts/check.sh pass.
 - [x] **T06.18** Ground simple action confirmations in actual tool receipts (applied/pending/failed paths, calculate/clock facts); preserve explicit specialist tasks and answers verbatim (2026-10-22).
 
-- [x] **T06.19** Repair specialist role confusion with isolated assignment and bounded correction; assert substantive review and manual Apply/Undo bytes (2026-10-22; new-tasks reliability subset). Full check passes; focused Reviewer 3/3 each model; broader MiniCPM failures remain T06.20, see SPIKES.
+- [x] **T06.19** Add isolated specialist assignment and bounded correction; enforce substantive review and manual Apply/Undo assertions (2026-10-22; new-tasks reliability subset). Full check passes; focused Reviewer 3/3 each model; broader MiniCPM failures remain T06.20, see SPIKES.
 - [ ] **T06.20** Complete small-model Agent reliability matrix and all-22-assistant/20-router quality evaluation without weakening assertions (new-tasks quality/defaults).
 - [ ] **T06.21** Evaluate and adapt optional bounded REFE procedures with discovery/selection/injection tests and repeated local-model evidence (new-tasks skills).
 - [ ] **T06.22** Extend Agent for scoped project-folder coding: context/instructions, progress, bounded execution, cancellation/resume, permissioned verification, multi-file end-to-end projects and beginner guide (new-tasks project coding).
+
+- [x] **T06.23** Route unambiguous numeric percentage queries directly to the enabled calculator; reject extra instructions/nonfinite numbers and verify actual results (2026-10-22; T06.20 subtask). Red/green router test, exact-result service test and full check pass.
 
 ## M07: Model manager and downloads · [spec](docs/milestones/M07-models.md) · [contract](docs/architecture/MODEL-MANAGER.md)
 - [x] **T07.01** GGUF header parser (guards) + fixture writer + tests (+ ignored real-model test) (2026-10-11)

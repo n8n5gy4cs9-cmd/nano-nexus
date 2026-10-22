@@ -138,3 +138,8 @@ correction, then an error; deterministic tests lock down the two-call maximum an
 assignment/budget. This does not certify every assistant or every review. Preserve failures
 in the wider Agent/Duo scenario separately (including path mutation and missed calculator
 routing) as T06.20 work rather than weakening the assertions.
+
+T06.23 fixes the observed missed percentage calculation with strict deterministic parsing
+and the existing calculator. A scripted answer-only model must still execute calculate and
+produce 441 for 18% of 2450, with no planning inference. Test disabled-tool behavior, signed
+decimals, nonfinite values and compound/extra instructions. Other math retains the router.

@@ -289,3 +289,12 @@ isolated context. A second such response returns an explicit consultation failur
 suggestion to supply an excerpt directly or choose a stronger model. This is a narrow
 recovery heuristic, not semantic validation of arbitrary reviews. Both calls keep the same
 768-token ceiling and cancellation token; no budgets are reduced and no tools are added.
+
+### Deterministic percentage queries (T06.23)
+
+An unambiguous numeric `N% of M` query (optionally prefixed by What is/What's/Calculate/
+Compute and followed by a question mark) runs the existing enabled calculate tool directly.
+Only finite signed decimal numbers are accepted; extra prose or compound tasks fall back
+to the existing constrained router. Tool disable settings still win. This avoids the observed
+small-model choice to answer without calculating, and removes inference calls for this exact
+query shape. The existing factual calculator receipt reports the actual result.

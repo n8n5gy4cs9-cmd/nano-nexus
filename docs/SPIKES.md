@@ -170,3 +170,17 @@ specialist final test subsequently passed; path fidelity and calculator routing 
 T06.20. Do not infer all-assistant quality from a successful consultation tool call.
 Logs: `/tmp/nexus-{minicpm,gemma}-quality-*.log`; red evidence: `/tmp/nexus-reviewer-red.log`.
 No production database/settings/grants were changed and no model was copied or downloaded.
+
+### Subsequent MiniCPM repeat (after T06.19)
+
+`/tmp/nexus-minicpm-percentage-live.log` failed at Reviewer before reaching arithmetic:
+the answer restated the requirement and promised to inspect it, but omitted the division
+finding. The focused 3/3 result does not establish robust consultation quality; T06.20
+remains open for this incomplete-answer class. Do not loosen the semantic assertion or
+claim every incomplete response is caught by the narrow refusal recovery heuristic.
+
+T06.23: the scripted answer-only percentage test was red before the fix, then the strict
+percentage shortcut executed the real calculator with zero planning-model calls. A normal
+service test (no model required) asserts the actual calculate trace and exact response
+`18/100*2450 = 441`. Signed decimals, disabled calculator, extra prose and nonfinite numbers
+are covered. Logs: `/tmp/nexus-percentage-{red,green,service}.log`.

@@ -402,6 +402,26 @@ pub(crate) fn simple_consultation(input: &str) -> bool {
         .any(|s| lower.contains(s))
 }
 
+// A deliberately narrow, unambiguous query shape. Other arithmetic still uses
+// the constrained router; extra prose must not silently change the calculation.
+fn percentage_expression(input: &str) -> Option<String> {
+    let lower = input.trim().trim_end_matches('?').trim().to_ascii_lowercase();
+    let query = ["what is ", "what's ", "calculate ", "compute "]
+        .iter()
+        .find_map(|prefix| lower.strip_prefix(prefix))
+        .unwrap_or(&lower);
+    let (percent, base) = query.split_once("% of ")?;
+    let number = |s: &str| {
+        let s = s.trim();
+        (!s.is_empty()
+            && s.chars()
+                .all(|c| c.is_ascii_digit() || matches!(c, '.' | '+' | '-'))
+            && s.parse::<f64>().is_ok_and(f64::is_finite))
+        .then_some(s.to_owned())
+    };
+    Some(format!("{}/100*{}", number(percent)?, number(base)?))
+}
+
 fn clock_requested(input: &str) -> bool {
     let lower = input.to_lowercase();
     let words: Vec<&str> = lower
@@ -798,6 +818,10 @@ pub async fn run_router(
             && req.allowed_tools[0] == "kb_search"
             && !req.user_text.trim().is_empty();
         let forced_clock = outcome.runs.is_empty() && has_tool("now") && clock_requested(req.user_text);
+        let percentage = (outcome.runs.is_empty() && has_tool("calculate"))
+            .then(|| percentage_expression(req.user_text))
+            .flatten();
+        let percentage_finished = percentage.is_some();
         let explicit_consultation = outcome.runs.is_empty() && has_tool("ask_assistant");
         let specialist = if explicit_consultation {
             requested_specialist(req.user_text)
@@ -809,6 +833,12 @@ pub async fn run_router(
                 action: "ask_assistant".into(),
                 assistant: Some(assistant.into()),
                 task: Some(req.user_text.to_owned()),
+                ..RouterAction::default()
+            }
+        } else if let Some(expression) = percentage {
+            RouterAction {
+                action: "calculate".into(),
+                expression: Some(expression),
                 ..RouterAction::default()
             }
         } else if forced_clock {
@@ -952,7 +982,7 @@ pub async fn run_router(
         let stop_after = matches!(&run, ToolRun { ok: false, .. }) && is_permission_stop(&run.llm_text);
         let consultation_finished = run.tool == "ask_assistant" && simple_consultation(req.user_text);
         outcome.runs.push(run);
-        if consultation_finished {
+        if consultation_finished || percentage_finished {
             outcome.stopped = "answer".into();
             break;
         }
@@ -1181,6 +1211,71 @@ mod tests {
         assert!(errors.iter().any(|e| e.contains("content")));
         action.content = Some(String::new());
         assert!(action.validate(&ctx).is_ok(), "creating an empty file is valid");
+    }
+
+    #[tokio::test]
+    async fn explicit_percentage_uses_calculator_even_if_model_would_answer() {
+        let (d, cx) = setup(true);
+        let llm = Scripted::new(vec![Some(RouterAction::answer())]);
+        let mut request = req("What is 18% of 2450?", d.path());
+        request.allowed_tools = vec!["calculate".into()];
+        let outcome = run_router(
+            request,
+            &llm,
+            &builtin_tools(),
+            &cx,
+            &VecSink::<ChatEvent>::default(),
+            CancellationToken::new(),
+        )
+        .await;
+        assert!(
+            outcome
+                .runs
+                .iter()
+                .any(|r| r.tool == "calculate" && r.ok && r.summary.contains("441"))
+        );
+        assert_eq!(llm.calls(), 0);
+    }
+
+    #[test]
+    fn percentage_shortcut_rejects_ambiguous_or_nonfinite_requests() {
+        assert_eq!(
+            percentage_expression("What is 18% of 2450?"),
+            Some("18/100*2450".into())
+        );
+        assert_eq!(
+            percentage_expression("Calculate -2.5% of 40"),
+            Some("-2.5/100*40".into())
+        );
+        for text in [
+            "Explain 18% of 2450",
+            "18% of 2450 and add 10",
+            "18% of NaN",
+            "18% of inf",
+            "What is 18% of 2450? Write a file",
+            "18% of 1e999",
+            "18% of --5",
+        ] {
+            assert_eq!(percentage_expression(text), None, "{text}");
+        }
+    }
+
+    #[tokio::test]
+    async fn percentage_shortcut_respects_disabled_calculator() {
+        let (d, cx) = setup(true);
+        let llm = Scripted::new(vec![Some(RouterAction::answer())]);
+        let mut request = req("What is 18% of 2450?", d.path());
+        request.allowed_tools = vec!["now".into()];
+        let outcome = run_router(
+            request,
+            &llm,
+            &builtin_tools(),
+            &cx,
+            &VecSink::<ChatEvent>::default(),
+            CancellationToken::new(),
+        )
+        .await;
+        assert!(!outcome.runs.iter().any(|r| r.tool == "calculate"));
     }
 
     #[test]

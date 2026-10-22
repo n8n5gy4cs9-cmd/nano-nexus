@@ -1065,6 +1065,28 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn percentage_calculation_executes_through_service_without_model_guessing() {
+        let dir = tempfile::tempdir().unwrap();
+        let ctx = AppState::for_tests(dir.path());
+        let events = live_turn(&ctx, "nexus", "What is 18% of 2450?".into())
+            .await
+            .unwrap();
+        assert!(
+            events
+                .iter()
+                .any(|e| matches!(e, ChatEvent::ToolResult { tool, ok: true, .. } if tool == "calculate"))
+        );
+        let text: String = events
+            .iter()
+            .filter_map(|e| match e {
+                ChatEvent::Content { delta } => Some(delta.as_str()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(text, "18/100*2450 = 441");
+    }
+
+    #[tokio::test]
     #[ignore = "needs NEXUS_MODEL and the real local runtime; models are referenced in place"]
     async fn real_model_agent_and_duo_apply_files_and_consult_a_specialist() {
         use nexus_core::fs::{GrantLevel, GrantScope};

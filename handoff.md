@@ -1,3 +1,31 @@
+# Latest session boundary — 2026-10-22
+
+Four verified task commits on main in this session: T07.12 safe model-reference removal,
+T07.13 reference-first imports + Read consent, T06.19 isolated specialist assignment/bounded
+refusal recovery + stronger semantic/manual Apply/Undo tests, T06.23 deterministic percentage
+calculator. Full scripts/check.sh passed after final source changes: 81 app tests (2 ignored),
+154 agent unit tests, 151 frontend tests; `/tmp/nano-nexus-check-percentage-final.log`.
+
+Important limit: overall small-model reliability is NOT passing. Focused Reviewer test passed
+3/3 each model, and wider Gemma passed 3/3, but subsequent MiniCPM full-service still promised
+a review without identifying the defect. Earlier MiniCPM also lost the dot in a temp folder
+path; permissions correctly denied the wrong path. Missed percentage routing is now locked
+down by a real-service exact-result test with no planning model calls. All failures are retained
+in docs/SPIKES.md/new-tasks.md; never weaken their assertions or permission boundaries.
+
+Continue T06.20 quality/path fidelity first, then T07.14 model defaults/Auto/tuning/custom GGUF
+handling/help, T06.21 evaluated optional skills, T06.22 actual project-folder coding/verification,
+T18.02/.04/.05 Duo, T15.12 hardware performance. These are unfinished, not declared complete or
+artificially blocked. Session limits stopped further implementation; original requirements
+remain in new-tasks.md and mapped tasks.md entries. No model copies/downloads, production DB
+changes, branches or PRs. Existing untracked .agents/ is preserved. The owner's previously
+uncommitted project-coding addition was preserved in T07.12's new-tasks.md update.
+
+Local REFE/pi-main and REFE/opencode-dev MIT licenses and actual skill-discovery/subagent/
+write/edit implementations were inspected. No REFE code was bundled/copied in these changes.
+The remaining project/skills work must adapt real behavior under Journal.apply and scoped
+permissions; it is not satisfied by the consultation prompt repair.
+
 ## Specialist reliability repair — 2026-10-22
 
 T06.19 adds a dedicated text-consultation preamble and final assignment, keeping the original

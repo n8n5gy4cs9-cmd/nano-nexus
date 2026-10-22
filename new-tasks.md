@@ -142,3 +142,28 @@ model defaults/controls/custom compatibility/help; T06.21 optional evaluated REF
 T06.22 scoped project workflow; T18.02/.04/.05 Duo; T15.12 hardware performance/cold start.
 All original acceptance requirements above remain. Next concrete defects: deterministic
 percentage calculator routing and exact path fidelity; never broaden grants to hide the latter.
+
+## Session boundary — unfinished work remains
+
+T06.23 fixes the observed skipped percentage calculator with strict deterministic parsing
+and the existing enabled calculate tool. Red/green scripted regression and real-service
+trace/exact-answer test pass without model inference. Final full scripts/check.sh passed:
+81 app tests (2 ignored), 154 agent unit tests, 151 frontend tests. Log:
+`/tmp/nano-nexus-check-percentage-final.log`. No test assertions were weakened.
+
+A subsequent full MiniCPM run still failed at Reviewer before arithmetic: it promised to
+review but did not state the actual division defect. The focused 3/3 specialist tests are
+limited evidence, not a general quality certification. See the durable SPIKES follow-up.
+Exact path fidelity also remains open: never relax grants or silently substitute user paths
+just to pass the model-generated wrong-path case.
+
+Still unfinished (not blocked by a code dependency): the rest of T06.20 (all-assistant and
+router/full-service quality matrix, invalid-argument recovery, denied access/cancel/restart
+coverage); T07.14 per-model defaults/Auto/custom-GGUF compatibility/tuning controls/reset and
+beginner guide; T06.21 selected bounded REFE skills with evaluations; T06.22 real scoped
+project-folder workflow and permissioned build/test verification; T18.02 automatic two-model
+switching and T18.04/.05 concurrent Duo/classifier; T15.12 cold-start/older-PC performance
+measurements and tuning. Older-PC hardware measurements need representative hardware; Mac
+functional timings in SPIKES must not be presented as those benchmarks. Original acceptance
+criteria above are preserved. No production database/grants/settings were changed; existing
+MiniCPM and Downloads Gemma were used in place. Untracked .agents/ remains untouched.
