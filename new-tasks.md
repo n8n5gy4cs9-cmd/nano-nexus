@@ -128,3 +128,17 @@ fail without prompting. Pack manifest/member preflight respects nested deny rule
 assert default/reference, explicit copy and cancel; service tests assert deny/allow, no copied
 bytes, registry persistence and nested pack denial. Full scripts/check.sh passed (78 app
 tests, 151 frontend tests); `/tmp/nano-nexus-check-copy-free-final.log`.
+
+T06.19 completed the narrow specialist request-boundary repair, not the whole reliability
+workstream. Full scripts/check.sh passes (80 app tests, 2 ignored, 151 frontend tests).
+Focused live Reviewer semantic assertions pass 3/3 on MiniCPM and 3/3 on Gemma. Manual
+proposal → Apply → Undo exact bytes is now in the broader live service test. Gemma wider
+scenario passed 3/3; intermediate MiniCPM wider runs passed only 1/4 (wrong path dot,
+self-delegation, skipped calculator). Detailed durable evidence is in docs/SPIKES.md.
+Final full-suite log: `/tmp/nano-nexus-check-specialist-final.log`.
+
+Task reconciliation: T06.20 covers remaining reliability/all-assistant evaluation; T07.14
+model defaults/controls/custom compatibility/help; T06.21 optional evaluated REFE skills;
+T06.22 scoped project workflow; T18.02/.04/.05 Duo; T15.12 hardware performance/cold start.
+All original acceptance requirements above remain. Next concrete defects: deterministic
+percentage calculator routing and exact path fidelity; never broaden grants to hide the latter.

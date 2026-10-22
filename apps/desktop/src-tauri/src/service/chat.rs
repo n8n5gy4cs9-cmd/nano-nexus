@@ -1112,9 +1112,35 @@ mod tests {
             if std::fs::read_to_string(&target).map_err(|e| e.to_string())? != "bravo\n" {
                 return Err("Agent edit did not reach disk".into());
             }
+            // Manual mode must propose before writing, then Apply and Undo exact bytes.
+            super::super::settings::set(&ctx, &Caller::Desktop, "chat.auto_apply_proposals", super::super::settings::SettingValue::Bool(false)).map_err(|e| e.to_string())?;
+            let staged = live_turn(&ctx, "agent", format!("Read {} and replace bravo with charlie using edit_file. Keep the newline.", target.display())).await?;
+            if std::fs::read_to_string(&target).map_err(|e| e.to_string())? != "bravo\n" {
+                return Err("Manual change was written before Apply".into());
+            }
+            let change_id = staged.iter().find_map(|event| match event {
+                ChatEvent::ToolCall { tool, args_json } if tool == "report" => {
+                    serde_json::from_str::<serde_json::Value>(args_json).ok()?.get("changeset_id")?.as_str().map(str::to_owned)
+                }
+                _ => None,
+            }).ok_or("Manual edit did not produce a change card")?;
+            super::super::fs::changeset_apply(&ctx, &Caller::Desktop, &change_id).map_err(|e| e.to_string())?;
+            if std::fs::read_to_string(&target).map_err(|e| e.to_string())? != "charlie\n" { return Err("Manual Apply had wrong bytes".into()); }
+            let undone = super::super::fs::changeset_undo(&ctx, &Caller::Desktop, &change_id, vec![]).map_err(|e| e.to_string())?;
+            if undone.status != "undone" || std::fs::read_to_string(&target).map_err(|e| e.to_string())? != "bravo\n" {
+                return Err("Manual Undo did not restore exact bytes".into());
+            }
+            super::super::settings::set(&ctx, &Caller::Desktop, "chat.auto_apply_proposals", super::super::settings::SettingValue::Bool(true)).map_err(|e| e.to_string())?;
             let events = live_turn(&ctx, "agent", "Ask Reviewer to review this supplied Python code: def average(xs): return sum(xs)/len(xs). The requirement is to return None for empty input. Consult the reviewer specialist and summarize its finding briefly.".into()).await?;
             if !events.iter().any(|e| matches!(e, ChatEvent::ToolResult { tool, ok: true, .. } if tool == "ask_assistant")) {
                 return Err("Agent did not consult Reviewer successfully".into());
+            }
+            let review: String = events.iter().filter_map(|e| match e {
+                ChatEvent::Content { delta } => Some(delta.as_str()), _ => None,
+            }).collect();
+            let lower_review = review.to_lowercase();
+            if !(lower_review.contains("empty") && (lower_review.contains("zero") || lower_review.contains("len(")) && review.contains("None")) {
+                return Err(format!("Reviewer did not identify the empty-input defect and required None result: {review}"));
             }
             let calculation = live_turn(&ctx, "nexus", "What is 18% of 2450?".into()).await?;
             if !calculation.iter().any(|e| matches!(e, ChatEvent::ToolResult { tool, ok: true, .. } if tool == "calculate")) {

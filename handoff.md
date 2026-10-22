@@ -1,3 +1,16 @@
+## Specialist reliability repair — 2026-10-22
+
+T06.19 adds a dedicated text-consultation preamble and final assignment, keeping the original
+task verbatim. Known refusal/self-delegation gets one isolated correction then explicit failure.
+No child tools/history/authority added. Semantic tests require actual empty-input review finding;
+manual Apply/Undo asserts exact bytes. Full check passes (80 app tests, 2 ignored; 151 frontend).
+Focused Reviewer 3/3 each model. Wider Gemma scenario 3/3; intermediate MiniCPM only 1/4:
+wrong temp-folder dot denied correctly, self-delegation, and missed calculator call. Keep these
+failures; broader reliability is not complete. See docs/SPIKES.md and new-tasks.md for logs.
+Next: T06.20, beginning with deterministic percentage routing and path fidelity. Remaining
+model defaults/controls, REFE skills, project coding, Duo, older-PC/performance work is mapped
+in tasks.md without deleting original requirements. No model download/copy or real DB changes.
+
 ## Copy-free import completion — 2026-10-22
 
 T07.13: local-file/pack imports default to reference, with explicit copy and existing Read

@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 231/262 tasks done (88%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 232/268 tasks done (86%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -139,6 +139,11 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T06.17** Repair tool intent/completion: arithmetic and clock routing, one bounded correction for premature/repeated reads before file changes, and truthful incomplete status; real chat-service coverage (2026-10-22). Intent and repeated-read regressions failed before repair; six live MiniCPM scenarios and full scripts/check.sh pass.
 - [x] **T06.18** Ground simple action confirmations in actual tool receipts (applied/pending/failed paths, calculate/clock facts); preserve explicit specialist tasks and answers verbatim (2026-10-22).
 
+- [x] **T06.19** Repair specialist role confusion with isolated assignment and bounded correction; assert substantive review and manual Apply/Undo bytes (2026-10-22; new-tasks reliability subset). Full check passes; focused Reviewer 3/3 each model; broader MiniCPM failures remain T06.20, see SPIKES.
+- [ ] **T06.20** Complete small-model Agent reliability matrix and all-22-assistant/20-router quality evaluation without weakening assertions (new-tasks quality/defaults).
+- [ ] **T06.21** Evaluate and adapt optional bounded REFE procedures with discovery/selection/injection tests and repeated local-model evidence (new-tasks skills).
+- [ ] **T06.22** Extend Agent for scoped project-folder coding: context/instructions, progress, bounded execution, cancellation/resume, permissioned verification, multi-file end-to-end projects and beginner guide (new-tasks project coding).
+
 ## M07: Model manager and downloads · [spec](docs/milestones/M07-models.md) · [contract](docs/architecture/MODEL-MANAGER.md)
 - [x] **T07.01** GGUF header parser (guards) + fixture writer + tests (+ ignored real-model test) (2026-10-11)
 - [x] **T07.02** Catalog loader + schema validation test (exactly one default) (2026-10-11)
@@ -154,6 +159,8 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 
 - [x] **T07.12** Repair external-reference removal: ownership metadata, canonical containment, legacy/symlink safety and temporary-fixture regressions (new-tasks P0; 2026-10-22). Full check passed; 76 app tests + 148 frontend tests.
 - [x] **T07.13** Default local and pack imports to references with explicit copy choice and Read consent (new-tasks P1; 2026-10-22). Full check passed, including consent/nested-deny tests and 151 frontend tests.
+
+- [ ] **T07.14** Verified model-specific defaults, conservative custom-GGUF compatibility, optional supported per-model tuning controls/reset and beginner help (new-tasks tuning).
 
 ## M08: Analyzer and reports · [spec](docs/milestones/M08-analyzer.md) · [contract](docs/architecture/ANALYZER.md)
 - [x] **T08.01** Scanner (ignore WalkBuilder, progress 10 Hz, cancel, warnings) + 100k-file benchmark (2026-10-11) — benchmark is `#[ignore]`: 100k files scan well under 10 s on this Linux box (release)
@@ -278,6 +285,8 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [ ] **T15.09** Empty/error/loading states everywhere
 - [ ] **T15.10** Visual QA: screenshots of every screen, light/dark, macOS/Windows/mobile → fix list done
 - [ ] ⭐ **T15.11** Exit check: budgets met; keyboard-only walkthrough; eval ≥ 80% per assistant
+
+- [ ] **T15.12** Quality-preserving older-PC performance experiments with latency/throughput/RAM/quality evidence, supported controls and honest hardware limits; diagnose cold startup (new-tasks performance).
 
 ## M16: Optional · [spec](docs/milestones/M16-optional.md)
 - [ ] **T16.01** Linux build (in a VM)

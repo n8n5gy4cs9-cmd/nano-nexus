@@ -144,3 +144,29 @@ _Pending._
   simple action confirmations. Unexpected test permission prompts are explicitly denied.
 - Remaining quality, storage and true two-model Duo work is recorded in root `new-tasks.md`
   and `handoff.md`. No production user database or grants were changed.
+
+## T06.19 specialist/full-service audit — 2026-10-22
+
+A baseline full-service MiniCPM run passed its old assertion (ask_assistant executed) while
+Reviewer refused to inspect the supplied code and repeated its limitations. The strengthened
+assertion requires the empty-input defect, zero/len evidence and required None result.
+Clarifying dispatch alone still failed. A dedicated consultation preamble, explicit final
+assignment and one bounded correction for observed refusal/self-delegation patterns were
+implemented; a second refusal reports failure. No tools, history or permissions were added.
+
+Focused real-model test: `real_model_reviewer_finds_supplied_defect_repeatedly`.
+Final runs: MiniCPM 3/3 substantive reviews (7.63 s total test), Gemma 3/3 (13.05 s).
+Existing models were referenced directly. These are warm Mac functional measurements,
+not cold-start or older-PC benchmarks; other verification processes ran during the audit.
+Logs: `/tmp/nexus-specialist-{minicpm,gemma}-repeats-final.log`.
+
+Wider service test now also asserts manual proposal leaves bytes unchanged, Apply changes
+bravo-newline to charlie-newline, and Undo restores bravo-newline. Gemma repeated full-service
+runs passed 3/3 (103.44, 81.94, 106.80 s). MiniCPM full-service runs passed only 1/4 in this
+intermediate audit: another run dropped the leading dot from a temporary folder name, and
+the permission boundary denied the wrong path; another self-delegated instead of reviewing;
+another skipped calculate. These are retained failures, not a quality pass. The focused
+specialist final test subsequently passed; path fidelity and calculator routing remain
+T06.20. Do not infer all-assistant quality from a successful consultation tool call.
+Logs: `/tmp/nexus-{minicpm,gemma}-quality-*.log`; red evidence: `/tmp/nexus-reviewer-red.log`.
+No production database/settings/grants were changed and no model was copied or downloaded.

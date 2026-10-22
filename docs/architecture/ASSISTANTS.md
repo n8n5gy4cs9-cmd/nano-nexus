@@ -273,3 +273,19 @@ Avoid catastrophic backtracking patterns; prefer explicit character classes.
    JSON validity). Saved under `tests/golden/<assistant>/`. Run before each release.
 3. **Eval script** `scripts/eval-assistants.sh` (M13): runs the golden set and prints a pass
    table, so model swaps can be compared.
+
+### Text-specialist request boundary (T06.19)
+
+Consultations render the assistant body with a dedicated text-only preamble. The parent
+Agent preamble's tool-runner/Apply instructions do not enter the child request. A trusted
+wrapper clarifies that dispatch has already happened and the specialist should provide its
+own findings or plan. The original task is still forwarded verbatim; no parent-model rewrite
+can introduce new facts. Enabled specialist allow-list, no history/tools/file authority,
+6000-character task limit, 768-token ceiling and cancellation remain unchanged.
+
+A separate final assignment message asks the already-selected specialist to return its own
+finding/plan. Known refusal/self-delegation responses receive one correction in that same
+isolated context. A second such response returns an explicit consultation failure with a
+suggestion to supply an excerpt directly or choose a stronger model. This is a narrow
+recovery heuristic, not semantic validation of arbitrary reviews. Both calls keep the same
+768-token ceiling and cancellation token; no budgets are reduced and no tools are added.

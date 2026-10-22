@@ -122,3 +122,19 @@ consultation. Return the child answer directly; a parent rewrite had introduced 
 claims and unnecessary follow-up tool attempts. Keep multi-specialist/multi-step orchestration
 on the parent path. Tests must deny unexpected grants in isolated live fixtures rather than
 waiting for UI consent or auto-approving model-invented paths.
+
+T06.19 uses a dedicated text-consultation preamble instead of the parent's tool-runner
+preamble. Preserve the exact task and all isolation/allow-list/cancellation/budget rules.
+The live test must assert the Reviewer identifies the supplied empty-input division defect
+and required None result; a successful tool call alone is insufficient. Also verify manual
+proposal leaves bytes unchanged, explicit Apply writes exact bytes, and Undo restores them.
+Repeat against both existing local models; record failures without loosening assertions.
+T06.20–T06.22 track the remaining quality/skills/project requirements in new-tasks.md; those
+requirements remain authoritative and are not satisfied by the specialist repair alone.
+
+The dedicated ignored test `real_model_reviewer_finds_supplied_defect_repeatedly` must pass
+three substantive reviews per model. Known refusal/self-delegation gets one isolated
+correction, then an error; deterministic tests lock down the two-call maximum and preserved
+assignment/budget. This does not certify every assistant or every review. Preserve failures
+in the wider Agent/Duo scenario separately (including path mutation and missed calculator
+routing) as T06.20 work rather than weakening the assertions.
