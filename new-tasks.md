@@ -31,3 +31,58 @@ ends at T06.18. Read `handoff.md` before continuing.
 - [ ] **P2 — Gemma cold-start performance.** Existing ignored inference smoke measured
   13.24 s against a 10 s readiness target. Streaming/schema tests passed. Diagnose cold
   startup without weakening the assertion just to make it green.
+
+- [ ] **P1 — Investigate quality-preserving speed on older PCs.** Benchmark representative
+  CPU-only and low-RAM machines before changing defaults: cold start, first-token latency,
+  prompt/decode tokens per second, peak RAM and identical assistant/tool quality cases.
+  Evaluate supported thread/batch settings, CPU instruction compatibility, available GPU
+  offload, model residency and safe prompt-prefix/KV reuse against the pinned runtime.
+  Preserve prompt content, required context, reasoning budget and model precision in the
+  initial experiments. Invalidate cached state across model, prompt, permission and session
+  changes. Avoid oversubscription and concurrent Duo when memory pressure makes it slower.
+  Accept an optimization only when measured faster without quality regression on repeated
+  fixtures; retain a compatible fallback. Smaller quantizations, shorter context and reduced
+  reasoning are not quality-neutral speed fixes and must not become automatic defaults.
+  Speculative decoding is an optional later experiment only if the pinned backend supports
+  distribution-preserving acceptance and total RAM/latency measurements justify it; do not
+  download another model merely to try it. Document unsupported hardware honestly.
+- [ ] **P1 — Adapt useful REFE skills for local models, if evaluation supports them.**
+  REFE contains Pi skill discovery/loading in
+  `REFE/pi-main/packages/coding-agent/src/core/skills.ts`, its `docs/skills.md`, and SDK
+  example `examples/sdk/04-skills.ts`; Claude's bundled skill examples include
+  `REFE/claude-code-main/src/skills/bundled/verify/SKILL.md` and `debug.ts`.
+  Inspect these implementations and licenses before adapting relevant patterns. Propose
+  small, optional task procedures for evidence-first debugging, read-before-edit,
+  plan/execute/verify and concise source-grounded summaries. Load only selected skill content
+  when needed, with bounded context, rather than injecting every skill into every turn.
+  Map steps to NanoNexus's actual tools and capabilities; never promise unavailable shell,
+  browser or file-write abilities. Skill text grants no permissions and cannot bypass
+  Journal.apply, consent or isolated-child boundaries. Test discovery, explicit selection,
+  context limits and malicious instructions. Compare repeated full-service quality and
+  latency with/without each skill on both local models, including older-PC measurements;
+  ship only demonstrated improvements. Skills guide behavior; they do not change model
+  weights or guarantee better reasoning. Do not copy cloud-specific prompts wholesale.
+
+- [ ] **P1 — Reliable small-model Agent defaults, tuning controls and beginner guide.**
+  Extend the quality/performance work above to the smallest supported models using real
+  full-service tasks: inspect files, create/edit through change cards, recover from invalid
+  arguments and denied permissions, consult a specialist, cancel and undo. Measure completed
+  tasks and exact file results, not just fluent answers. Evaluate concise model-specific
+  tool instructions, required-argument decoding, bounded retries, observation retention and
+  adequate context/output/reasoning budgets. Choose defaults from repeated quality and
+  latency results; never silently reduce reasoning/context for speed. Provide clear recovery
+  or optional stronger-model handoff when tasks exceed demonstrated capability.
+  Build an excellent out-of-box Auto profile from detected hardware and verified model
+  capabilities, with conservative fallbacks. Offer understandable controls for supported
+  context, response/reasoning budgets, sampling, CPU threads, GPU offload, tool-step/retry
+  limits and Duo selection. Expose only runtime-supported options, with safe bounds and
+  plain-language speed/RAM/reliability tradeoffs. Keep advanced controls optional, persist
+  appropriate choices per model and provide Reset to recommended defaults. Preserve all
+  permission and Apply boundaries; do not claim a universal best preset without evidence.
+  Add a beginner-friendly tuning guide to existing app help: quick-start steps, measured
+  example presets for older CPU-only/low-RAM PCs and smaller models, and one-setting-at-a-time
+  troubleshooting for slow startup/answers, memory errors, repeated calls and unfinished
+  file tasks. Explain how to confirm Apply succeeded, when Planner/Reviewer or a stronger
+  model helps, and how to restore defaults. Avoid inference jargon and config-file editing.
+  Acceptance: fresh defaults pass repeated small-model Agent regressions, controls persist
+  correctly, and a beginner can follow the guide. Clearly document remaining model limits.
