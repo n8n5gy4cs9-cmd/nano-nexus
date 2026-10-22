@@ -32,7 +32,7 @@ function entries(): Entry[] {
 
 /** Help: the full documentation, bundled with the app. Markdown and HTML render; "Raw" shows the file text. */
 export function HelpPage() {
-  const list = useMemo(entries, []);
+  const list = useMemo(() => entries(), []);
   const first = list.find((e) => e.name === "GUIDE-ASK-YOUR-BOOKS") ?? list[0];
   const [current, setCurrent] = useState<string | null>(first?.id ?? null);
   const [text, setText] = useState<{ id: string; value: string } | null>(null);

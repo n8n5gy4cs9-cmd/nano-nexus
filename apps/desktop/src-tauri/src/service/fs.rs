@@ -669,7 +669,10 @@ mod tests {
             1
         );
         assert!(stat(&ctx, &Caller::Desktop, file.to_str().unwrap()).unwrap().size == 5);
-        assert!(!audit_list(&ctx, 10, None).unwrap().is_empty() || true);
+        ctx.audit.flush().await;
+        let audit = audit_list(&ctx, 10, None).unwrap();
+        assert!(audit.iter().any(|entry| !entry.allowed));
+        assert!(audit.iter().any(|entry| entry.allowed));
     }
 
     #[tokio::test]

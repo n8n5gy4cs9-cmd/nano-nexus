@@ -375,7 +375,11 @@ pub fn resolve_action(
         }
         "edit_file" => {
             path(&mut args, false)?;
-            let old = clean(&a.old_text).ok_or("old_text is required")?;
+            let old = a
+                .old_text
+                .as_deref()
+                .filter(|s| !s.is_empty())
+                .ok_or("old_text is required")?;
             let new = a.new_text.as_deref().ok_or("new_text is required")?;
             args.insert("old_text".into(), Value::String(old.to_owned()));
             args.insert("new_text".into(), Value::String(new.to_owned()));
@@ -545,12 +549,12 @@ pub async fn run_router(
         let mut user = p.user;
         if !outcome.runs.is_empty() {
             user.push_str("\nDone so far:\n");
-            for r in &outcome.runs {
-                user.push_str(&format!(
-                    "- {} ({})\n",
-                    r.summary,
-                    if r.ok { "ok" } else { "failed" }
-                ));
+            // Like REFE/pi-main's agent loop, feed observations back into the next decision.
+            // Summaries alone lose file contents, search hits, and actionable tool errors.
+            // Reuse the final-answer budget so multi-hop context stays bounded.
+            for result in outcome.as_attachments() {
+                user.push_str(&result.text);
+                user.push('\n');
             }
         }
         msgs.push(ChatMessage::user(user));
@@ -705,11 +709,15 @@ mod tests {
     use std::collections::VecDeque;
     use std::sync::Mutex;
 
-    struct Scripted(Mutex<VecDeque<Option<RouterAction>>>, Mutex<usize>);
+    struct Scripted(
+        Mutex<VecDeque<Option<RouterAction>>>,
+        Mutex<usize>,
+        Mutex<Vec<Vec<ChatMessage>>>,
+    );
 
     impl Scripted {
         fn new(v: Vec<Option<RouterAction>>) -> Self {
-            Self(Mutex::new(v.into()), Mutex::new(0))
+            Self(Mutex::new(v.into()), Mutex::new(0), Mutex::new(Vec::new()))
         }
         fn calls(&self) -> usize {
             *self.1.lock().unwrap()
@@ -720,12 +728,13 @@ mod tests {
     impl RouterLlm for Scripted {
         async fn decide(
             &self,
-            _m: Vec<ChatMessage>,
+            m: Vec<ChatMessage>,
             _s: &Value,
             _a: &[String],
             _t: u32,
             _c: CancellationToken,
         ) -> Option<RouterAction> {
+            self.2.lock().unwrap().push(m);
             *self.1.lock().unwrap() += 1;
             self.0.lock().unwrap().pop_front().flatten()
         }
@@ -798,6 +807,25 @@ mod tests {
         assert!(needs_tools_heuristic("what is in Projects", &roots, false));
         assert!(needs_tools_heuristic("anything", &roots, true));
         assert!(!needs_tools_heuristic("version 3.5 is out", &roots, false));
+    }
+
+    #[test]
+    fn edit_resolution_preserves_exact_whitespace() {
+        let old = "    return value;\n";
+        let call = resolve_action(
+            &RouterAction {
+                action: "edit_file".into(),
+                path: Some("/project/code.rs".into()),
+                old_text: Some(old.into()),
+                new_text: Some("    return fixed;\n".into()),
+                ..Default::default()
+            },
+            &["edit_file".into()],
+            Path::new("/home/me"),
+            &[],
+        )
+        .unwrap();
+        assert_eq!(call.args["old_text"], old);
     }
 
     #[test]
@@ -1004,6 +1032,12 @@ mod tests {
         assert_eq!(o.stopped, "answer");
         assert_eq!(o.runs.len(), 1);
         assert!(o.runs[0].ok && o.runs[0].llm_text.contains("buy milk"));
+        let decisions = llm.2.lock().unwrap();
+        let next_input = serde_json::to_string(&decisions[1]).unwrap();
+        assert!(
+            next_input.contains("buy milk"),
+            "next tool decision must see the file contents"
+        );
         let ev = sink.events();
         assert!(matches!(&ev[0], ChatEvent::ToolCall { tool, .. } if tool == "read_file"));
         assert!(
@@ -1012,6 +1046,99 @@ mod tests {
         let att = o.as_attachments();
         assert_eq!(att.len(), 1);
         assert!(att[0].text.contains("buy milk"));
+    }
+
+    struct CaptureProposal(Mutex<Vec<nexus_core::changes::FileOp>>);
+
+    impl crate::tools::ProposalSink for CaptureProposal {
+        fn propose(&self, _title: &str, ops: Vec<nexus_core::changes::FileOp>) -> Result<String, String> {
+            self.0.lock().map_err(|e| e.to_string())?.extend(ops);
+            Ok("proposal-test".into())
+        }
+    }
+
+    struct ReadThenWrite;
+
+    #[async_trait]
+    impl RouterLlm for ReadThenWrite {
+        async fn decide(
+            &self,
+            messages: Vec<ChatMessage>,
+            _schema: &Value,
+            _allowed: &[String],
+            _max_tokens: u32,
+            _cancel: CancellationToken,
+        ) -> Option<RouterAction> {
+            let input = &messages.last().unwrap().content;
+            if input.contains("NOT written yet") {
+                return Some(RouterAction::answer());
+            }
+            if input.contains("buy milk") {
+                return Some(RouterAction {
+                    action: "write_file".into(),
+                    path: Some("summary.md".into()),
+                    content: Some("Shopping: buy milk\n".into()),
+                    ..Default::default()
+                });
+            }
+            act("read_file", Some("notes.md"), None)
+        }
+    }
+
+    #[tokio::test]
+    async fn read_then_create_proposal_applies_through_the_journal() {
+        let (d, _) = setup(false);
+        let engine = Arc::new(PermissionEngine::new(
+            DenyList::default(),
+            Arc::new(MemoryAudit::default()),
+        ));
+        engine
+            .add_grant(NewGrant {
+                root: d.path().to_owned(),
+                level: GrantLevel::Full,
+                recursive: true,
+                scope: GrantScope::Session,
+                expires_at: None,
+                label: None,
+            })
+            .unwrap();
+        let proposals = Arc::new(CaptureProposal(Mutex::new(Vec::new())));
+        let mut cx = ToolCx::new(Arc::new(EngineGatekeeper::new(engine.clone(), "agent", None)));
+        cx.proposals = Some(proposals.clone());
+        let mut request = req("Read notes.md and create summary.md", d.path());
+        request.allowed_tools.push("write_file".into());
+        let sink = VecSink::<ChatEvent>::default();
+        let outcome = run_router(
+            request,
+            &ReadThenWrite,
+            &builtin_tools(),
+            &cx,
+            &sink,
+            CancellationToken::new(),
+        )
+        .await;
+        assert_eq!(outcome.stopped, "answer");
+        assert_eq!(outcome.runs.len(), 2);
+        assert!(outcome.runs.iter().all(|r| r.ok));
+        let target = d.path().join("summary.md");
+        assert!(!target.exists(), "a proposal must wait for Apply");
+        let changes = nexus_core::changes::ChangeSet {
+            id: nexus_core::ids::ChangeSetId::new(),
+            title: "Create summary".into(),
+            origin: "agent".into(),
+            ops: proposals.0.lock().unwrap().clone(),
+            created_at: 0,
+        };
+        assert_eq!(changes.ops.len(), 1);
+        let journal_dir = tempfile::tempdir().unwrap();
+        let journal = nexus_fs::Journal::new(
+            journal_dir.path(),
+            Arc::new(nexus_fs::MoveToDirTrash::new(journal_dir.path().join("trash"))),
+        );
+        journal.apply(&engine, "agent", &changes).unwrap();
+        assert_eq!(std::fs::read_to_string(target).unwrap(), "Shopping: buy milk\n");
+        assert!(sink.events().iter().any(|e| matches!(e,
+            ChatEvent::ToolCall { tool, .. } if tool == "report")));
     }
 
     #[tokio::test]

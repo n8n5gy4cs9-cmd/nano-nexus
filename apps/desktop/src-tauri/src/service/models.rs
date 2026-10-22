@@ -1294,7 +1294,8 @@ mod tests {
             ErrorCode::Network
         );
         let cards = catalog(&ctx).unwrap();
-        assert_eq!(cards.len(), 21);
+        assert!(!cards.is_empty());
+        assert_eq!(cards.len(), Catalog::embedded().models.len());
         assert!(
             cards
                 .iter()

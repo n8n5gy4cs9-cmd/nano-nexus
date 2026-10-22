@@ -54,3 +54,20 @@ prompt appears → Allow → a tool chip shows "Read notes.md" → a grounded an
 ## Pitfalls
 - 1B models over-call tools. The heuristic gate matters, so measure with and without it.
 - `include_dir!` paths are relative to the crate. Add `cargo:rerun-if-changed=../../assistants` in a `build.rs` so edits trigger rebuilds.
+
+## REFE repair follow-up (owner request, 2026-10-22)
+
+T06.14 repairs the existing router rather than replacing its permission or journal contracts.
+Reference: `REFE/pi-main/packages/agent/src/agent-loop.ts` appends actual tool results to the
+context before the next inference call. Port that observation-feedback behavior to our
+constrained-JSON router; the final answer and intermediate decisions share the bounded result
+budget. Preserve exact `edit_file.old_text` bytes, including indentation and trailing newlines.
+
+Acceptance: a deterministic router test must inspect the next decision's messages for the
+contents returned by `read_file`. A read → write proposal test must use the real tool registry,
+verify no file exists before Apply, then apply via `Journal::apply` and assert file contents.
+Keep loop limits, repeated-call protection, deny rules, and permission checks intact.
+
+This is a behavioral port into Rust; it does not introduce Pi's process execution or direct
+filesystem writes. Existing REFE checkouts are local reference material, not bundled dependencies.
+Concurrent Duo inference remains T18.04; Duo tier selection alone is not sub-agent delegation.

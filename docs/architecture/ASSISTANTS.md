@@ -107,7 +107,7 @@ for hop in 0..max_hops:
    decision = chat_json(router_prompt, schema = router_action(allowed_tools), thinking off, temp 0.2)
    Fallback → {"action":"answer"}
    if decision.action == "answer": break
-   check permission → (maybe prompt the user) → run tool → append <tool_result name=… > (≤ 1 200 tokens)
+   check permission → (maybe prompt the user) → run tool → append <tool_result name=… > (≤ 1 200 tokens) to subsequent routing decisions and the final answer
    sink.tool_trace(…)   // UI chip: "📂 Listed ~/Projects (42 items)"
 stream final answer with all tool results in context
 ```

@@ -11,5 +11,6 @@ export default defineConfig(({ mode }) => ({
   clearScreen: false,
   server: { port: 1420, strictPort: true, host: "127.0.0.1", watch: { ignored: ["**/src-tauri/**"] } },
   build: { target: "safari15", outDir: "dist", emptyOutDir: true },
-  test: { environment: "jsdom", globals: false, setupFiles: ["src/test-setup.ts"], include: ["src/**/*.test.{ts,tsx}"] },
+  // Keep keyboard tests independent of the host OS; platform-specific behavior has explicit tests.
+  test: { environmentOptions: { jsdom: { userAgent: "NanoNexus tests (Linux)" } }, environment: "jsdom", globals: false, setupFiles: ["src/test-setup.ts"], include: ["src/**/*.test.{ts,tsx}"] },
 }));
