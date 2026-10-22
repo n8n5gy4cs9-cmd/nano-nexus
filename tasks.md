@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 229/260 tasks done (88%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 230/262 tasks done (87%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -151,6 +151,9 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T07.09** UI Models page: runtime panel, Installed (Bundled / Downloaded / Imported+Discovered), Discover, Search HF (2026-10-11)
 - [x] **T07.10** UI model cards (RAM badge, capabilities, progress ring, pause/resume/cancel/use/delete) + detail drawer (GGUF meta) (2026-10-11)
 - [ ] ⭐ **T07.11** 🍎 Exit check: pause → quit → resume → verify → use → chat; corrupted part → checksum error; offline states
+
+- [x] **T07.12** Repair external-reference removal: ownership metadata, canonical containment, legacy/symlink safety and temporary-fixture regressions (new-tasks P0; 2026-10-22). Full check passed; 76 app tests + 148 frontend tests.
+- [ ] **T07.13** Default local and pack imports to references with explicit copy choice and Read consent (new-tasks P1).
 
 ## M08: Analyzer and reports · [spec](docs/milestones/M08-analyzer.md) · [contract](docs/architecture/ANALYZER.md)
 - [x] **T08.01** Scanner (ignore WalkBuilder, progress 10 Hz, cancel, warnings) + 100k-file benchmark (2026-10-11) — benchmark is `#[ignore]`: 100k files scan well under 10 s on this Linux box (release)

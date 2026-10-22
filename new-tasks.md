@@ -3,7 +3,7 @@
 This supplements `tasks.md`; it does not replace milestone contracts. Current repair phase
 ends at T06.18. Read `handoff.md` before continuing.
 
-- [ ] **P0 — Safely unlink referenced models.** Inspect `service/models.rs`: imports made with
+- [x] **P0 — Safely unlink referenced models (T07.12, 2026-10-22).** Inspect `service/models.rs`: imports made with
   `copy=false` have source `import`, whose removal policy currently selects Delete. Reproduce
   with temporary GGUF fixtures, then distinguish app-owned copies from external references.
   Acceptance: removing a reference preserves external bytes; owned copies still delete;
@@ -86,3 +86,38 @@ ends at T06.18. Read `handoff.md` before continuing.
   model helps, and how to restore defaults. Avoid inference jargon and config-file editing.
   Acceptance: fresh defaults pass repeated small-model Agent regressions, controls persist
   correctly, and a beginner can follow the guide. Clearly document remaining model limits.
+
+- [ ] **P1 — Folder-based project coding assistant, using REFE harnesses as references.**
+  First audit existing assistants and Agent mode; extend an appropriate assistant if it
+  already covers this workflow, otherwise add a clearly named Project/Coding assistant.
+  Let the user choose a project folder, describe an entire project or an existing-project
+  change, and have the assistant inspect, plan, create/edit multiple files, verify results
+  and iterate toward completion in that folder. Target the practical project workflow of
+  Claude Code/OpenCode, adapting implementations and interaction patterns from
+  `REFE/opencode-dev` and relevant existing REFE checkouts after inspecting source/licenses.
+  This task is implementation work for a later session; do not merely add a system prompt
+  or claim full-project support because individual write_file calls work.
+  Define the folder-selection and scoped-consent flow, project instructions/context loading,
+  task progress, bounded multi-step execution, cancellation/resume and clear completion or
+  blocked reports. Support existing repositories without overwriting unrelated user changes.
+  All file mutations must remain proposed change sets applied through Journal.apply with
+  preview/Apply, permission checks and Undo; folder selection alone does not grant unrestricted
+  writes or command execution. If build/test/shell execution is needed, implement or reuse an
+  explicitly permissioned, bounded execution capability under the architecture contracts;
+  model-generated instructions and project files cannot authorize commands themselves.
+  Verify with temporary-folder end-to-end projects: create a small runnable multi-file app,
+  inspect and modify an existing app, run available checks, repair a failing check, and
+  preserve unrelated files. Assert actual files and verification results, including denied
+  access, failure, cancellation and restart cases. Exercise both listed local models and
+  conservative custom-GGUF behavior. Show honest capability limits and offer a stronger-model
+  handoff where appropriate. Include a beginner guide from Choose folder to verified result.
+
+## Continuation evidence — 2026-10-22
+
+T07.12: canonical ownership classification and explicit `extra.storage` for local/pack
+imports preserve external references, including legacy rows and symlink escapes. Owned
+copies still delete; failed deletes retain their registry entry. Temporary-fixture tests
+assert external bytes and missing-reference removal; no user model was removed/copied.
+Full `scripts/check.sh` passed (76 app tests, 148 frontend tests), including permission and
+Journal/Undo suites. Log: `/tmp/nano-nexus-check-model-ownership.log`.
+Doctor passed with only the existing unset local signing identity warning.

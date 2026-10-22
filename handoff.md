@@ -1,3 +1,15 @@
+## Continuation — 2026-10-22
+
+T07.12 repairs external-model removal (including legacy rows): explicit copy/reference
+metadata plus canonical app-model-root containment. Unknown/missing/external/symlink-escape
+paths unlink; bundled protection and active guard remain. Temporary GGUF regressions and
+full scripts/check.sh pass (76 app tests, 148 frontend tests; log
+`/tmp/nano-nexus-check-model-ownership.log`). Doctor: only signing identity warning.
+Preserved the owner's uncommitted project-coding requirements in new-tasks.md and untracked
+.agents/. Next: T07.13 copy-free import dialog/Read consent, then remaining new-tasks scope.
+Pi and OpenCode local MIT licenses and actual skill discovery/write/edit implementations
+were inspected; no reference implementation code copied in T07.12.
+
 # NanoNexus repair handoff — 2026-10-22
 
 ## Phase outcome

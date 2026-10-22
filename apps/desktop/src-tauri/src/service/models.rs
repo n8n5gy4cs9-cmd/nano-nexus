@@ -217,12 +217,24 @@ pub fn active_model_id(ctx: &AppCtx) -> Option<String> {
         .flatten()
 }
 
-fn removal(source: &str) -> Removal {
-    match source {
-        "builtin" => Removal::Protected,
-        "discovered" => Removal::Unlink,
-        _ => Removal::Delete,
+fn removal(ctx: &AppCtx, row: &ModelRow) -> Removal {
+    if row.source == "builtin" {
+        return Removal::Protected;
     }
+    let referenced = row
+        .extra
+        .as_deref()
+        .and_then(|s| serde_json::from_str::<serde_json::Value>(s).ok())
+        .is_some_and(|v| v.get("storage").and_then(|s| s.as_str()) == Some("reference"));
+    // Legacy rows have no ownership marker. Only files canonically inside app data
+    // can be owned; stale paths and symlink escapes always fall back to unlink.
+    let owned = matches!(row.source.as_str(), "download" | "import")
+        && !referenced
+        && dunce::canonicalize(&ctx.paths.models)
+            .ok()
+            .zip(dunce::canonicalize(&row.path).ok())
+            .is_some_and(|(root, path)| path != root && path.starts_with(root));
+    if owned { Removal::Delete } else { Removal::Unlink }
 }
 
 fn installed_view(ctx: &AppCtx, m: &ModelRow, active: Option<&str>, mem: &MemoryInfo) -> InstalledModel {
@@ -260,7 +272,7 @@ fn installed_view(ctx: &AppCtx, m: &ModelRow, active: Option<&str>, mem: &Memory
         has_chat_template: meta.as_ref().is_none_or(|g| g.has_chat_template),
         context_length: meta.as_ref().and_then(|g| g.context_length),
         active: active == Some(m.id.as_str()),
-        removal: removal(&m.source),
+        removal: removal(ctx, m),
         fit: fit::estimate(meta.as_ref(), m.bytes, ctx_size, mem),
         gguf: meta,
     }
@@ -804,7 +816,7 @@ pub fn delete(ctx: &AppCtx, caller: &Caller, id: &str) -> Result<(), NexusError>
         .store
         .get_model(id)?
         .ok_or_else(|| NexusError::NotFound("model".into()))?;
-    match removal(&row.source) {
+    match removal(ctx, &row) {
         Removal::Protected => {
             return Err(NexusError::InvalidInput(
                 "the built-in model is part of the app and cannot be deleted".into(),
@@ -816,11 +828,12 @@ pub fn delete(ctx: &AppCtx, caller: &Caller, id: &str) -> Result<(), NexusError>
             ));
         }
         Removal::Delete => {
-            let p = Path::new(&row.path);
-            let _ = std::fs::remove_file(p);
+            let p = dunce::canonicalize(&row.path)?;
+            std::fs::remove_file(&p)?;
             if let Some(dir) = p.parent()
-                && dir.starts_with(&ctx.paths.models)
-                && dir != ctx.paths.models
+                && dunce::canonicalize(&ctx.paths.models)
+                    .ok()
+                    .is_some_and(|root| dir.starts_with(&root) && dir != root)
             {
                 let _ = std::fs::remove_dir(dir); // only succeeds when empty
             }
@@ -885,7 +898,7 @@ pub async fn import_local(
             catalog_id: None,
             gguf_meta: serde_json::to_string(&meta).ok(),
             license: meta.license.clone(),
-            extra: None,
+            extra: Some(serde_json::json!({"storage": if copy { "copy" } else { "reference" }}).to_string()),
             added_at: now_ms(),
         })?;
         Ok(id)
@@ -1473,6 +1486,99 @@ mod tests {
         Arc::get_mut(&mut ctx).unwrap().dev_vendor_dir = Some(vendor);
         assert_eq!(rescan(&ctx).unwrap(), 1);
         assert_eq!(list_installed(&ctx).unwrap().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn removing_import_references_preserves_external_bytes_and_legacy_rows() {
+        let dir = tempfile::tempdir().unwrap();
+        let ctx = AppState::for_tests(dir.path());
+        let external = dir.path().join("external");
+        std::fs::create_dir_all(&external).unwrap();
+        let src = external.join("model.gguf");
+        let bytes = model_bytes();
+        std::fs::write(&src, &bytes).unwrap();
+        super::super::fs::grant_add(
+            &ctx,
+            &Caller::Desktop,
+            external.to_str().unwrap(),
+            nexus_core::fs::GrantLevel::Read,
+            true,
+            None,
+            None,
+        )
+        .unwrap();
+        let copied = import_local(&ctx, &Caller::Desktop, src.to_str().unwrap(), true)
+            .await
+            .unwrap();
+        let mut sentinel = ctx.store.get_model(&copied.id).unwrap().unwrap();
+        sentinel.id = "sentinel".into();
+        sentinel.source = "builtin".into();
+        sentinel.path = src.display().to_string();
+        ctx.store.upsert_model(&sentinel).unwrap();
+        super::super::settings::set(
+            &ctx,
+            &Caller::Desktop,
+            "models.active_model_id",
+            SettingValue::Text("sentinel".into()),
+        )
+        .unwrap();
+        for legacy in [false, true] {
+            let referenced = import_local(&ctx, &Caller::Desktop, src.to_str().unwrap(), false)
+                .await
+                .unwrap();
+            assert_eq!(referenced.removal, Removal::Unlink);
+            assert_eq!(
+                referenced.path,
+                dunce::canonicalize(&src).unwrap().display().to_string()
+            );
+            if legacy {
+                let mut row = ctx.store.get_model(&referenced.id).unwrap().unwrap();
+                row.extra = None;
+                ctx.store.upsert_model(&row).unwrap();
+            }
+            delete(&ctx, &Caller::Desktop, &referenced.id).unwrap();
+            assert_eq!(std::fs::read(&src).unwrap(), bytes);
+            assert!(ctx.store.get_model(&referenced.id).unwrap().is_none());
+        }
+        delete(&ctx, &Caller::Desktop, &copied.id).unwrap();
+        assert!(!Path::new(&copied.path).exists());
+        assert_eq!(std::fs::read(&src).unwrap(), bytes);
+        // Missing external files can still be unlinked.
+        let referenced = import_local(&ctx, &Caller::Desktop, src.to_str().unwrap(), false)
+            .await
+            .unwrap();
+        std::fs::remove_file(&src).unwrap();
+        delete(&ctx, &Caller::Desktop, &referenced.id).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn owned_model_symlink_escape_is_unlinked_without_deleting_target() {
+        let dir = tempfile::tempdir().unwrap();
+        let ctx = AppState::for_tests(dir.path());
+        let src = dir.path().join("external.gguf");
+        let bytes = model_bytes();
+        std::fs::write(&src, &bytes).unwrap();
+        let copied = import_local(&ctx, &Caller::Desktop, src.to_str().unwrap(), true)
+            .await
+            .unwrap();
+        let mut sentinel = ctx.store.get_model(&copied.id).unwrap().unwrap();
+        sentinel.id = "sentinel".into();
+        sentinel.source = "builtin".into();
+        sentinel.path = src.display().to_string();
+        ctx.store.upsert_model(&sentinel).unwrap();
+        super::super::settings::set(
+            &ctx,
+            &Caller::Desktop,
+            "models.active_model_id",
+            SettingValue::Text("sentinel".into()),
+        )
+        .unwrap();
+        std::fs::remove_file(&copied.path).unwrap();
+        std::os::unix::fs::symlink(&src, &copied.path).unwrap();
+        assert_eq!(list_installed(&ctx).unwrap()[0].removal, Removal::Unlink);
+        delete(&ctx, &Caller::Desktop, &copied.id).unwrap();
+        assert_eq!(std::fs::read(&src).unwrap(), bytes);
     }
 
     #[tokio::test]

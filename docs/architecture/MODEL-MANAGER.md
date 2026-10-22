@@ -11,6 +11,12 @@
 | **Downloaded** (catalog or HF search) | `<data>/models/<owner>__<repo>/<file>.gguf` | Yes |
 | **Imported** (user picked a local `.gguf`) | copied into `<data>/models/local/`, or referenced in place (requires a Read grant) | Yes (copy) / Unlink (reference) |
 
+Removal uses canonical component-wise containment in `<data>/models`, not source alone.
+New local and pack imports record `extra.storage = copy | reference`; references always unlink.
+Legacy imports outside the app directory, missing paths, unknown sources and symlink escapes
+unlink conservatively. Built-ins stay protected and active models cannot be removed.
+An owned-file deletion error is surfaced before removing its registry row.
+
 Every installed model is a row in `models` (see DATA-AND-IPC.md) with `sha256`, `bytes`,
 `gguf_meta` (JSON), `source`, `repo`, `revision`, `file`, and `added_at`. `settings.active_model_id`
 picks the one the supervisor runs.

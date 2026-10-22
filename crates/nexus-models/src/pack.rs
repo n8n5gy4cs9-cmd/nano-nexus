@@ -414,7 +414,7 @@ pub fn import_pack(
             }),
             Ok(path) => {
                 let (gguf_meta, meta) = meta_json(&path);
-                let extra = serde_json::json!({"sampling": m.sampling, "capabilities": m.capabilities});
+                let extra = serde_json::json!({"sampling": m.sampling, "capabilities": m.capabilities, "storage": if mode == ImportMode::Copy { "copy" } else { "reference" }});
                 store.upsert_model(&ModelRow {
                     id: m.id.clone(),
                     source: source.db().into(),

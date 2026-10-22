@@ -39,6 +39,7 @@ tauri-plugin-notification.workspace = true
 tauri-plugin-opener.workspace = true
 tauri-plugin-dialog.workspace = true
 tauri-plugin-autostart.workspace = true
+dunce.workspace = true
 serde_json.workspace = true
 toml.workspace = true
 async-trait.workspace = true
@@ -52,5 +53,4 @@ window-vibrancy.workspace = true
 [dev-dependencies]
 wiremock.workspace = true
 sha2.workspace = true
-dunce.workspace = true
 tempfile.workspace = true
