@@ -1,19 +1,22 @@
 {
-  "$comment": "Router decision (ADR-003/004). The action enum is rebuilt at runtime from the assistant's allowed tools + 'answer'. Flat on purpose: small models + GBNF grammar handle flat objects best.",
-  "type": "object",
-  "additionalProperties": false,
-  "required": ["action"],
-  "properties": {
-    "action": { "type": "string", "enum": ["answer", "ask_assistant", "read_file", "list_dir", "search_files", "grep_text", "scan_folder", "file_info", "doc_search", "calculate", "now", "write_file", "edit_file", "move_file", "trash_file", "search_web", "fetch_url"] },
-    "assistant": { "type": "string", "enum": ["planner", "reviewer"] },
-    "task": { "type": "string", "maxLength": 6000 },
-    "path": { "type": "string", "maxLength": 1024 },
-    "query": { "type": "string", "maxLength": 200 },
-    "expression": { "type": "string", "maxLength": 200 },
-    "content": { "type": "string", "maxLength": 12000 },
-    "old_text": { "type": "string", "maxLength": 4000 },
-    "new_text": { "type": "string", "maxLength": 12000 },
-    "to": { "type": "string", "maxLength": 1024 },
-    "url": { "type": "string", "maxLength": 2048 }
-  }
+  "$comment": "Router decision: union of flat action objects with action-specific required arguments. The runtime selects only allowed tools plus answer.",
+  "anyOf": [
+    {"type": "object", "additionalProperties": false, "required": ["action"], "properties": {"action": {"type": "string", "enum": ["answer"]}}},
+    {"type": "object", "additionalProperties": false, "required": ["action", "assistant", "task"], "properties": {"action": {"type": "string", "enum": ["ask_assistant"]}, "assistant": {"type": "string", "enum": ["planner", "reviewer"]}, "task": {"type": "string", "maxLength": 6000}}},
+    {"type": "object", "additionalProperties": false, "required": ["action", "path"], "properties": {"action": {"type": "string", "enum": ["read_file"]}, "path": {"type": "string", "maxLength": 1024}}},
+    {"type": "object", "additionalProperties": false, "required": ["action", "path"], "properties": {"action": {"type": "string", "enum": ["list_dir"]}, "path": {"type": "string", "maxLength": 1024}}},
+    {"type": "object", "additionalProperties": false, "required": ["action", "query"], "properties": {"action": {"type": "string", "enum": ["search_files"]}, "query": {"type": "string", "maxLength": 200}, "path": {"type": "string", "maxLength": 1024}}},
+    {"type": "object", "additionalProperties": false, "required": ["action", "query"], "properties": {"action": {"type": "string", "enum": ["grep_text"]}, "query": {"type": "string", "maxLength": 200}, "path": {"type": "string", "maxLength": 1024}}},
+    {"type": "object", "additionalProperties": false, "required": ["action", "path"], "properties": {"action": {"type": "string", "enum": ["scan_folder"]}, "path": {"type": "string", "maxLength": 1024}}},
+    {"type": "object", "additionalProperties": false, "required": ["action", "path"], "properties": {"action": {"type": "string", "enum": ["file_info"]}, "path": {"type": "string", "maxLength": 1024}}},
+    {"type": "object", "additionalProperties": false, "required": ["action", "query"], "properties": {"action": {"type": "string", "enum": ["doc_search"]}, "query": {"type": "string", "maxLength": 200}}},
+    {"type": "object", "additionalProperties": false, "required": ["action", "expression"], "properties": {"action": {"type": "string", "enum": ["calculate"]}, "expression": {"type": "string", "maxLength": 200}}},
+    {"type": "object", "additionalProperties": false, "required": ["action"], "properties": {"action": {"type": "string", "enum": ["now"]}}},
+    {"type": "object", "additionalProperties": false, "required": ["action", "path", "content"], "properties": {"action": {"type": "string", "enum": ["write_file"]}, "path": {"type": "string", "maxLength": 1024}, "content": {"type": "string", "maxLength": 12000}}},
+    {"type": "object", "additionalProperties": false, "required": ["action", "path", "old_text", "new_text"], "properties": {"action": {"type": "string", "enum": ["edit_file"]}, "path": {"type": "string", "maxLength": 1024}, "old_text": {"type": "string", "maxLength": 4000}, "new_text": {"type": "string", "maxLength": 12000}}},
+    {"type": "object", "additionalProperties": false, "required": ["action", "path", "to"], "properties": {"action": {"type": "string", "enum": ["move_file"]}, "path": {"type": "string", "maxLength": 1024}, "to": {"type": "string", "maxLength": 1024}}},
+    {"type": "object", "additionalProperties": false, "required": ["action", "path"], "properties": {"action": {"type": "string", "enum": ["trash_file"]}, "path": {"type": "string", "maxLength": 1024}}},
+    {"type": "object", "additionalProperties": false, "required": ["action", "query"], "properties": {"action": {"type": "string", "enum": ["search_web"]}, "query": {"type": "string", "maxLength": 200}}},
+    {"type": "object", "additionalProperties": false, "required": ["action", "url"], "properties": {"action": {"type": "string", "enum": ["fetch_url"]}, "url": {"type": "string", "maxLength": 2048}}}
+  ]
 }

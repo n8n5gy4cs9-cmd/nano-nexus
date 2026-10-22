@@ -86,3 +86,28 @@ _Pending._
   unit tests, frontend checks, all 22 built-in prompts). Added three structural golden cases
   each for Planner and Reviewer; `node --test scripts/eval-assistants.test.mjs` passes.
   `scripts/eval-assistants.sh --assistant planner` exits 2 with "no default model"; see Q-10.
+
+## Live assistant execution repair (2026-10-22, T06.16)
+
+- Owner supplied Gemma's existing Downloads location and requested only MiniCPM's default download.
+  MiniCPM5 1B Opus-Fable5 V2 Q8 was downloaded once (1.1 GB), verified (SHA-256 prefix
+  `fc3ee1eddd305c15`), and set as the development default. Gemma was used in place; no copies.
+- A new ignored chat-service test reproduced the reported failure: real Gemma selected
+  `write_file` with a path and no content; the file never existed. Required-argument validation
+  alone caused a correction retry but the same field was missing again.
+- A union of flat per-action schemas now enforces required arguments during decoding. The
+  original end-to-end scenario passes on Gemma (~72 s for four turns) and MiniCPM (~13 s):
+  Agent creates, reads/edits, consults Reviewer, and Duo creates; exact disk contents and
+  successful tool traces are asserted. These writes go through the actual journal/apply service.
+- Plain tool statuses are tagged consistently; failed decisions reach final-answer context.
+  Conditional examples are skipped when empty. Temporary router diagnostics were removed.
+- Full `scripts/check.sh` passes with models downloaded. Tests now receive an isolated vendor
+  model root; a real local model previously polluted two model-discovery fixture counts.
+- Gemma's separate inference smoke: streaming and schema JSON passed; initial cold readiness
+  was 13.24 s, exceeding the existing 10 s target. That assertion was not weakened.
+- Default-model golden evaluation remains incomplete quality work: first run 8/12 assistants
+  met the 80% threshold; a captured repeat met it for 6/12. Bug Hunter, Scribe, Shell Sage and
+  TL;DR failed both; Nexus and Planner also failed a case on the repeat. Typical failures are
+  omitted facts, invented agenda detail, long answers, and incorrect off-by-one diagnosis.
+  The golden checks were not weakened. MiniCPM can still echo internal markup in final wording
+  despite correct file operations. Tool execution success is not a claim of perfect model output.

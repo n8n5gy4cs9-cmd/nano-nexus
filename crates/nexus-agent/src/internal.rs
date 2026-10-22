@@ -225,7 +225,10 @@ pub fn render_full<V: Serialize>(src: &str, vars: &V) -> Result<RenderedPrompt, 
             "user" => user = Some(out),
             "example_user" => pending = Some(out),
             "example_assistant" => {
-                if let Some(u) = pending.take() {
+                if let Some(u) = pending.take()
+                    && !u.is_empty()
+                    && !out.is_empty()
+                {
                     examples.push((u, out));
                 }
             }

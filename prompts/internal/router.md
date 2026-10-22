@@ -37,6 +37,12 @@ Request: explain what a mutex is
 Tool results so far: 0
 === example_assistant ===
 {"action":"answer"}
+=== example_user ===
+{% if has_write | default(false) %}Request: Create {{ home_dir }}/Downloads/hello.txt containing exactly hello and a newline.
+Tool results so far: 0{% endif %}
+=== example_assistant ===
+{% if has_write | default(false) %}{"action":"write_file","path":"{{ home_dir }}/Downloads/hello.txt","content":"hello\n"}
+{% endif %}
 === user ===
 Request: {{ request }}
 Tool results so far: {{ tool_results_so_far }}{% if previous_answer %}

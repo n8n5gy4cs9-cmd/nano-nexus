@@ -78,3 +78,17 @@ before user attachments. Preserve token-accounting indices for the original atta
 Regression tests must demonstrate that a large early read cannot hide a later pending-write
 status and a large user attachment cannot hide it from the final inference request. This applies
 to every assistant using the shared router/turn engine, including Agent and Duo.
+
+T06.16 adds an ignored live-model test through the application chat service, not just a scripted
+router. With `NEXUS_MODEL` pointing to an existing GGUF, start the real runtime on loopback, grant
+a temporary work folder, enable automatic journal apply only in the isolated test context, and
+verify Agent create/read/edit, Reviewer consultation, and Duo create. Inspect persisted tool
+traces and exact disk contents; always shut down the runtime, including on failed assertions.
+Do not copy models into fixtures or build outputs. Bound each turn with a cancellation timeout.
+
+The live Gemma repro returned `write_file` with `path` and no `content`, twice even after a
+correction request. T06.16 therefore also repairs the routing contract: a union of flat action
+objects requires each action's arguments during decoding, and Rust validates required arguments
+before a correction retry. Add a conditional write example (skip empty example pairs when a
+feature is absent), retain invalid-decision errors in final context, and tag plain tool statuses
+consistently. Keep the original prompt budgets, grants, loop guards, and journal behavior.

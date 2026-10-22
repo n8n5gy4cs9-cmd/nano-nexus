@@ -118,15 +118,23 @@ log, csv, size, find, list, how many) in English, or if the assistant has
 `workflow.always_route = true`. This skips a model call for chit-chat, which roughly halves
 latency.
 
-**Router action schema** (built dynamically; flat on purpose, see R9):
+**Router action schema** (built dynamically; a union of flat action objects, see R9):
 ```json
-{"type":"object","additionalProperties":false,"required":["action"],
- "properties":{
-   "action":{"type":"string","enum":["answer","read_file","list_dir","search_files","grep_text","scan_folder","file_info","calculate","now"]},
-   "path":{"type":"string","maxLength":1024},
-   "query":{"type":"string","maxLength":200},
-   "expression":{"type":"string","maxLength":200}}}
+{"anyOf":[
+  {"type":"object","additionalProperties":false,"required":["action"],
+   "properties":{"action":{"type":"string","enum":["answer"]}}},
+  {"type":"object","additionalProperties":false,"required":["action","path","content"],
+   "properties":{"action":{"type":"string","enum":["write_file"]},
+                 "path":{"type":"string","maxLength":1024},
+                 "content":{"type":"string","maxLength":12000}}}
+]}
 ```
+Each allowed tool gets one branch with its required fields. Other tools are omitted. Domain
+validation also checks required arguments before the correction retry. The former schema made
+all arguments optional: a live model repeatedly returned `write_file` without `content`, so the
+app never proposed a file. See Q-11. Failed/rejected decisions are added to final-answer context
+as errors; they must not silently become unsupported claims of completed work.
+
 Rust then validates: the args each action requires are present, paths are absolute or resolvable
 against a granted root (`"Downloads"` → `~/Downloads` if granted), and the same tool wasn't
 called with the same args twice (to break loops).

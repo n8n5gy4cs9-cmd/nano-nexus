@@ -104,3 +104,22 @@ Recommendation: locate/import the owner's existing models first, then rerun T06.
 and the golden assistant evals. Consultations added in T18.06 run sequentially on the active
 model; concurrent light/strong inference remains unimplemented T18.04.
 Answer (owner): _pending_
+
+### Q-10 update (2026-10-22): model locations resolved
+The owner identified Gemma in Downloads and requested only the default model download.
+MiniCPM5 1B Opus-Fable5 V2 Q8 was downloaded once, SHA-256 verified, and selected as the dev
+default. Gemma is referenced directly in Downloads; it was not copied or re-downloaded.
+The live Gemma chat-service regression now passes create/read/edit, Reviewer consultation, and
+Duo create. Existing installed-app database paths were not rewritten. Further validation continues
+on MiniCPM; concurrent dual-model execution is still T18.04.
+
+## Q-11: Optional router arguments prevented real file writes (2026-10-22)
+Context: the architecture's flat all-optional argument schema allowed `write_file` with no
+`content`. Gemma produced that response twice, including after a validation reask. The router
+rejected it silently and the final answer narrated a file creation without executing any tool.
+This reproduces the owner's reported missing files through the real application service.
+Options: (a) keep optional arguments and rely on prompting/reasks; (b) constrain decoding with
+a union of flat action objects whose arguments are required per action.
+Decision: (b), under the owner's explicit repair request; retain Rust validation and one retry
+as well. The pinned llama.cpp converter supports schema unions. No nested args, new dependencies,
+permission changes, or direct LLM writes are introduced. The M06 follow-up specifies the repair.

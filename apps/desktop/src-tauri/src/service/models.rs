@@ -1108,8 +1108,8 @@ pub fn rescan(ctx: &AppCtx) -> Result<usize, NexusError> {
     // An offline kit's `models-extra` with a `pack.json` is registered as bundled models (see `init`).
     dirs.retain(|d| !(d.file_name().is_some_and(|n| n == "models-extra") && d.join("pack.json").is_file()));
     // Dev builds list whatever `scripts/fetch-model.mjs` put in `<repo>/vendor/models`.
-    if cfg!(debug_assertions) {
-        dirs.push(std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../vendor/models"));
+    if let Some(vendor) = &ctx.dev_vendor_dir {
+        dirs.push(vendor.join("models"));
     }
     bundled::sync_extra_folders(&ctx.store, &dirs).map_err(|e| NexusError::Internal(e.to_string()))
 }
@@ -1456,6 +1456,23 @@ mod tests {
             "builtin",
             "a failed activation changes nothing"
         );
+    }
+
+    #[tokio::test]
+    async fn development_models_are_scanned_only_from_the_contexts_vendor_root() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut ctx = AppState::for_tests(dir.path());
+        assert_eq!(
+            rescan(&ctx).unwrap(),
+            0,
+            "test contexts must not scan the developer's real models"
+        );
+        let vendor = dir.path().join("test-vendor");
+        std::fs::create_dir_all(vendor.join("models")).unwrap();
+        std::fs::write(vendor.join("models/default.gguf"), model_bytes()).unwrap();
+        Arc::get_mut(&mut ctx).unwrap().dev_vendor_dir = Some(vendor);
+        assert_eq!(rescan(&ctx).unwrap(), 1);
+        assert_eq!(list_installed(&ctx).unwrap().len(), 1);
     }
 
     #[tokio::test]

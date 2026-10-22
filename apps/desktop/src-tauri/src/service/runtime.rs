@@ -33,8 +33,7 @@ pub fn build_config_for(ctx: &AppCtx, prefer: Option<&str>) -> Option<RuntimeCon
             .flatten(),
         resource_dir: ctx.resource_dir.clone(),
         active_model_id: settings.models_active_model_id.clone(),
-        vendor_dir: cfg!(debug_assertions)
-            .then(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../vendor")),
+        vendor_dir: ctx.dev_vendor_dir.clone(),
     };
     // The developer override wins; then the model chosen in the Models page (or the bundle default, via
     // the registry); then whatever the bundle manifest or the dev vendor folder offers.
@@ -56,11 +55,11 @@ pub fn build_config_for(ctx: &AppCtx, prefer: Option<&str>) -> Option<RuntimeCon
         });
     let model = registered.or_else(|| runtime_paths::resolve_model(&search))?;
     let mut binary = runtime_paths::server_binary(&ctx.resource_dir, &ctx.exe_dir);
-    if cfg!(debug_assertions) && !binary.is_file() {
-        let vendor = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../vendor");
-        if let Some(dev) = runtime_paths::vendor_server_binary(&vendor) {
-            binary = dev;
-        }
+    if !binary.is_file()
+        && let Some(vendor) = &ctx.dev_vendor_dir
+        && let Some(dev) = runtime_paths::vendor_server_binary(vendor)
+    {
+        binary = dev;
     }
     let mut cfg = RuntimeConfig::from_settings(&settings, binary, model.path);
     cfg.model_id = model.id;

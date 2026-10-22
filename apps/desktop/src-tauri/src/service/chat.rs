@@ -647,6 +647,9 @@ fn start_turn(
             };
             let llm = SchedulerRouter(Arc::new(ctx.scheduler.clone()));
             let routed = run_router(request, &llm, &builtin_tools(), &cx, &persisting, cancel.clone()).await;
+            if !routed.runs.is_empty() {
+                input.system_prompt.push_str("\nThe tool steps below have already finished. Report the observed results and any required Apply action. Do not print tool calls or promise future tool execution.");
+            }
             input.attachments.extend(routed.as_attachments());
         }
         let mut outcome = match early_text {
@@ -994,6 +997,103 @@ mod tests {
             tokio::time::sleep(Duration::from_millis(10)).await;
         }
         panic!("turn never finished");
+    }
+
+    async fn live_turn(ctx: &Ctx, assistant: &str, text: String) -> Result<Vec<ChatEvent>, String> {
+        let sink = VecSink::<ChatEvent>::default();
+        let mut request = args(&text, None);
+        request.assistant_id = AssistantId::from(assistant);
+        let sent = send(ctx, &Caller::Desktop, request, Arc::new(sink.clone())).map_err(|e| e.to_string())?;
+        let wait = async {
+            while ctx.chats.is_running(&sent.assistant_message_id) {
+                tokio::time::sleep(Duration::from_millis(100)).await;
+            }
+        };
+        if tokio::time::timeout(Duration::from_secs(180), wait)
+            .await
+            .is_err()
+        {
+            stop(ctx, &sent.assistant_message_id);
+            return Err(format!("{assistant} turn timed out"));
+        }
+        let messages = ctx
+            .store
+            .list_messages(&sent.conversation_id)
+            .map_err(|e| e.to_string())?;
+        let answer = messages.last().ok_or("missing assistant message")?;
+        println!(
+            "{assistant}: status={:?}, trace={:?}, answer={}",
+            answer.status, answer.tool_trace, answer.content
+        );
+        if answer.status != MessageStatus::Done {
+            return Err(format!("{assistant} did not finish: {:?}", answer.error));
+        }
+        Ok(sink.events())
+    }
+
+    #[tokio::test]
+    #[ignore = "needs NEXUS_MODEL and the real local runtime; models are referenced in place"]
+    async fn real_model_agent_and_duo_apply_files_and_consult_a_specialist() {
+        use nexus_core::fs::{GrantLevel, GrantScope};
+        let dir = tempfile::tempdir().unwrap();
+        let work = dir.path().join("work");
+        std::fs::create_dir(&work).unwrap();
+        let work = dunce::canonicalize(work).unwrap();
+        let ctx = AppState::for_tests(dir.path());
+        ctx.perms
+            .add_grant(nexus_fs::NewGrant {
+                root: work.clone(),
+                level: GrantLevel::Full,
+                recursive: true,
+                scope: GrantScope::Session,
+                expires_at: None,
+                label: None,
+            })
+            .unwrap();
+        super::super::settings::set(
+            &ctx,
+            &Caller::Desktop,
+            "chat.auto_apply_proposals",
+            super::super::settings::SettingValue::Bool(true),
+        )
+        .unwrap();
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../..");
+        let model = std::env::var_os("NEXUS_MODEL").expect("set NEXUS_MODEL to the existing GGUF");
+        let binary = std::env::var_os("NEXUS_LLAMA_BIN")
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|| root.join("vendor/runtime/macos-arm64/llama-server-aarch64-apple-darwin"));
+        let mut config = nexus_llm::RuntimeConfig::new(binary, model);
+        config.model_id = "real-eval".into();
+        ctx.supervisor.start(config).await.unwrap();
+        let result: Result<(), String> = async {
+            let target = work.join("created.txt");
+            live_turn(&ctx, "agent", format!(
+                "Create {} containing exactly alpha followed by one newline. Use the file tool; report briefly.", target.display()
+            )).await?;
+            if std::fs::read_to_string(&target).map_err(|e| e.to_string())? != "alpha\n" {
+                return Err("Agent created incorrect content".into());
+            }
+            live_turn(&ctx, "agent", format!(
+                "Read {} and change alpha to bravo using edit_file. Keep the newline. Report briefly.", target.display()
+            )).await?;
+            if std::fs::read_to_string(&target).map_err(|e| e.to_string())? != "bravo\n" {
+                return Err("Agent edit did not reach disk".into());
+            }
+            let events = live_turn(&ctx, "agent", "Ask Reviewer to review this supplied Python code: def average(xs): return sum(xs)/len(xs). The requirement is to return None for empty input. Consult the reviewer specialist and summarize its finding briefly.".into()).await?;
+            if !events.iter().any(|e| matches!(e, ChatEvent::ToolResult { tool, ok: true, .. } if tool == "ask_assistant")) {
+                return Err("Agent did not consult Reviewer successfully".into());
+            }
+            let duo_file = work.join("duo.txt");
+            live_turn(&ctx, "duo", format!(
+                "Create {} containing exactly duo followed by one newline. Use write_file and report briefly.", duo_file.display()
+            )).await?;
+            if std::fs::read_to_string(&duo_file).map_err(|e| e.to_string())? != "duo\n" {
+                return Err("Duo did not create the requested file".into());
+            }
+            Ok(())
+        }.await;
+        ctx.supervisor.shutdown().await;
+        assert!(result.is_ok(), "{}", result.unwrap_err());
     }
 
     #[tokio::test]

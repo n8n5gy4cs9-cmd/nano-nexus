@@ -213,6 +213,8 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         settings: RwLock::new(settings),
         share,
         resource_dir,
+        dev_vendor_dir: cfg!(debug_assertions)
+            .then(|| std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../vendor")),
         exe_dir,
     }));
     bridge_runtime_status(app.handle());

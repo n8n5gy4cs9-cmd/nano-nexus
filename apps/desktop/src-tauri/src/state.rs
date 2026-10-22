@@ -129,6 +129,8 @@ pub struct AppState {
     pub share: crate::service::share::ShareController,
     /// Tauri's `resource_dir()` (bundled models, Windows runtime).
     pub resource_dir: PathBuf,
+    /// Development vendor root; absent in packaged builds and isolated test contexts.
+    pub dev_vendor_dir: Option<PathBuf>,
     /// Directory of the running executable (macOS sidecar, portable data, `models-extra`).
     pub exe_dir: PathBuf,
 }
@@ -254,6 +256,7 @@ impl AppState {
             share: crate::service::share::ShareController::new(store_for_share, &Settings::default()),
             settings: RwLock::new(Settings::default()),
             resource_dir: root.join("resources"),
+            dev_vendor_dir: None,
             exe_dir: root.join("bin"),
         })
     }

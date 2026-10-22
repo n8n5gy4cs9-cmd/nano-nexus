@@ -70,16 +70,51 @@ impl RouterAction {
 
 impl Validate for RouterAction {
     fn validate(&self, ctx: &ValidationCtx) -> Result<(), Vec<String>> {
-        // `allowed_ids` carries the allowed actions.
-        if ctx.allowed_ids.iter().any(|a| a == &self.action) {
-            Ok(())
-        } else {
-            Err(vec![format!(
+        if !ctx.allowed_ids.iter().any(|a| a == &self.action) {
+            return Err(vec![format!(
                 "`{}` is not an allowed action; use one of: {}",
                 self.action,
                 ctx.allowed_ids.join(", ")
-            )])
+            )]);
         }
+        let mut errors = Vec::new();
+        let mut require = |name: &str, value: &Option<String>, allow_empty: bool| {
+            if !value
+                .as_ref()
+                .is_some_and(|v| allow_empty || !v.trim().is_empty())
+            {
+                errors.push(format!("{} requires `{name}`", self.action));
+            }
+        };
+        match self.action.as_str() {
+            "read_file" | "list_dir" | "file_info" | "scan_folder" | "trash_file" => {
+                require("path", &self.path, false)
+            }
+            "write_file" => {
+                require("path", &self.path, false);
+                require("content", &self.content, true);
+            }
+            "edit_file" => {
+                require("path", &self.path, false);
+                require("old_text", &self.old_text, false);
+                require("new_text", &self.new_text, true);
+            }
+            "move_file" => {
+                require("path", &self.path, false);
+                require("to", &self.to, false);
+            }
+            "search_files" | "grep_text" | "search_web" | "doc_search" | "kb_search" | "find_symbol" => {
+                require("query", &self.query, false)
+            }
+            "fetch_url" => require("url", &self.url, false),
+            "calculate" => require("expression", &self.expression, false),
+            "ask_assistant" => {
+                require("assistant", &self.assistant, false);
+                require("task", &self.task, false);
+            }
+            _ => {}
+        }
+        if errors.is_empty() { Ok(()) } else { Err(errors) }
     }
 }
 
@@ -122,33 +157,64 @@ impl RouterLlm for SchedulerRouter {
         };
         match chat_json::<RouterAction>(&self.0, Priority::Interactive, messages, spec, &vctx, cancel).await {
             Ok(Structured::Valid(a)) => Some(a),
-            _ => None,
+            Ok(Structured::Fallback { reason }) => {
+                tracing::debug!(%reason, "router validation failed after correction");
+                None
+            }
+            Err(error) => {
+                tracing::debug!(%error, "router request failed");
+                None
+            }
         }
     }
 }
 
-/// The action schema for `allowed` tools plus `answer` (flat on purpose, ASSISTANTS §3.2).
+/// Flat action objects with per-tool required arguments. The union prevents constrained decoding
+/// from producing a write action without content (which an all-optional argument schema allowed).
 pub fn router_schema(allowed_tools: &[String]) -> Value {
-    let mut actions = vec!["answer".to_owned()];
-    actions.extend(allowed_tools.iter().cloned());
-    json!({
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["action"],
-        "properties": {
-            "action": {"type": "string", "enum": actions},
-            "assistant": {"type": "string", "enum": ["planner", "reviewer"]},
-            "task": {"type": "string", "maxLength": 6000},
-            "path": {"type": "string", "maxLength": 1024},
-            "query": {"type": "string", "maxLength": 200},
-            "expression": {"type": "string", "maxLength": 200},
-            "content": {"type": "string", "maxLength": 12000},
-            "old_text": {"type": "string", "maxLength": 4000},
-            "new_text": {"type": "string", "maxLength": 12000},
-            "to": {"type": "string", "maxLength": 1024},
-            "url": {"type": "string", "maxLength": 2048}
-        }
-    })
+    let properties = json!({
+        "path": {"type": "string", "maxLength": 1024},
+        "query": {"type": "string", "maxLength": 200},
+        "expression": {"type": "string", "maxLength": 200},
+        "content": {"type": "string", "maxLength": 12000},
+        "old_text": {"type": "string", "maxLength": 4000},
+        "new_text": {"type": "string", "maxLength": 12000},
+        "to": {"type": "string", "maxLength": 1024},
+        "url": {"type": "string", "maxLength": 2048},
+        "assistant": {"type": "string", "enum": ["planner", "reviewer"]},
+        "task": {"type": "string", "maxLength": 6000}
+    });
+    let actions = std::iter::once("answer").chain(allowed_tools.iter().map(String::as_str));
+    let variants: Vec<Value> = actions
+        .map(|action| {
+            let fields: &[&str] = match action {
+                "read_file" | "list_dir" | "file_info" | "scan_folder" | "trash_file" => &["path"],
+                "write_file" => &["path", "content"],
+                "edit_file" => &["path", "old_text", "new_text"],
+                "move_file" => &["path", "to"],
+                "search_files" | "grep_text" | "search_web" | "doc_search" | "kb_search" | "find_symbol" => {
+                    &["query"]
+                }
+                "fetch_url" => &["url"],
+                "calculate" => &["expression"],
+                "ask_assistant" => &["assistant", "task"],
+                _ => &[],
+            };
+            let mut props = serde_json::Map::new();
+            props.insert("action".into(), json!({"type": "string", "enum": [action]}));
+            let mut required = vec!["action"];
+            for field in fields {
+                props.insert((*field).into(), properties[*field].clone());
+                required.push(field);
+            }
+            if matches!(action, "search_files" | "grep_text") {
+                props.insert("path".into(), properties["path"].clone());
+            }
+            json!({"type": "object", "additionalProperties": false,
+            "required": required, "properties": props})
+        })
+        .collect();
+    json!({"anyOf": variants})
 }
 
 /// Most characters of the previous answer shown to the router.
@@ -464,7 +530,14 @@ impl RouterOutcome {
         let mut out = Vec::new();
         for r in self.runs.iter().rev() {
             let text = if r.ok {
-                r.llm_text.clone()
+                if r.llm_text.starts_with("<tool_result") || r.llm_text.starts_with("<file ") {
+                    r.llm_text.clone()
+                } else {
+                    format!(
+                        "<tool_result name=\"{}\">\n{}\n</tool_result>",
+                        r.tool, r.llm_text
+                    )
+                }
             } else {
                 format!(
                     "<tool_result name=\"{}\" error=\"true\">\n{}\n</tool_result>",
@@ -599,7 +672,14 @@ pub async fn run_router(
         } else {
             llm.decide(msgs, &schema, &allowed_actions, max_tokens, cancel.clone())
                 .await
-                .unwrap_or_else(RouterAction::answer)
+                .unwrap_or_else(|| {
+                    outcome.runs.push(ToolRun {
+                        tool: "router".into(), args_json: "{}".into(), ok: false,
+                        summary: "Tool planning failed".into(),
+                        llm_text: "Tool planning failed after correction. No action was executed for this decision. Explain the failure; do not claim a file was written or changed.".into(),
+                    });
+                    RouterAction::answer()
+                })
         };
         if decision.action == "answer" {
             outcome.stopped = "answer".into();
@@ -609,6 +689,11 @@ pub async fn run_router(
             Ok(c) => c,
             Err(reason) => {
                 tracing::debug!(%reason, "router decision rejected");
+                outcome.runs.push(ToolRun {
+                    tool: decision.action.clone(), args_json: "{}".into(), ok: false,
+                    summary: "Tool decision rejected".into(),
+                    llm_text: format!("Tool decision rejected: {reason}. No action was executed. Explain what is missing; do not claim success."),
+                });
                 outcome.stopped = "invalid".into();
                 break;
             }
@@ -890,12 +975,39 @@ mod tests {
     }
 
     #[test]
+    fn incomplete_write_decisions_fail_validation_for_reask() {
+        let ctx = ValidationCtx {
+            allowed_ids: vec!["write_file".into()],
+            ..Default::default()
+        };
+        let mut action = RouterAction {
+            action: "write_file".into(),
+            path: Some("/project/new.txt".into()),
+            ..Default::default()
+        };
+        let errors = action
+            .validate(&ctx)
+            .expect_err("missing content must trigger structured reask");
+        assert!(errors.iter().any(|e| e.contains("content")));
+        action.content = Some(String::new());
+        assert!(action.validate(&ctx).is_ok(), "creating an empty file is valid");
+    }
+
+    #[test]
     fn schema_lists_answer_and_the_allowed_tools() {
         let s = router_schema(&["read_file".into(), "now".into()]);
-        assert_eq!(
-            s["properties"]["action"]["enum"],
-            json!(["answer", "read_file", "now"])
+        let variants = s["anyOf"].as_array().unwrap();
+        let actions: Vec<&str> = variants
+            .iter()
+            .map(|v| v["properties"]["action"]["enum"][0].as_str().unwrap())
+            .collect();
+        assert_eq!(actions, ["answer", "read_file", "now"]);
+        let validator = jsonschema::validator_for(&router_schema(&["write_file".into()])).unwrap();
+        assert!(!validator.is_valid(&json!({"action": "write_file", "path": "/new.txt"})));
+        assert!(
+            validator.is_valid(&json!({"action": "write_file", "path": "/new.txt", "content": "alpha\n"}))
         );
+        assert!(validator.is_valid(&json!({"action": "answer"})));
     }
 
     #[test]
@@ -1320,7 +1432,9 @@ mod tests {
         )
         .await;
         assert_eq!(o.stopped, "answer");
-        assert!(o.runs.is_empty());
+        assert_eq!(o.runs.len(), 1);
+        assert!(!o.runs[0].ok);
+        assert!(o.as_attachments()[0].text.contains("No action was executed"));
     }
 
     #[tokio::test]
@@ -1337,7 +1451,9 @@ mod tests {
         )
         .await;
         assert_eq!(o.stopped, "invalid");
-        assert!(o.runs.is_empty());
+        assert_eq!(o.runs.len(), 1);
+        assert!(!o.runs[0].ok);
+        assert!(o.as_attachments()[0].text.contains("not an allowed tool"));
     }
 
     #[tokio::test]
