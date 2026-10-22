@@ -148,7 +148,7 @@ percentage calculator routing and exact path fidelity; never broaden grants to h
 T06.23 fixes the observed skipped percentage calculator with strict deterministic parsing
 and the existing enabled calculate tool. Red/green scripted regression and real-service
 trace/exact-answer test pass without model inference. Final full scripts/check.sh passed:
-81 app tests (2 ignored), 154 agent unit tests, 151 frontend tests. Log:
+81 app tests (2 ignored), 153 agent unit tests, 151 frontend tests. Log:
 `/tmp/nano-nexus-check-percentage-final.log`. No test assertions were weakened.
 
 A subsequent full MiniCPM run still failed at Reviewer before arithmetic: it promised to

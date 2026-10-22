@@ -1,10 +1,12 @@
 # Latest session boundary — 2026-10-22
 
-Four verified task commits on main in this session: T07.12 safe model-reference removal,
+Four implementation commits plus T06.24 evidence audit on main in this session: T07.12 safe model-reference removal,
 T07.13 reference-first imports + Read consent, T06.19 isolated specialist assignment/bounded
 refusal recovery + stronger semantic/manual Apply/Undo tests, T06.23 deterministic percentage
 calculator. Full scripts/check.sh passed after final source changes: 81 app tests (2 ignored),
-154 agent unit tests, 151 frontend tests; `/tmp/nano-nexus-check-percentage-final.log`.
+153 agent unit tests, 151 frontend tests; `/tmp/nano-nexus-check-percentage-final.log`.
+T06.24 corrected the recorded count and repeated the full suite successfully:
+`/tmp/nano-nexus-check-evidence.log`.
 
 Important limit: overall small-model reliability is NOT passing. Focused Reviewer test passed
 3/3 each model, and wider Gemma passed 3/3, but subsequent MiniCPM full-service still promised

@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 233/269 tasks done (86%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 234/270 tasks done (86%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -145,6 +145,8 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [ ] **T06.22** Extend Agent for scoped project-folder coding: context/instructions, progress, bounded execution, cancellation/resume, permissioned verification, multi-file end-to-end projects and beginner guide (new-tasks project coding).
 
 - [x] **T06.23** Route unambiguous numeric percentage queries directly to the enabled calculator; reject extra instructions/nonfinite numbers and verify actual results (2026-10-22; T06.20 subtask). Red/green router test, exact-result service test and full check pass.
+
+- [x] **T06.24** Audit final verification counts against the saved log and correct handoff evidence without changing quality claims (2026-10-22). Repeated full check passed; 153 agent tests, 81 app tests, 151 frontend tests.
 
 ## M07: Model manager and downloads · [spec](docs/milestones/M07-models.md) · [contract](docs/architecture/MODEL-MANAGER.md)
 - [x] **T07.01** GGUF header parser (guards) + fixture writer + tests (+ ignored real-model test) (2026-10-11)
