@@ -1087,6 +1087,35 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "needs NEXUS_MODEL and the real local runtime; model is referenced in place"]
+    async fn real_model_polyglot_avoids_runaway_and_invented_context() {
+        let dir = tempfile::tempdir().unwrap();
+        let ctx = AppState::for_tests(dir.path());
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../..");
+        let model = std::env::var_os("NEXUS_MODEL").expect("set NEXUS_MODEL to the existing GGUF");
+        let binary = root.join("vendor/runtime/macos-arm64/llama-server-aarch64-apple-darwin");
+        ctx.supervisor
+            .start(nexus_llm::RuntimeConfig::new(binary, model))
+            .await
+            .unwrap();
+        let result = live_turn(&ctx, "polyglot", "What is Kulo in English?".into()).await;
+        ctx.supervisor.shutdown().await;
+        let events = result.unwrap();
+        let answer: String = events
+            .iter()
+            .filter_map(|event| match event {
+                ChatEvent::Content { delta } => Some(delta.as_str()),
+                _ => None,
+            })
+            .collect();
+        println!("Polyglot answer: {answer}");
+        assert!(answer.len() < 600, "runaway Polyglot answer: {answer}");
+        let lower = answer.to_lowercase();
+        assert!(!lower.contains("kilo studios"), "invented context: {answer}");
+        assert!(!lower.contains("0.333 meters"), "invented context: {answer}");
+    }
+
+    #[tokio::test]
     #[ignore = "needs NEXUS_MODEL and the real local runtime; models are referenced in place"]
     async fn real_model_agent_and_duo_apply_files_and_consult_a_specialist() {
         use nexus_core::fs::{GrantLevel, GrantScope};

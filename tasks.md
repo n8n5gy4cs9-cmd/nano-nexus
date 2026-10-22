@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 235/271 tasks done (86%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 236/272 tasks done (86%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -148,6 +148,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 
 - [x] **T06.24** Audit final verification counts against the saved log and correct handoff evidence without changing quality claims (2026-10-22). Repeated full check passed; 153 agent tests, 81 app tests, 151 frontend tests.
 - [x] **T06.25** Prevent repeated pending change cards for one canonical file target in an Agent turn; preserve distinct multi-file proposals and Apply/Undo (2026-10-22; user-reported MiniCPM regression). Red/green router regression and full check.
+- [x] **T06.26** Stop runaway repeated prose in streamed assistant answers, mark the stop visibly, and make Polyglot ask for source context instead of inventing lore (2026-10-22; user-reported MiniCPM regression). Red/green streaming tests, prompt lint and live model check.
 
 ## M07: Model manager and downloads · [spec](docs/milestones/M07-models.md) · [contract](docs/architecture/MODEL-MANAGER.md)
 - [x] **T07.01** GGUF header parser (guards) + fixture writer + tests (+ ignored real-model test) (2026-10-11)

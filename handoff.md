@@ -1,5 +1,15 @@
 # Latest session boundary — 2026-10-22
 
+T06.26 addresses the reported Polyglot runaway: a long repeated sentence now
+stops the generation with a visible warning, including when streamed in small
+chunks. The Polyglot prompt asks for missing source language/context and avoids
+inventing a game or company. Regression failed before the fix and passed after;
+code-fence repetition stays intact. Live MiniCPM (`/tmp/nexus-polyglot-minicpm.log`)
+returned a short request for context without invented game details. Full
+scripts/check.sh passed: 81 app tests (3 ignored), 157 agent unit tests and
+151 frontend tests; log: `/tmp/nano-nexus-check-repetition.log`. This guard
+does not establish general translation accuracy.
+
 T06.25 addresses the owner-reported five Apply cards for one file: scripted
 write decisions with varied content reproduced two proposals before the fix.
 The router now tracks canonical pending targets (including move destinations)
@@ -7,8 +17,8 @@ and stops a second proposal for the same target while preserving Apply/Undo.
 Focused regression passed. Full scripts/check.sh passed: 81 app tests
 (2 ignored), 155 agent unit tests, 151 frontend tests. Log:
 `/tmp/nano-nexus-check-pending-target-final.log`.
-Unfinished work remains in new-tasks.md, including the repeated Polyglot answer,
-all-model quality, folder coding, defaults, skills, Duo and older-PC testing.
+Unfinished work remains in new-tasks.md, including all-model quality, folder
+coding, defaults, skills, Duo and older-PC testing.
 
 Four implementation commits plus T06.24 evidence audit on main in this session: T07.12 safe model-reference removal,
 T07.13 reference-first imports + Read consent, T06.19 isolated specialist assignment/bounded

@@ -358,7 +358,26 @@ impl<B: ChatBackend, K: Tokenize> TurnEngine<B, K> {
                 }
                 Ok(StreamEvent::Content(delta)) => {
                     first_token.get_or_insert_with(Instant::now);
+                    let previous_len = content.len();
                     content.push_str(&delta);
+                    if let Some(cutoff) = repetition_cutoff(&content) {
+                        if cutoff >= previous_len {
+                            let kept = &delta[..cutoff - previous_len];
+                            if !kept.is_empty() {
+                                sink.send(ChatEvent::Content { delta: kept.into() });
+                            }
+                            content.truncate(cutoff);
+                        } else {
+                            // Earlier chunks have already reached the UI; events cannot retract them.
+                            content.truncate(previous_len);
+                        }
+                        let notice = "\n\n[Generation stopped because the answer began repeating. Check the text above before relying on it.]";
+                        content.push_str(notice);
+                        sink.send(ChatEvent::Content { delta: notice.into() });
+                        outcome.status = MessageStatus::Stopped;
+                        cancel.cancel();
+                        break;
+                    }
                     if !sink.send(ChatEvent::Content { delta }) {
                         outcome.status = MessageStatus::Stopped;
                         break;
@@ -422,6 +441,41 @@ impl<B: ChatBackend, K: Tokenize> TurnEngine<B, K> {
         });
         outcome
     }
+}
+
+// Detect long identical prose sentences repeated four times. This is deliberately
+// conservative: code fences and short list/table entries are not candidates.
+fn repetition_cutoff(text: &str) -> Option<usize> {
+    let mut start = 0;
+    let mut previous = String::new();
+    let mut streak = 0;
+    for (index, ch) in text.char_indices() {
+        if !matches!(ch, '.' | '!' | '?') {
+            continue;
+        }
+        let end = index + ch.len_utf8();
+        if !text[end..].chars().next().is_some_and(char::is_whitespace) {
+            continue;
+        }
+        let sentence = text[start..end].trim();
+        if sentence.len() >= 72 && text[..start].matches("```").count().is_multiple_of(2) {
+            let normalized = sentence.split_whitespace().collect::<Vec<_>>().join(" ");
+            if normalized == previous {
+                streak += 1;
+                if streak >= 4 {
+                    return Some(start);
+                }
+            } else {
+                previous = normalized;
+                streak = 1;
+            }
+        } else {
+            previous.clear();
+            streak = 0;
+        }
+        start = end;
+    }
+    None
 }
 
 fn e_to_code(e: &LlmError) -> (ErrorCode, String) {
@@ -571,6 +625,44 @@ mod tests {
             matches!(&events[3], ChatEvent::Done { finish_reason, tokens_out: 7, .. } if finish_reason == "stop")
         );
         assert_eq!(events.len(), 4);
+    }
+
+    #[tokio::test]
+    async fn repeated_long_sentence_stops_before_the_output_runs_away() {
+        let sentence =
+            "The term Kilo refers to the size of the phone in meters, which is approximately 0.333 meters. ";
+        let repeated = sentence.repeat(30);
+        let mock = Mock::new(vec![Script::Events(vec![c(&repeated), Ok(done("length"))])]);
+        let (out, events) = run(&mock, input("What is Kulo in English?")).await;
+        assert_eq!(out.status, MessageStatus::Stopped);
+        assert!(out.content.matches(sentence).count() <= 3);
+        assert!(out.content.contains("began repeating"));
+        assert!(
+            matches!(events.last(), Some(ChatEvent::Done { finish_reason, .. }) if finish_reason == "stopped")
+        );
+    }
+
+    #[tokio::test]
+    async fn repetition_guard_works_across_chunks_and_preserves_code() {
+        let sentence =
+            "The model gave the same unsupported explanation for this ambiguous word again and again. ";
+        let chunks = sentence
+            .repeat(20)
+            .chars()
+            .collect::<Vec<_>>()
+            .chunks(13)
+            .map(|chunk| c(&chunk.iter().collect::<String>()))
+            .collect();
+        let mock = Mock::new(vec![Script::Events(chunks)]);
+        let (out, _) = run(&mock, input("Translate this word")).await;
+        assert_eq!(out.status, MessageStatus::Stopped);
+        assert!(out.content.matches(sentence).count() <= 4);
+
+        let code = format!("```js\n{}\n```", sentence.repeat(5));
+        let mock = Mock::new(vec![Script::Events(vec![c(&code), Ok(done("stop"))])]);
+        let (out, _) = run(&mock, input("Show the fixture verbatim")).await;
+        assert_eq!(out.status, MessageStatus::Done);
+        assert_eq!(out.content, code);
     }
 
     #[tokio::test]

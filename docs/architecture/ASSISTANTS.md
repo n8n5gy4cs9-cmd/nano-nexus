@@ -100,6 +100,11 @@ attachments (list of {kind, path, tokens}), tools (list of {name, signature, des
 ### 3.1 `chat`
 `[preamble + system_prompt] + [rolling summary] + [history] + [attachments block] + user` → stream.
 
+The streamed answer stops after four consecutive copies of a long prose sentence,
+including copies split across deltas. It keeps the useful prefix and appends a
+visible warning that the answer began repeating. Code fences and short data
+entries are excluded; this guard does not certify the preceding answer as true.
+
 ### 3.2 `router` (bounded tool use, max 3 hops)
 
 When a file-changing tool stages a proposal, the router records its canonical

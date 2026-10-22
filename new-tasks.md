@@ -7,7 +7,7 @@
   proposal awaits Apply, even if MiniCPM varies the content or path spelling.
   Distinct files remain eligible for separate proposals. This does not complete
   the multi-file project workflow or its verification requirements below.
-- [ ] **Runaway repeated answers and invented translation context.** MiniCPM
+- [x] **Runaway repeated answers and invented translation context (T06.26, 2026-10-22).** MiniCPM
   repeated a fabricated “Kilo” explanation for a short Polyglot question about
   “Kulo”. Add a bounded streaming repetition stop across assistants, make the
   Polyglot behavior honest about unknown source language/context, and verify
