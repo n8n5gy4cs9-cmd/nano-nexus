@@ -437,11 +437,12 @@ pub struct RouterOutcome {
 }
 
 impl RouterOutcome {
-    /// Tool results as attachment blocks for the turn engine (one per successful or failed call).
+    /// Tool results, newest first, within the shared budget. Recent failures and write status
+    /// take priority over older reads so the final answer can accurately report what happened.
     pub fn as_attachments(&self) -> Vec<AttachmentBlock> {
         let mut left = TOTAL_RESULT_BUDGET;
         let mut out = Vec::new();
-        for r in &self.runs {
+        for r in self.runs.iter().rev() {
             let text = if r.ok {
                 r.llm_text.clone()
             } else {
@@ -807,6 +808,41 @@ mod tests {
         assert!(needs_tools_heuristic("what is in Projects", &roots, false));
         assert!(needs_tools_heuristic("anything", &roots, true));
         assert!(!needs_tools_heuristic("version 3.5 is out", &roots, false));
+    }
+
+    #[test]
+    fn latest_write_status_survives_a_full_observation_budget() {
+        let outcome = RouterOutcome {
+            runs: vec![
+                ToolRun {
+                    tool: "read_file".into(),
+                    args_json: "{}".into(),
+                    ok: true,
+                    summary: "Read big file".into(),
+                    llm_text: "data ".repeat(10_000),
+                },
+                ToolRun {
+                    tool: "write_file".into(),
+                    args_json: "{}".into(),
+                    ok: true,
+                    summary: "Created summary (press Apply)".into(),
+                    llm_text: "NOT written yet: press Apply".into(),
+                },
+            ],
+            stopped: "answer".into(),
+        };
+        let results = outcome.as_attachments();
+        assert!(
+            results.iter().any(|r| r.text.contains("NOT written yet")),
+            "an earlier read must not hide the final write status"
+        );
+        assert!(
+            results
+                .iter()
+                .map(|r| crate::budget::estimate_tokens(&r.text))
+                .sum::<u32>()
+                <= TOTAL_RESULT_BUDGET
+        );
     }
 
     #[test]

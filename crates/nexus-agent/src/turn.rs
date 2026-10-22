@@ -157,10 +157,14 @@ fn truncate_with_note(text: &str, total_tokens: u32, keep_tokens: u32) -> String
 }
 
 /// `<file path="…">…</file>`, with a literal closing tag inside the text neutralised.
+fn is_tool_result(a: &AttachmentBlock) -> bool {
+    a.path.is_none() && a.label.starts_with("tool result")
+}
+
 fn file_block(a: &AttachmentBlock, text: &str) -> String {
     // Tool results already carry their own `<tool_result …>` / `<file …>` tags. Wrapping them again in
     // `<file path="tool result: list_dir">` made small models echo that wrapper into their answers.
-    if a.path.is_none() && a.label.starts_with("tool result") {
+    if is_tool_result(a) {
         return text.replace("</file>", "<\\/file>");
     }
     let name = a.path.as_deref().unwrap_or(&a.label);
@@ -186,7 +190,8 @@ impl<B: ChatBackend, K: Tokenize> TurnEngine<B, K> {
         let system_tokens = self.counter.count(&input.system_prompt).await;
         let user_tokens = self.counter.count(&input.user_text).await;
 
-        // Attachments, within their budget; later ones are cut first.
+        // Reserve tool observations before user attachments: the final answer needs the actual
+        // apply/permission status even when a large attachment consumes the remaining budget.
         let mut remaining = limits.attachments.min(
             input
                 .assistant
@@ -195,13 +200,25 @@ impl<B: ChatBackend, K: Tokenize> TurnEngine<B, K> {
                 .max(limits.attachments.min(1)),
         );
         let mut blocks = Vec::new();
-        let mut attachment_tokens = Vec::new();
-        for a in &input.attachments {
+        let mut attachment_tokens = vec![0; input.attachments.len()];
+        let ordered = input
+            .attachments
+            .iter()
+            .enumerate()
+            .filter(|(_, a)| is_tool_result(a))
+            .chain(
+                input
+                    .attachments
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, a)| !is_tool_result(a)),
+            );
+        for (index, a) in ordered {
             let total = self.counter.count(&a.text).await;
             let keep = total.min(remaining);
             let text = truncate_with_note(&a.text, total, keep);
             remaining -= keep;
-            attachment_tokens.push(keep);
+            attachment_tokens[index] = keep;
             blocks.push(file_block(a, &text));
         }
         let attachments_used: u32 = attachment_tokens.iter().sum();
@@ -629,6 +646,31 @@ mod tests {
         assert!(last.ends_with("Summarize it"));
         assert_eq!(out.attachment_tokens.len(), 2);
         assert!(out.attachment_tokens.iter().sum::<u32>() <= 3000);
+    }
+
+    #[tokio::test]
+    async fn tool_status_has_priority_over_large_user_attachments() {
+        let mock = Mock::new(vec![Script::Events(vec![c("x"), Ok(done("stop"))])]);
+        let mut i = input("Save a summary");
+        i.attachments = vec![
+            AttachmentBlock {
+                label: "big.txt".into(),
+                path: None,
+                text: "data ".repeat(20_000),
+            },
+            AttachmentBlock {
+                label: "tool result: write_file".into(),
+                path: None,
+                text: "NOT written yet: press Apply".into(),
+            },
+        ];
+        run(&mock, i).await;
+        let requests = mock.requests();
+        let final_input = &requests[0].messages.last().unwrap().content;
+        assert!(
+            final_input.contains("NOT written yet: press Apply"),
+            "the final answer must know whether the file was written"
+        );
     }
 
     #[tokio::test]

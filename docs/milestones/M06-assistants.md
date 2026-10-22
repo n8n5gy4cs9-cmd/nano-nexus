@@ -71,3 +71,10 @@ Keep loop limits, repeated-call protection, deny rules, and permission checks in
 This is a behavioral port into Rust; it does not introduce Pi's process execution or direct
 filesystem writes. Existing REFE checkouts are local reference material, not bundled dependencies.
 Concurrent Duo inference remains T18.04; Duo tier selection alone is not sub-agent delegation.
+
+T06.15 keeps observations useful under context pressure. Select tool results newest first within
+the existing 2 400-token shared budget; allocate final-answer attachment space to tool results
+before user attachments. Preserve token-accounting indices for the original attachment list.
+Regression tests must demonstrate that a large early read cannot hide a later pending-write
+status and a large user attachment cannot hide it from the final inference request. This applies
+to every assistant using the shared router/turn engine, including Agent and Duo.

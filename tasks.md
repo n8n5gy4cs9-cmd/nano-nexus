@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 224/255 tasks done (87%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 225/256 tasks done (87%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -134,6 +134,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T06.12** UI tool chips + status lines in chat (2026-10-11)
 - [ ] ⭐ **T06.13** 🍎 Exit check: router eval 20 prompts ≥ 80% correct tool choice (SPIKES.md §router); denied path graceful
 - [x] **T06.14** REFE repair: feed real observations into subsequent router decisions, preserve exact edit text, and verify read → create proposal → journal apply (2026-10-22; owner request; M06 follow-up). Rust suite + frontend suite pass; repaired pre-existing audit/catalog assertions, Help lint, and host-dependent shortcut tests discovered by verification.
+- [x] **T06.15** REFE repair: preserve recent tool outcomes under context pressure and reserve final-answer context for tool status before user attachments (2026-10-22; owner request; M06 follow-up). Both regressions reproduced before the fix; full scripts/check.sh passes.
 
 ## M07: Model manager and downloads · [spec](docs/milestones/M07-models.md) · [contract](docs/architecture/MODEL-MANAGER.md)
 - [x] **T07.01** GGUF header parser (guards) + fixture writer + tests (+ ignored real-model test) (2026-10-11)
