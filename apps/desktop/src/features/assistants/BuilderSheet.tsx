@@ -46,7 +46,7 @@ export const BLANK_SPEC: AssistantSpec_Serialize = {
   prompt: { system: "" },
 };
 
-const TOOLS = ["read_file", "list_dir", "search_files", "grep_text", "file_info", "calculate", "now"] as const;
+const TOOLS = ["ask_assistant", "read_file", "list_dir", "search_files", "grep_text", "file_info", "calculate", "now"] as const;
 const FILE_TOOLS = new Set(["read_file", "list_dir", "search_files", "grep_text", "file_info"]);
 
 /** `Regex Smith!` → `regex-smith` (the id a new assistant gets until the user edits it). */
@@ -270,7 +270,7 @@ function BuilderForm({
                       </label>
                     ))}
                   </div>
-                  <span className="text-caption text-faint">Tools only read. Folders still need your permission.</span>
+                  <span className="text-caption text-faint">File tools only read. Specialist consultations use supplied text. Folders still need your permission.</span>
                 </fieldset>
               ) : null}
               <fieldset className="flex flex-col gap-2">

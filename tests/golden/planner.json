@@ -1,0 +1,48 @@
+{
+  "assistant": "planner",
+  "note": "Structural live-model checks; not a substitute for tool-chain regression tests. Not run until a model is available.",
+  "cases": [
+    {
+      "name": "migration-plan",
+      "input": "Plan migrating a settings file from JSON to TOML. Keep a backup and verify existing settings survive.",
+      "checks": {
+        "containsAny": [
+          "backup",
+          "back up"
+        ],
+        "containsAll": [
+          "verify"
+        ],
+        "maxWords": 220
+      }
+    },
+    {
+      "name": "missing-facts",
+      "input": "Plan a database migration. The database engine and schema are not supplied. Label what is unknown.",
+      "checks": {
+        "containsAny": [
+          "unknown",
+          "missing",
+          "not supplied",
+          "need"
+        ],
+        "maxWords": 220
+      }
+    },
+    {
+      "name": "supplied-constraints",
+      "input": "Plan adding an offline search feature. Requirements: no network requests and tests for empty queries.",
+      "checks": {
+        "containsAll": [
+          "offline",
+          "empty"
+        ],
+        "containsAny": [
+          "test",
+          "verify"
+        ],
+        "maxWords": 220
+      }
+    }
+  ]
+}

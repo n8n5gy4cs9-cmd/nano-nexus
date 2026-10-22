@@ -33,6 +33,10 @@ pub const TOTAL_RESULT_BUDGET: u32 = 2400;
 pub struct RouterAction {
     pub action: String,
     #[serde(default)]
+    pub assistant: Option<String>,
+    #[serde(default)]
+    pub task: Option<String>,
+    #[serde(default)]
     pub path: Option<String>,
     #[serde(default)]
     pub query: Option<String>,
@@ -133,6 +137,8 @@ pub fn router_schema(allowed_tools: &[String]) -> Value {
         "required": ["action"],
         "properties": {
             "action": {"type": "string", "enum": actions},
+            "assistant": {"type": "string", "enum": ["planner", "reviewer"]},
+            "task": {"type": "string", "maxLength": 6000},
             "path": {"type": "string", "maxLength": 1024},
             "query": {"type": "string", "maxLength": 200},
             "expression": {"type": "string", "maxLength": 200},
@@ -262,6 +268,10 @@ pub fn needs_tools_for(
         .collect();
     (has(&["write_file", "edit_file", "move_file", "trash_file"])
         && WRITE_WORDS.iter().any(|w| words.contains(w)))
+        || (has(&["ask_assistant"])
+            && ["plan", "review", "planner", "reviewer", "delegate", "consult"]
+                .iter()
+                .any(|w| words.contains(w)))
         || (has(&["search_web", "fetch_url"]) && WEB_PHRASES.iter().any(|p| lower.contains(p)))
 }
 
@@ -409,6 +419,16 @@ pub fn resolve_action(
             args.insert("expression".into(), Value::String(e.to_owned()));
         }
         "now" => {}
+        "ask_assistant" => {
+            let assistant = clean(&a.assistant).ok_or("assistant is required")?;
+            let task = a
+                .task
+                .as_deref()
+                .filter(|t| !t.trim().is_empty())
+                .ok_or("task is required")?;
+            args.insert("assistant".into(), Value::String(assistant.to_owned()));
+            args.insert("task".into(), Value::String(task.to_owned()));
+        }
         other => return Err(format!("unknown tool `{other}`")),
     }
     Ok(ResolvedCall {
@@ -509,6 +529,8 @@ pub async fn run_router(
     // The router writes a whole file inside its JSON decision, so it needs room for it.
     let max_tokens = if has_tool("write_file") || has_tool("edit_file") {
         3500
+    } else if has_tool("ask_assistant") {
+        2200
     } else {
         160
     };
@@ -533,6 +555,7 @@ pub async fn run_router(
             "request": req.user_text,
             "tool_results_so_far": outcome.runs.len(),
             "has_write": has_tool("write_file"),
+            "has_delegate": has_tool("ask_assistant"),
             "has_edit": has_tool("edit_file"),
             "has_move": has_tool("move_file") || has_tool("trash_file"),
             "has_web": has_tool("search_web"),
@@ -604,6 +627,8 @@ pub async fn run_router(
             break;
         };
         let mut cx_run = ToolCx {
+            cancel: cancel.clone(),
+            consultations: cx.consultations.clone(),
             gate: cx.gate.clone(),
             reason: cx.reason.clone(),
             budget_tokens: cx.budget_tokens,
@@ -1175,6 +1200,62 @@ mod tests {
         assert_eq!(std::fs::read_to_string(target).unwrap(), "Shopping: buy milk\n");
         assert!(sink.events().iter().any(|e| matches!(e,
             ChatEvent::ToolCall { tool, .. } if tool == "report")));
+    }
+
+    struct SpecialistResult;
+
+    #[async_trait]
+    impl crate::tools::ConsultationSource for SpecialistResult {
+        async fn consult(
+            &self,
+            assistant: &str,
+            task: &str,
+            _cancel: CancellationToken,
+        ) -> Result<String, String> {
+            assert_eq!(assistant, "reviewer");
+            assert_eq!(task, "Check the supplied code");
+            Ok("Review finding: handle the empty input".into())
+        }
+    }
+
+    #[tokio::test]
+    async fn a_specialist_result_reaches_the_parent_decision_and_tool_trace() {
+        let (d, mut cx) = setup(false);
+        cx.consultations = Some(Arc::new(SpecialistResult));
+        let llm = Scripted::new(vec![
+            Some(RouterAction {
+                action: "ask_assistant".into(),
+                assistant: Some("reviewer".into()),
+                task: Some("Check the supplied code".into()),
+                ..Default::default()
+            }),
+            Some(RouterAction::answer()),
+        ]);
+        let mut request = req("Review this supplied code", d.path());
+        request.allowed_tools = vec!["ask_assistant".into()];
+        let sink = VecSink::<ChatEvent>::default();
+        let outcome = run_router(
+            request,
+            &llm,
+            &builtin_tools(),
+            &cx,
+            &sink,
+            CancellationToken::new(),
+        )
+        .await;
+        assert_eq!(outcome.stopped, "answer");
+        assert_eq!(outcome.runs.len(), 1);
+        assert!(outcome.runs[0].ok);
+        let decisions = llm.2.lock().unwrap();
+        assert!(
+            decisions[1]
+                .last()
+                .unwrap()
+                .content
+                .contains("handle the empty input")
+        );
+        assert!(sink.events().iter().any(|e| matches!(e,
+            ChatEvent::ToolResult { tool, ok: true, .. } if tool == "ask_assistant")));
     }
 
     #[tokio::test]

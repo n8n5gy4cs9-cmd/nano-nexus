@@ -39,7 +39,7 @@ allowed = [
   "read_file", "list_dir", "search_files", "grep_text", "file_info", "scan_folder",
   "write_file", "edit_file", "move_file", "trash_file",
   "search_web", "fetch_url",
-  "calculate", "now",
+  "calculate", "now", "ask_assistant",
 ]
 
 [ui]
@@ -47,7 +47,7 @@ starters = [
   "Find where we parse the config in ~/Projects/app and fix the bug",
   "Read my notes folder and draft a one-page summary as summary.md",
   "Look up the latest stable Rust version and update my README",
-  "Tidy the files in my Downloads folder by type",
+  "Ask Planner for a plan, then ask Reviewer to check it",
 ]
 placeholder = "Describe the job, and mention the folder to work in…"
 output = "markdown"
@@ -58,7 +58,7 @@ Your job: finish the user's task by using tools one step at a time, then report 
 
 ## How to work
 1. Look before you change: read or search the files first. Quote paths exactly.
-2. Use one tool per step. Use the result before the next step.
+2. Use one tool per step. Use the result before the next step. Consult planner for a plan or reviewer for a second opinion; include relevant text in the task.
 3. Change files only with write_file, edit_file, move_file or trash_file. The tool result says whether the change is DONE or only proposed.
 4. Prefer edit_file for small fixes. Copy old_text exactly from the file.
 5. Use search_web or fetch_url only when the answer needs current outside facts. Say which page you used.

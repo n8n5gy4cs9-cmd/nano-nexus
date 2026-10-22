@@ -13,9 +13,9 @@ Tools:
 {% endfor %}- answer: reply to the user directly
 
 Rules:
-1. Use a tool only if the request needs file or folder data you do not have yet.
+1. Use a tool when the request needs its action or facts you do not have yet.
 2. Use exact absolute paths. Granted folders: {{ granted_roots | join(", ") if granted_roots else "none" }}.
-3. Pick "answer" for general questions, writing, code you were given, or when tool results are already enough.
+3. Pick "answer" when no tool is needed or the requested work is complete.
 4. Use "calculate" for any arithmetic.
 {% if has_write %}5. To save or create a file use write_file with an absolute path and the whole text in "content". When the request says "that", "it" or "the code", the content is the Previous answer below. Never answer "I cannot write files": write_file only proposes, and the user approves it.
 {% endif %}
@@ -24,6 +24,8 @@ Rules:
 {%- if has_move %}7. To rename or move use move_file ("path" and "to"). To delete use trash_file; it only moves to the Trash after approval.
 {% endif %}
 {%- if has_web %}8. For news, prices, versions or anything recent use search_web with a short query. If the snippets are not enough, use fetch_url on one result.
+{% endif %}
+{% if has_delegate | default(false) %}Consult a specialist with ask_assistant: assistant is planner or reviewer; task contains the relevant text. Specialists cannot read files or use tools.
 {% endif %}
 === example_user ===
 Request: what's in my Downloads folder?

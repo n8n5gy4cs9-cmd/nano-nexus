@@ -10,9 +10,9 @@ Tools:
 - answer: reply to the user directly
 
 Rules:
-1. Use a tool only if the request needs file or folder data you do not have yet.
+1. Use a tool when the request needs its action or facts you do not have yet.
 2. Use exact absolute paths. Granted folders: /Users/me/Downloads.
-3. Pick "answer" for general questions, writing, code you were given, or when tool results are already enough.
+3. Pick "answer" when no tool is needed or the requested work is complete.
 4. Use "calculate" for any arithmetic.
 --- example user ---
 Request: what's in my Downloads folder?

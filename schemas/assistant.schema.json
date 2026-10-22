@@ -53,7 +53,7 @@
     },
     "tools": {
       "type": "object", "additionalProperties": false,
-      "properties": { "allowed": { "type": "array", "uniqueItems": true, "items": { "enum": ["read_file", "list_dir", "search_files", "grep_text", "scan_folder", "file_info", "doc_search", "kb_search", "calculate", "now", "write_file", "edit_file", "move_file", "trash_file", "search_web", "fetch_url"] } } }
+      "properties": { "allowed": { "type": "array", "uniqueItems": true, "items": { "enum": ["ask_assistant", "read_file", "list_dir", "search_files", "grep_text", "scan_folder", "file_info", "doc_search", "kb_search", "calculate", "now", "write_file", "edit_file", "move_file", "trash_file", "search_web", "fetch_url"] } } }
     },
     "ui": {
       "type": "object", "additionalProperties": false,

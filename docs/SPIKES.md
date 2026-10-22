@@ -60,3 +60,29 @@ _Pending._
 
 ## Performance budgets (T15.06)
 _Pending._
+
+## Assistant repair verification (2026-10-22)
+
+- REFE reference: Pi's `packages/agent/src/agent-loop.ts` feeds tool results into subsequent
+  decisions; `packages/coding-agent/examples/extensions/subagent/` isolates child tasks and
+  propagates cancellation. NanoNexus ports these behaviors into its constrained router and
+  single scheduler, preserving permission checks and journaled writes.
+- Reproduced before fixing: `cargo test -p nexus-agent reads_a_file_then_answers` failed because
+  the next decision lacked the read contents. `latest_write_status_survives_a_full_observation_budget`
+  and `tool_status_has_priority_over_large_user_attachments` also failed before their fixes.
+- The read → create regression uses real tools, asserts the proposal creates no file, applies
+  the change through `Journal::apply`, and verifies the exact file contents.
+- Planner/Reviewer consultations are text-only, sequential on the active model, with bounded
+  input/output and parent cancellation. Tests cover dispatch, feedback to the parent, isolated
+  request construction, disabled/recursive targets, truncation, and in-flight cancellation.
+- Full `scripts/check.sh` passed for T06.14/T06.15, including the integrated Activity Observatory.
+  Frontend dependencies were restored with `pnpm install --frozen-lockfile`; no dependency changes.
+- Live-model evaluation remains unverified: no GGUF exists under `vendor/models`, and the three
+  models registered in the local app database all refer to missing bundle paths. No model was
+  downloaded and no user database rows were changed. T06.13/T18.02 remain open. Concurrent
+  light/strong inference (T18.04) is not implemented by specialist consultation.
+
+- T18.06 final verification: full `scripts/check.sh` passes (140 agent unit tests, 73 app service
+  unit tests, frontend checks, all 22 built-in prompts). Added three structural golden cases
+  each for Planner and Reviewer; `node --test scripts/eval-assistants.test.mjs` passes.
+  `scripts/eval-assistants.sh --assistant planner` exits 2 with "no default model"; see Q-10.

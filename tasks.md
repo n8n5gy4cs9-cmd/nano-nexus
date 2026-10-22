@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 225/256 tasks done (87%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 226/257 tasks done (87%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -132,7 +132,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T06.10** UI Builder sheet (form, icon/color pickers, prompt editor w/ live token count, params, tools, starters) + Test chat (draft spec) (2026-10-11)
 - [x] **T06.11** Import/export TOML + Prompt Architect "Open in builder" detection (2026-10-11) — export = clipboard + webview download (the app never writes to arbitrary paths); new command `assistant_draft`
 - [x] **T06.12** UI tool chips + status lines in chat (2026-10-11)
-- [ ] ⭐ **T06.13** 🍎 Exit check: router eval 20 prompts ≥ 80% correct tool choice (SPIKES.md §router); denied path graceful
+- [ ] ⭐ **T06.13** 🍎 Exit check: router eval 20 prompts ≥ 80% correct tool choice (SPIKES.md §router); denied path graceful — ⛔ blocked: see QUESTIONS Q-10 (registered model files missing)
 - [x] **T06.14** REFE repair: feed real observations into subsequent router decisions, preserve exact edit text, and verify read → create proposal → journal apply (2026-10-22; owner request; M06 follow-up). Rust suite + frontend suite pass; repaired pre-existing audit/catalog assertions, Help lint, and host-dependent shortcut tests discovered by verification.
 - [x] **T06.15** REFE repair: preserve recent tool outcomes under context pressure and reserve final-answer context for tool status before user attachments (2026-10-22; owner request; M06 follow-up). Both regressions reproduced before the fix; full scripts/check.sh passes.
 
@@ -303,10 +303,11 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 
 ## M18: Duo assistant (light + strong model) · [spec](docs/milestones/M18-duo.md)
 - [x] **T18.01** v0.1: `duo` assistant, heuristic tier classifier (`nexus-agent::duo`), settings `duo.light_model_id` / `duo.strong_model_id`, per-message model swap in chat, Duo panel on the Models page (2026-10-11) — one model runs at a time (swap on demand); classifier + settings + prompt_lint tested; app crate + UI not built here
-- [ ] **T18.02** 🍎 Try Duo with two real models; tune `HARD_WORDS` / thresholds; note swap latency in SPIKES.md
+- [ ] **T18.02** 🍎 Try Duo with two real models; tune `HARD_WORDS` / thresholds; note swap latency in SPIKES.md — ⛔ blocked: see QUESTIONS Q-10 (registered model files missing)
 - [x] **T18.03** Show the chosen tier on the message ("light" / "strong") and a "Use strong model" button on light answers (2026-10-11) — `AssistantMessage` gets `tier` + `onUseStrong`; `ChatView` derives the tier by comparing the stored `model_id` with `duo.light_model_id` / `duo.strong_model_id` (no badge when unset or equal); the button regenerates with Think harder, which Duo always routes to the strong model. **Frontend written but not linted/typechecked/tested (owner asked for no runs); no component test added yet**
 - [ ] **T18.04** (v0.2) Run both models at the same time (second `Supervisor` + port, memory check via `MemoryInfo`) to remove swap latency
 - [ ] **T18.05** (v0.2) Optional model-based classifier (light model scores difficulty 1–5) and automatic escalation when the light answer looks unsure
+- [x] **T18.06** REFE port: isolated Planner/Reviewer consultations via ask_assistant for Agent and Duo; bounded context, cancellation, no recursive delegation or child file writes (2026-10-22; owner request; M18 follow-up). Full scripts/check.sh, isolated consultation/cancellation tests, 22-assistant prompt lint, and golden-fixture validation pass. Live model eval remains blocked by Q-10.
 
 ## M19: Activity Observatory (live agent dashboard) · [spec](docs/milestones/M19-activity.md)
 - [x] **T19.01** Plan: ADR-017, `docs/architecture/OBSERVE.md`, `docs/milestones/M19-activity.md`, these tasks (2026-10-19)

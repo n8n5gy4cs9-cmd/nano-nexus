@@ -99,7 +99,7 @@ Priorities: **P0** is required for v1, **P1** is strongly wanted, **P2** is nice
 ### F2. Assistants (P0)
 | ID | Requirement | Acceptance criteria |
 |---|---|---|
-| F2.1 | 17 built-in assistants (see §6) | Each has an icon, color, tagline, starters, sampling parameters, allowed tools, and a system prompt of ≤ 450 tokens. |
+| F2.1 | 22 built-in assistants (see §6) | Each has an icon, color, tagline, starters, sampling parameters, allowed tools, and a system prompt of ≤ 450 tokens. |
 | F2.2 | Assistant gallery | Grid by category with search. A card shows name, tagline, and needed permissions. One click starts a chat. |
 | F2.3 | Assistant builder | Form fields (name, icon, color, prompt, params, tools, starters, workflow) with a live token count and a test-chat side panel. |
 | F2.4 | Import / export | `.toml` files validated against `schemas/assistant.schema.json`. Invalid files show field-level errors. |
@@ -249,6 +249,12 @@ Priorities: **P0** is required for v1, **P1** is strongly wanted, **P2** is nice
 | 15 | **Polyglot** | `polyglot` | Writing | Translation and localization that keeps placeholders, tone, and length limits | chat |
 | 16 | **Shell Sage** | `shell-sage` | System | Explains and builds terminal commands with safety ratings, never runs them | chat |
 | 17 | **Prompt Architect** | `prompt-architect` | Meta | Interviews you and writes a new assistant (TOML) for NanoNexus | chat |
+
+| 18 | **Agent** | `agent` | General | Multi-step tools, journaled file proposals, optional web, specialist consultations | router |
+| 19 | **Duo** | `duo` | General | Selects light/strong model per turn; tools and isolated specialist consultations | router |
+| 20 | **Librarian** | `librarian` | General | Answers from enabled offline libraries with citations | router |
+| 21 | **Planner** | `planner` | General | Plans from supplied text with verifiable steps | chat |
+| 22 | **Reviewer** | `reviewer` | General | Checks supplied work against requirements and reports actionable defects | chat |
 
 Users can add unlimited custom assistants (chat or router workflow, or reuse any pipeline
 with their own prompt). The tutorial example is **Regex Smith**.

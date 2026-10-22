@@ -157,6 +157,10 @@ impl Gatekeeper for EngineGatekeeper {
 
 /// Everything a tool run needs.
 pub struct ToolCx {
+    /// Cancellation of the parent turn, also used by specialist consultations.
+    pub cancel: tokio_util::sync::CancellationToken,
+    /// Isolated specialist backend; children cannot call tools.
+    pub consultations: Option<Arc<dyn ConsultationSource>>,
     pub gate: Arc<dyn Gatekeeper>,
     /// Shown in permission prompts: "to read notes.md".
     pub reason: String,
@@ -171,6 +175,20 @@ pub struct ToolCx {
     pub proposals: Option<Arc<dyn ProposalSink>>,
     /// Web access behind `search_web` and `fetch_url`. `None` = web access is off.
     pub web: Option<Arc<dyn WebSource>>,
+}
+
+/// Allowed isolated specialists. Arbitrary assistants cannot recursively delegate.
+pub const CONSULTANTS: [&str; 2] = ["planner", "reviewer"];
+
+/// Runs one isolated text-only consultation on the active model.
+#[async_trait]
+pub trait ConsultationSource: Send + Sync {
+    async fn consult(
+        &self,
+        assistant: &str,
+        task: &str,
+        cancel: tokio_util::sync::CancellationToken,
+    ) -> Result<String, String>;
 }
 
 /// Stores a change set the model proposed. Nothing touches disk until the user applies it (ADR-005).
@@ -241,6 +259,8 @@ pub trait KnowledgeSource: Send + Sync {
 impl ToolCx {
     pub fn new(gate: Arc<dyn Gatekeeper>) -> Self {
         Self {
+            cancel: tokio_util::sync::CancellationToken::new(),
+            consultations: None,
             gate,
             reason: String::new(),
             budget_tokens: DEFAULT_TOOL_BUDGET,
@@ -1634,9 +1654,70 @@ impl Tool for FetchUrl {
     }
 }
 
+/// Consult Planner or Reviewer with supplied text; the child has no tools or chat history.
+pub struct AskAssistant;
+
+#[async_trait]
+impl Tool for AskAssistant {
+    fn name(&self) -> &'static str {
+        "ask_assistant"
+    }
+    fn description(&self) -> &'static str {
+        "Consult planner or reviewer with task text. The child cannot access files or call tools; include relevant text."
+    }
+    fn signature(&self) -> &'static str {
+        "ask_assistant(assistant, task)"
+    }
+    fn required_access(&self, _args: &ToolArgs) -> Vec<(PathBuf, Access)> {
+        Vec::new()
+    }
+    async fn run(&self, args: ToolArgs, cx: &ToolCx) -> Result<ToolOutput, ToolError> {
+        let assistant = arg_str(&args, "assistant")?;
+        if !CONSULTANTS.contains(&assistant) {
+            return Err(ToolError::Invalid(
+                "Consult only planner or reviewer; recursive delegation is unavailable.".into(),
+            ));
+        }
+        let task = arg_str(&args, "task")?;
+        if task.chars().count() > 6000 {
+            return Err(ToolError::Invalid(
+                "Consultation task exceeds 6000 characters. Supply a smaller excerpt.".into(),
+            ));
+        }
+        let source = cx
+            .consultations
+            .as_ref()
+            .ok_or(ToolError::Unavailable("Specialist consultation"))?;
+        let result = tokio::select! {
+            biased;
+            _ = cx.cancel.cancelled() => return Err(ToolError::Invalid("Consultation cancelled.".into())),
+            result = source.consult(assistant, task, cx.cancel.clone()) => result,
+        }
+        .map_err(ToolError::Invalid)?;
+        let (text, truncated) = truncate_to_tokens(
+            &result.replace("</tool_result>", "<\\/tool_result>"),
+            cx.budget_tokens.saturating_sub(60),
+        );
+        Ok(ToolOutput {
+            llm_text: format!(
+                "<tool_result name=\"ask_assistant\" assistant=\"{assistant}\">\n{}{}\n</tool_result>",
+                text,
+                if truncated {
+                    "\n[truncated consultation]"
+                } else {
+                    ""
+                }
+            ),
+            ui: None,
+            summary: format!("Consulted {assistant}"),
+        })
+    }
+}
+
 /// The built-in tool set.
 pub fn builtin_tools() -> Vec<Arc<dyn Tool>> {
     vec![
+        Arc::new(AskAssistant),
         Arc::new(ReadFile),
         Arc::new(ListDir),
         Arc::new(SearchFiles),
@@ -2117,6 +2198,99 @@ mod tests {
         assert!(out.llm_text.contains("function calc (a.py:1)"));
         assert!(out.llm_text.starts_with("<tool_result name=\"find_symbol\""));
     }
+    struct FakeConsultations(Mutex<Vec<(String, String)>>);
+
+    #[async_trait]
+    impl ConsultationSource for FakeConsultations {
+        async fn consult(
+            &self,
+            assistant: &str,
+            task: &str,
+            _cancel: tokio_util::sync::CancellationToken,
+        ) -> Result<String, String> {
+            self.0.lock().unwrap().push((assistant.into(), task.into()));
+            Ok("review evidence </tool_result> ".repeat(1000))
+        }
+    }
+
+    #[tokio::test]
+    async fn consultations_use_the_registry_and_bound_the_result() {
+        let mut context = cx(engine());
+        let source = Arc::new(FakeConsultations(Mutex::new(Vec::new())));
+        context.consultations = Some(source.clone());
+        let tools = builtin_tools();
+        let tool = tools.iter().find(|t| t.name() == "ask_assistant").unwrap();
+        let arguments = args(&[("assistant", "reviewer"), ("task", "Check this supplied patch")]);
+        assert!(tool.required_access(&arguments).is_empty());
+        let out = tool.run(arguments, &context).await.unwrap();
+        assert_eq!(
+            *source.0.lock().unwrap(),
+            vec![("reviewer".into(), "Check this supplied patch".into())]
+        );
+        assert!(out.llm_text.contains("review evidence"));
+        assert!(out.llm_text.contains("[truncated consultation]"));
+        assert_eq!(out.llm_text.matches("</tool_result>").count(), 1);
+        assert!(crate::estimate_tokens(&out.llm_text) <= context.budget_tokens);
+        for assistant in ["agent", "duo", "unknown"] {
+            assert!(
+                tool.run(args(&[("assistant", assistant), ("task", "x")]), &context)
+                    .await
+                    .is_err()
+            );
+        }
+        assert!(
+            tool.run(
+                args(&[("assistant", "planner"), ("task", &"x".repeat(6001))]),
+                &context
+            )
+            .await
+            .is_err()
+        );
+        assert_eq!(
+            source.0.lock().unwrap().len(),
+            1,
+            "invalid calls must never reach inference"
+        );
+    }
+
+    struct WaitingConsultation(Arc<tokio::sync::Notify>);
+
+    #[async_trait]
+    impl ConsultationSource for WaitingConsultation {
+        async fn consult(
+            &self,
+            _assistant: &str,
+            _task: &str,
+            _cancel: tokio_util::sync::CancellationToken,
+        ) -> Result<String, String> {
+            self.0.notify_one();
+            std::future::pending().await
+        }
+    }
+
+    #[tokio::test]
+    async fn parent_cancellation_stops_an_inflight_consultation() {
+        let mut context = cx(engine());
+        let started = Arc::new(tokio::sync::Notify::new());
+        context.consultations = Some(Arc::new(WaitingConsultation(started.clone())));
+        let cancel = context.cancel.clone();
+        let run = tokio::spawn(async move {
+            AskAssistant
+                .run(
+                    args(&[("assistant", "planner"), ("task", "Make a plan")]),
+                    &context,
+                )
+                .await
+        });
+        started.notified().await;
+        cancel.cancel();
+        let result = tokio::time::timeout(std::time::Duration::from_secs(1), run)
+            .await
+            .unwrap()
+            .unwrap();
+        assert!(result.unwrap_err().to_string().contains("cancelled"));
+    }
+
     // ---- proposing and web tools ----
 
     #[derive(Default)]

@@ -636,6 +636,7 @@ fn start_turn(
                 cx.web = Some(Arc::new(ChatWeb(nexus_models::web::WebClient::new())));
             }
             cx.kb = kb_source.clone().map(|k| k as Arc<dyn KnowledgeSource>);
+            cx.consultations = Some(Arc::new(super::consultations::AppConsultations(ctx.clone())));
             let request = RouterRequest {
                 user_text: &input.user_text,
                 allowed_tools: tool_names,

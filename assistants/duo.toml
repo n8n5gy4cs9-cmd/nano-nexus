@@ -31,14 +31,14 @@ kind = "router"
 max_hops = 3
 
 [tools]
-allowed = ["read_file", "list_dir", "search_files", "grep_text", "write_file", "edit_file", "search_web", "fetch_url"]
+allowed = ["read_file", "list_dir", "search_files", "grep_text", "write_file", "edit_file", "search_web", "fetch_url", "ask_assistant"]
 
 [ui]
 starters = [
   "What's a good name for a coffee shop?",
   "Explain how a hash map works",
   "Help me debug this error: …",
-  "Compare REST and GraphQL for a small app",
+  "Ask Reviewer to check this supplied code",
 ]
 placeholder = "Ask anything…"
 output = "markdown"
@@ -49,8 +49,9 @@ Your job: answer the user's question clearly and correctly.
 
 ## Steps
 1. Answer the question directly in the first sentence.
-2. Add only the detail that helps: a short example, a few steps, or a code block.
-3. If the request is unclear, ask one short question instead of guessing.
+2. Use tools for file or web facts. Consult planner or reviewer with relevant task text when a plan or second opinion helps.
+3. Add only the detail that helps: a short example, a few steps, or a code block.
+4. If the request is unclear, ask one short question instead of guessing.
 
 ## Format
 Plain language. Short paragraphs or a numbered list. Code in fenced blocks.

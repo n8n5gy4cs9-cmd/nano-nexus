@@ -1,0 +1,41 @@
+{
+  "assistant": "reviewer",
+  "note": "Structural live-model checks; not a substitute for tool-chain regression tests. Not run until a model is available.",
+  "cases": [
+    {
+      "name": "empty-input",
+      "input": "Review this Python code. Requirement: average([]) should return None.\ndef average(xs):\n    return sum(xs) / len(xs)",
+      "checks": {
+        "containsAny": [
+          "empty",
+          "zero",
+          "ZeroDivisionError"
+        ],
+        "maxWords": 220
+      }
+    },
+    {
+      "name": "requirements-mismatch",
+      "input": "Review against the requirement that the greeting include the provided name.\nfunction greet(name) { return \"Hello\"; }",
+      "checks": {
+        "containsAll": [
+          "name"
+        ],
+        "maxWords": 220
+      }
+    },
+    {
+      "name": "unverified-claims",
+      "input": "Review this supplied statement: \"The new cache is 50% faster.\" No benchmark results, code, or test results are supplied.",
+      "checks": {
+        "containsAny": [
+          "benchmark",
+          "evidence",
+          "unverified",
+          "not verified"
+        ],
+        "maxWords": 220
+      }
+    }
+  ]
+}

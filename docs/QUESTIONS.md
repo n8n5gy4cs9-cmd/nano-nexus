@@ -88,3 +88,19 @@ A real Mac build showed the failure: `gguf_init_from_reader: tensor 'output.weig
 - Context: M17 said "HTML is sanitized to text". The owner asked for HTML manuals to render (with a Raw toggle), PDFs staying text.
 - Decision taken (owner request): indexing is unchanged (text). The passage dialog's "Original document" tab reads the file via `kb_document_source` and shows it in a sandboxed iframe (`sandbox=""`, CSP `default-src 'none'`), so no scripts or network. Relative images/CSS inside the manual do not load (srcdoc has no base); only inline styles and `data:` images show.
 - Open: inline the manual's local CSS/images into the iframe (read-only, inside the library folder) if the plain render looks too bare.
+
+## Q-10: Restore models for live assistant and Duo validation (2026-10-22)
+
+Context: deterministic tool, journal-apply, consultation, permission, cancellation, and prompt tests
+pass. Live evaluation cannot start: `scripts/eval-assistants.sh --assistant planner` reports
+`no default model: run node scripts/fetch-model.mjs first, or pass --endpoint`. The vendor model
+folder contains an index only; all three model paths in the current local app database refer
+to missing bundle files. The database was inspected read-only and was not changed.
+
+Options: (a) provide the current local GGUF paths and import/select them; (b) download the desired
+models using the existing model manager; (c) use an existing authenticated loopback runtime for
+the evaluation script. Duo's two-model check needs both chosen models.
+Recommendation: locate/import the owner's existing models first, then rerun T06.13 and T18.02
+and the golden assistant evals. Consultations added in T18.06 run sequentially on the active
+model; concurrent light/strong inference remains unimplemented T18.04.
+Answer (owner): _pending_

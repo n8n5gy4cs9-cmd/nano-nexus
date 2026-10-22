@@ -42,6 +42,7 @@ export function permissionChips(needs: string[]): string[] {
 
 /** Plain names for the tools an assistant may call (Settings → Tools can turn them off). */
 export const TOOL_LABEL: Record<string, string> = {
+  ask_assistant: "Consult Planner or Reviewer",
   read_file: "Read files",
   list_dir: "List folders",
   search_files: "Find files",

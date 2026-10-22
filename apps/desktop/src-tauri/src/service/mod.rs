@@ -7,6 +7,7 @@ pub mod assistants;
 pub mod attachments;
 pub mod chat;
 pub mod coalesce;
+mod consultations;
 pub mod conversations;
 pub mod diagnostics;
 pub mod editor;

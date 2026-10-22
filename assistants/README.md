@@ -27,6 +27,8 @@ their sources: [`docs/architecture/ASSISTANTS.md` §2](../docs/architecture/ASSI
 | `agent.toml` | Agent | router (always routes, 5 hops) | Multi-step jobs: reads, searches, proposes file changes (you apply them), optional web search. Tools can be switched off in Settings → Tools |
 | `duo.toml` | Duo | router (tools, two models) | Light model for easy questions, strong model for hard ones; pick both in Settings |
 | `librarian.toml` | Librarian | router (`kb_search`, always routes) | Answers from offline libraries with verified `[n]` citations; quotes code exactly, names book + page, flags disagreement. See `docs/GUIDE-ASK-YOUR-BOOKS.md` |
+| `planner.toml` | Planner | chat | Text-only plans with acceptance checks; also consulted by Agent/Duo in isolated context |
+| `reviewer.toml` | Reviewer | chat | Reviews supplied work for actionable defects; also consulted by Agent/Duo in isolated context |
 | `_TEMPLATE.toml` | — | — | Starting point for your own assistants (not loaded) |
 | `regex-smith.example.toml` | Regex Smith | chat | Tutorial example (not loaded; import it to try) |
 

@@ -4,7 +4,9 @@
   "additionalProperties": false,
   "required": ["action"],
   "properties": {
-    "action": { "type": "string", "enum": ["answer", "read_file", "list_dir", "search_files", "grep_text", "scan_folder", "file_info", "doc_search", "calculate", "now", "write_file", "edit_file", "move_file", "trash_file", "search_web", "fetch_url"] },
+    "action": { "type": "string", "enum": ["answer", "ask_assistant", "read_file", "list_dir", "search_files", "grep_text", "scan_folder", "file_info", "doc_search", "calculate", "now", "write_file", "edit_file", "move_file", "trash_file", "search_web", "fetch_url"] },
+    "assistant": { "type": "string", "enum": ["planner", "reviewer"] },
+    "task": { "type": "string", "maxLength": 6000 },
     "path": { "type": "string", "maxLength": 1024 },
     "query": { "type": "string", "maxLength": 200 },
     "expression": { "type": "string", "maxLength": 200 },
