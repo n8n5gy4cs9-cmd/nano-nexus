@@ -129,3 +129,18 @@ _Pending._
   calculator, UTC clock, Duo create), checking exact file contents and successful tool traces.
   Full `scripts/check.sh` passes. Final wording can still echo fake tool markup; a factual
   receipt is the next repair, distinct from the now-verified execution.
+
+## Factual receipts and phase close (2026-10-22, T06.18)
+
+- Simple file operations now report actual tool status and paths, including pending Apply,
+  failed apply and Undo guidance. Calculation and clock replies use actual tool facts.
+  Explanatory and open-ended requests retain model inference.
+- Explicit single Planner/Reviewer consultations forward the original task verbatim and return
+  the specialist answer unchanged; parent rewriting had introduced incorrect code claims.
+  Multi-step and multiple-specialist requests retain orchestration.
+- Full `scripts/check.sh` passes: 149 agent tests, 74 app tests (one ignored), 148 frontend tests.
+- The six-scenario ignored service test passes with MiniCPM (9.93 s) and Gemma (59.05 s).
+  It asserts exact file contents, successful tool traces and absence of fake tool markup in
+  simple action confirmations. Unexpected test permission prompts are explicitly denied.
+- Remaining quality, storage and true two-model Duo work is recorded in root `new-tasks.md`
+  and `handoff.md`. No production user database or grants were changed.

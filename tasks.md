@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 228/259 tasks done (88%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 229/260 tasks done (88%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -137,6 +137,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [x] **T06.15** REFE repair: preserve recent tool outcomes under context pressure and reserve final-answer context for tool status before user attachments (2026-10-22; owner request; M06 follow-up). Both regressions reproduced before the fix; full scripts/check.sh passes.
 - [x] **T06.16** Real-model argument/schema repair and chat-service regression: Agent create/read/edit, Reviewer consultation, and Duo file creation through real routing and journal apply; use model files in place (2026-10-22; owner request; M06 follow-up). Reproduced missing content on real Gemma, repaired per-action required arguments, passed real Agent/Duo create/edit/consultation on Gemma and MiniCPM; full scripts/check.sh green.
 - [x] **T06.17** Repair tool intent/completion: arithmetic and clock routing, one bounded correction for premature/repeated reads before file changes, and truthful incomplete status; real chat-service coverage (2026-10-22). Intent and repeated-read regressions failed before repair; six live MiniCPM scenarios and full scripts/check.sh pass.
+- [x] **T06.18** Ground simple action confirmations in actual tool receipts (applied/pending/failed paths, calculate/clock facts); preserve explicit specialist tasks and answers verbatim (2026-10-22).
 
 ## M07: Model manager and downloads · [spec](docs/milestones/M07-models.md) · [contract](docs/architecture/MODEL-MANAGER.md)
 - [x] **T07.01** GGUF header parser (guards) + fixture writer + tests (+ ignored real-model test) (2026-10-11)

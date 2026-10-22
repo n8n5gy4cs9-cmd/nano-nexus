@@ -10,6 +10,7 @@ pub mod internal;
 pub mod jobs;
 pub mod pipelines;
 pub mod prompt;
+pub mod receipt;
 pub mod registry;
 pub mod router;
 pub mod spec;

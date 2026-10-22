@@ -107,3 +107,18 @@ trash only for those explicit requests). Do not execute a repeated call twice. I
 was proposed/applied, return a deterministic incomplete report rather than a generated success
 claim. Explanatory questions and general writing do not trigger this correction.
 Current clock questions call the available `now` tool directly before the final answer.
+
+T06.18 separates execution receipts from generative explanation. In live tests MiniCPM can echo
+XML tool calls and invent future writes even after a successful journal apply. For simple explicit
+file-action requests, render the actual mutation summaries and paths, with pending Apply guidance
+and undo guidance for applied changes. For pure successful calculator/clock results, return the
+trusted facts. Requests explicitly asking why/explanation, and non-action results, keep their
+existing generative path. Preserve tool/change cards, permission checks, and exact apply state.
+Test applied/pending/failed receipts and assert live simple action answers contain no internal
+function/tool-result markup. No model copies, new dependencies, or filesystem side channels.
+
+Explicit single-specialist requests also forward the user task verbatim and end after that
+consultation. Return the child answer directly; a parent rewrite had introduced unsupported
+claims and unnecessary follow-up tool attempts. Keep multi-specialist/multi-step orchestration
+on the parent path. Tests must deny unexpected grants in isolated live fixtures rather than
+waiting for UI consent or auto-approving model-invented paths.

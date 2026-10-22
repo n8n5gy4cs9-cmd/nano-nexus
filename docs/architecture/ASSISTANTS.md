@@ -196,7 +196,9 @@ write: ADR-016); `ask_assistant(assistant, task)` consults enabled `planner` or 
 request (6 000 characters, child output ≤ 768 tokens). Children get no history or tools and cannot
 recursively delegate. Parent cancellation stops the consultation. The active model runs consultations
 sequentially through the existing scheduler; this is independent of concurrent-model Duo (T18.04).
-Agent and Duo declare it; Settings → Tools can disable it.
+Agent and Duo declare it; Settings → Tools can disable it. Explicit single-specialist requests
+forward the user's task verbatim and return the child answer without parent rewriting or invented
+follow-up tools. Multi-step/multi-specialist requests keep the parent orchestration path.
 
 Web tools `search_web(query)`, `fetch_url(url)` (only when Settings → Tools → Allow web
 access is on). The router also routes on *intent* when the assistant has the matching tools ("save that as notes.txt", "what's the latest …"), is given the assistant's previous answer so "save that" has content, and gets 3 500 tokens (not 160) when `write_file`/`edit_file` is allowed. A proposal adds a **Review** chip that opens Changes, where Apply is. Settings → Tools can turn off any tool an assistant declares (`tools.disabled`).
@@ -204,6 +206,9 @@ access is on). The router also routes on *intent* when the assistant has the mat
 Tool observations share a 2 400-token budget, with newest results first. Final-answer context
 reserves space for those observations before user attachments so a large read or attachment cannot
 hide the latest permission failure or the distinction between proposed and applied changes.
+Simple explicit file-action confirmations use trusted summaries and paths, including pending Apply
+and undo guidance, instead of asking the model to narrate tool execution. Pure calculator/clock
+answers use their returned facts. Explicit explanation requests retain the generative path.
 
 Tool descriptions follow Anthropic's tool-design advice ("make tools hard to misuse"): one verb,
 absolute paths, small outputs with truncation notes ("…and 120 more files"). Error messages are

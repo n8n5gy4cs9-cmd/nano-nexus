@@ -1,3 +1,77 @@
+# NanoNexus repair handoff — 2026-10-22
+
+## Phase outcome
+
+Repairs were implemented directly on main using local `REFE/pi-main` agent-loop and
+subagent examples as behavioral references. Native Rust ports preserve Journal.apply,
+permission checks, scheduler ownership and loopback-only runtime access. No dependencies added.
+The user requested closing this phase with remaining work documented due usage limits.
+
+Completed commits before this final T06.18 commit:
+
+- `34847b1` T06.14: real tool observations feed subsequent agent decisions; exact edit whitespace.
+- `4e0c81c` T06.15: recent tool observations survive context pressure and large attachments.
+- `2b81d51` T18.06: Planner/Reviewer built-ins and bounded isolated ask_assistant consultations.
+- `bbde86f` T06.16: per-action required-argument schemas and real service regression test.
+- `24214e5` T06.17: calculator/clock routing and bounded incomplete file-task recovery.
+- T06.18: factual operation receipts and verbatim explicit specialist task/answer handling.
+
+There are 22 built-in assistants. Specialist children have no tools or shared history;
+consultations are cancellable, sequential and use the active model. True concurrent
+two-model Duo is unfinished. Assistant reasoning quality is not uniformly passing.
+
+## Models and disk constraints
+
+Only the default MiniCPM was downloaded (~1.1 GB, SHA verified):
+`vendor/models/minicpm5-1b-fable5-v2-q8/MiniCPM5-1B-Claude-Opus-Fable5-V2-Thinking-Q8_0.gguf`.
+The dev default was set through `scripts/fetch-model.mjs`.
+
+Use Gemma directly at:
+`/Users/harriahola/Downloads/gemma-4-E4B-it-ultra-uncensored-heretic-Q5_K_M.gguf`.
+No Gemma copy or third Qwen download was made. User removed duplicate model bundles due SSD
+space. Do not recreate them. The production app database still contains three stale model
+paths under deleted dist-bundles files; it was inspected read-only and not changed.
+Fix external reference removal before configuring those references in the production app.
+
+## Verification
+
+`scripts/check.sh` passed after the final source changes: Rust fmt/clippy/tests, prompt lint,
+frontend lint/typecheck and 148 frontend tests. Agent tests: 149; app tests: 74 plus one ignored.
+Full output: `/tmp/nano-nexus-check-receipts.log`.
+
+Run the real service scenario from the repository root (requires a loopback server):
+
+```sh
+NEXUS_MODEL=/absolute/path/to/model.gguf cargo test -p nano-nexus --lib real_model_agent_and_duo_apply_files_and_consult_a_specialist -- --ignored --test-threads=1 --nocapture
+```
+
+Check the app crate package name in Cargo.toml if the command's package selector changes.
+The test uses an isolated database, temporary granted folder and test-only automatic Apply.
+It verifies create/read-edit exact bytes, Reviewer consultation, calculator 441, actual UTC
+clock and Duo creation. Both models passed: MiniCPM 9.93 s, Gemma 59.05 s. Logs:
+`/tmp/nano-nexus-minicpm-receipts.log`, `/tmp/nano-nexus-gemma-receipts.log`.
+No production grants/settings were modified and no app bundle was installed.
+
+Golden evaluation: `scripts/eval-assistants.sh --json /tmp/nano-nexus-assistant-eval.json`.
+Captured repeat: `/tmp/nano-nexus-assistant-eval-captured.json` and
+`/tmp/nano-nexus-golden-responses.jsonl`. Temporary logs may disappear; the durable findings
+are in `docs/SPIKES.md` and `new-tasks.md`. Do not weaken golden assertions.
+
+## Next work and boundaries
+
+Start with the external-model reference deletion bug in `new-tasks.md` using temporary
+fixtures only, then copy-free import UI and real two-model switching. Read the applicable
+milestone/contracts and skills, add planned tasks without rewriting completed history,
+verify, commit and push each task to main. Never commit models/vendor/build outputs.
+
+Pre-existing local `.gitignore` changes and untracked `.agents/` were preserved and excluded
+from repair commits. Generated bindings were not hand-edited. Q10/Q11 in QUESTIONS and
+ASSISTANTS/M06/M18 document model locations, schema rationale and consultation behavior.
+
+---
+
+## Historical handoff (superseded; retained for context)
+
 # Handoff (session ending 2026-10-11, second session)
 
 Read `CLAUDE.md` / `AGENTS.md` first. Work directly on `main`, one task = one commit, no PRs, no model names in commits.

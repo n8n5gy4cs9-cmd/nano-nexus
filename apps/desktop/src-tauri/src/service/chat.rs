@@ -657,6 +657,9 @@ fn start_turn(
                     "No file change was proposed or applied. The assistant stopped before completing the requested change. Last step: {reason}."
                 ));
             }
+            if early_text.is_none() {
+                early_text = nexus_agent::receipt::tool_receipt(&input.user_text, &routed.runs);
+            }
             if !routed.runs.is_empty() {
                 input.system_prompt.push_str("\nThe tool steps below have already finished. Report the observed results and any required Apply action. Do not print tool calls or promise future tool execution.");
             }
@@ -1016,15 +1019,25 @@ mod tests {
         let sent = send(ctx, &Caller::Desktop, request, Arc::new(sink.clone())).map_err(|e| e.to_string())?;
         let wait = async {
             while ctx.chats.is_running(&sent.assistant_message_id) {
+                for pending in ctx.broker.open_requests() {
+                    super::super::permissions::respond(
+                        ctx,
+                        &pending.id,
+                        super::super::permissions::Decision::Deny,
+                    )
+                    .map_err(|e| e.to_string())?;
+                }
                 tokio::time::sleep(Duration::from_millis(100)).await;
             }
+            Ok::<(), String>(())
         };
-        if tokio::time::timeout(Duration::from_secs(180), wait)
-            .await
-            .is_err()
-        {
+        let failure = match tokio::time::timeout(Duration::from_secs(180), wait).await {
+            Ok(result) => result.err(),
+            Err(_) => Some(format!("{assistant} turn timed out")),
+        };
+        if let Some(error) = failure {
             stop(ctx, &sent.assistant_message_id);
-            return Err(format!("{assistant} turn timed out"));
+            return Err(error);
         }
         let messages = ctx
             .store
@@ -1038,7 +1051,17 @@ mod tests {
         if answer.status != MessageStatus::Done {
             return Err(format!("{assistant} did not finish: {:?}", answer.error));
         }
-        Ok(sink.events())
+        let events = sink.events();
+        let factual_action = events.iter().any(|event| {
+            matches!(event,
+            ChatEvent::ToolResult { tool, ok: true, .. }
+                if matches!(tool.as_str(), "write_file" | "edit_file" | "calculate" | "now"))
+        });
+        if factual_action && (answer.content.contains("<function") || answer.content.contains("<tool_result"))
+        {
+            return Err("simple action answer leaked internal tool markup".into());
+        }
+        Ok(events)
     }
 
     #[tokio::test]

@@ -38,3 +38,9 @@ to the existing tool budget; propagate parent cancellation. Existing hop and rep
 Verify dispatch through the real tool registry, invalid/recursive targets, task/output limits,
 cancellation, isolated request construction, enabled-state checks, and prompt lint for both new
 assistants. Keep all file changes in the parent proposal/journal flow. No new dependencies.
+
+T06.18 follow-up: explicit single-specialist requests are forwarded verbatim, without a parent
+model rewrite, and the child response is returned directly. Multi-step/multi-specialist requests
+retain parent orchestration. This removes an observed case where the parent inserted incorrect
+claims into the review task. Simple file operations and clock/calculator replies now use factual
+receipts; this preserves applied/pending state and prevents fake XML calls in confirmations.

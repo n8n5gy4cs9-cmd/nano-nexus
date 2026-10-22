@@ -361,6 +361,47 @@ pub fn needs_tools_for(
         || (has(&["search_web", "fetch_url"]) && WEB_PHRASES.iter().any(|p| lower.contains(p)))
 }
 
+pub(crate) fn requested_specialist(input: &str) -> Option<&'static str> {
+    let lower = input.to_lowercase();
+    let text = lower.trim().strip_prefix("please ").unwrap_or(lower.trim());
+    let text = text
+        .strip_prefix("can you ")
+        .or_else(|| text.strip_prefix("could you "))
+        .unwrap_or(text);
+    crate::tools::CONSULTANTS
+        .into_iter()
+        .find(|id| text.starts_with(&format!("ask {id}")) || text.starts_with(&format!("consult {id}")))
+}
+
+pub(crate) fn simple_consultation(input: &str) -> bool {
+    let lower = input.to_lowercase();
+    requested_specialist(input).is_some()
+        && crate::tools::CONSULTANTS
+            .iter()
+            .filter(|id| {
+                lower
+                    .split(|c: char| !c.is_alphanumeric())
+                    .any(|word| word == **id)
+            })
+            .count()
+            == 1
+        && !lower.contains(" then ")
+        && ![
+            "and create",
+            "and write",
+            "and save",
+            "and edit",
+            "and change",
+            "and fix",
+            "and move",
+            "and delete",
+            "and ask",
+            "and review",
+        ]
+        .iter()
+        .any(|s| lower.contains(s))
+}
+
 fn clock_requested(input: &str) -> bool {
     let lower = input.to_lowercase();
     let words: Vec<&str> = lower
@@ -374,7 +415,7 @@ fn clock_requested(input: &str) -> bool {
 }
 
 /// Conservative completion guard for explicit file-change instructions, not general writing questions.
-fn file_change_requested(input: &str, allowed: &[String]) -> bool {
+pub(crate) fn file_change_requested(input: &str, allowed: &[String]) -> bool {
     let lower = input.to_lowercase();
     let text = lower.trim().strip_prefix("please ").unwrap_or(lower.trim());
     let text = text
@@ -428,7 +469,7 @@ fn completion_tools(input: &str, allowed: &[String], has_read: bool) -> Vec<Stri
         .collect()
 }
 
-fn is_file_change(tool: &str) -> bool {
+pub(crate) fn is_file_change(tool: &str) -> bool {
     matches!(tool, "write_file" | "edit_file" | "move_file" | "trash_file")
 }
 
@@ -757,7 +798,20 @@ pub async fn run_router(
             && req.allowed_tools[0] == "kb_search"
             && !req.user_text.trim().is_empty();
         let forced_clock = outcome.runs.is_empty() && has_tool("now") && clock_requested(req.user_text);
-        let mut decision = if forced_clock {
+        let explicit_consultation = outcome.runs.is_empty() && has_tool("ask_assistant");
+        let specialist = if explicit_consultation {
+            requested_specialist(req.user_text)
+        } else {
+            None
+        };
+        let mut decision = if let Some(assistant) = specialist {
+            RouterAction {
+                action: "ask_assistant".into(),
+                assistant: Some(assistant.into()),
+                task: Some(req.user_text.to_owned()),
+                ..RouterAction::default()
+            }
+        } else if forced_clock {
             RouterAction {
                 action: "now".into(),
                 ..RouterAction::default()
@@ -896,7 +950,12 @@ pub async fn run_router(
             ok: run.ok,
         });
         let stop_after = matches!(&run, ToolRun { ok: false, .. }) && is_permission_stop(&run.llm_text);
+        let consultation_finished = run.tool == "ask_assistant" && simple_consultation(req.user_text);
         outcome.runs.push(run);
+        if consultation_finished {
+            outcome.stopped = "answer".into();
+            break;
+        }
         if stop_after {
             // A declined or ungranted folder: answer now so the assistant can explain, instead of retrying.
             outcome.stopped = "answer".into();
@@ -1570,6 +1629,52 @@ mod tests {
         assert_eq!(o.stopped, "max_hops");
         assert_eq!(o.runs.len(), 3);
         assert_eq!(llm.calls(), 3);
+    }
+
+    struct VerbatimSpecialist(Mutex<Option<String>>);
+
+    #[async_trait]
+    impl crate::tools::ConsultationSource for VerbatimSpecialist {
+        async fn consult(
+            &self,
+            _assistant: &str,
+            task: &str,
+            _cancel: CancellationToken,
+        ) -> Result<String, String> {
+            *self.0.lock().unwrap() = Some(task.into());
+            Ok("Concrete finding from the supplied code".into())
+        }
+    }
+
+    #[tokio::test]
+    async fn explicit_consultations_forward_the_users_task_without_rewriting_it() {
+        let (d, mut cx) = setup(false);
+        let source = Arc::new(VerbatimSpecialist(Mutex::new(None)));
+        cx.consultations = Some(source.clone());
+        let text = "Ask Reviewer to review this exact code: def avg(xs): return sum(xs)/len(xs)";
+        let mut request = req(text, d.path());
+        request.allowed_tools = vec!["ask_assistant".into()];
+        let llm = Scripted::new(vec![]);
+        let outcome = run_router(
+            request,
+            &llm,
+            &builtin_tools(),
+            &cx,
+            &VecSink::<ChatEvent>::default(),
+            CancellationToken::new(),
+        )
+        .await;
+        assert_eq!(source.0.lock().unwrap().as_deref(), Some(text));
+        assert!(outcome.runs[0].ok);
+        assert_eq!(
+            llm.calls(),
+            0,
+            "no parent task rewrite or invented follow-up step"
+        );
+        assert!(!simple_consultation("Explain how to ask Reviewer for feedback"));
+        assert!(!simple_consultation(
+            "Ask Reviewer to review, then create report.md"
+        ));
     }
 
     #[tokio::test]

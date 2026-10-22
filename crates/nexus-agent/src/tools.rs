@@ -1008,7 +1008,7 @@ impl Tool for Now {
         Ok(ToolOutput {
             llm_text: format!("<tool_result name=\"now\">\n{t}\n</tool_result>"),
             ui: None,
-            summary: "Checked the time".into(),
+            summary: format!("Current date and time: {t}"),
         })
     }
 }
