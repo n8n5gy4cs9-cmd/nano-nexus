@@ -49,6 +49,8 @@ export function ModelsPage() {
   const [detail, setDetail] = useState<InstalledModel | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<InstalledModel | null>(null);
   const [tab, setTab] = useState("installed");
+  const [importOpen, setImportOpen] = useState(false);
+  const [copyImport, setCopyImport] = useState(false);
   const [pack, setPack] = useState<"export" | "import" | null>(null);
   const refresh = () => void qc.invalidateQueries({ queryKey: ["models"] });
 
@@ -83,12 +85,15 @@ export function ModelsPage() {
     onError: fail,
   });
   const importFile = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (copy: boolean) => {
       const path = await api.models.pickFile();
-      return path ? api.models.import(path, true) : null;
+      return path ? api.models.import(path, copy) : null;
     },
     onSuccess: (m) => {
-      if (m) toast.success(`Added “${m.name}”.`);
+      if (m) {
+        toast.success(`Added “${m.name}”.`);
+        setImportOpen(false);
+      }
       refresh();
     },
     onError: fail,
@@ -149,7 +154,7 @@ export function ModelsPage() {
             <Button size="sm" disabled={addFolder.isPending} onClick={() => addFolder.mutate()}>
               <FolderPlus /> Add folder
             </Button>
-            <Button size="sm" disabled={importFile.isPending} onClick={() => importFile.mutate()}>
+            <Button size="sm" disabled={importFile.isPending} onClick={() => { setCopyImport(false); setImportOpen(true); }}>
               <Upload /> Add a .gguf file
             </Button>
             <Button size="sm" onClick={() => setPack("import")}>
@@ -235,6 +240,26 @@ export function ModelsPage() {
       </Tabs>
 
       {pack === "export" ? <ExportPackDialog models={installed.data ?? []} onClose={() => setPack(null)} /> : null}
+      {importOpen ? (
+        <Dialog open onOpenChange={(open) => !importFile.isPending && setImportOpen(open)}>
+          <DialogContent aria-describedby="local-import-desc">
+            <DialogTitle>Add a model file</DialogTitle>
+            <DialogDescription id="local-import-desc">
+              Use the existing file without taking extra disk space. Allow Read access when asked, and keep the file in this location.
+            </DialogDescription>
+            <label className="flex items-start gap-2 text-body">
+              <input type="checkbox" checked={copyImport} onChange={(e) => setCopyImport(e.target.checked)} disabled={importFile.isPending} />
+              <span>Copy the model into NanoNexus<span className="block text-small text-muted">Optional: uses extra disk space so the original can be moved or disconnected.</span></span>
+            </label>
+            <DialogFooter>
+              <Button disabled={importFile.isPending} onClick={() => setImportOpen(false)}>Cancel</Button>
+              <Button variant="primary" disabled={importFile.isPending} onClick={() => importFile.mutate(copyImport)}>
+                {importFile.isPending ? "Adding…" : "Choose model file"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      ) : null}
       {pack === "import" ? <ImportPackDialog onClose={() => setPack(null)} /> : null}
       {detail ? <ModelDrawer m={detail} onClose={() => setDetail(null)} /> : null}
       {confirmDelete ? (

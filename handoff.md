@@ -1,3 +1,12 @@
+## Copy-free import completion — 2026-10-22
+
+T07.13: local-file/pack imports default to reference, with explicit copy and existing Read
+broker consent before parsing. Per-member pack checks preserve nested denies. Full check
+passes: 78 app tests + 151 frontend tests; `/tmp/nano-nexus-check-copy-free-final.log`.
+No model duplicated/downloaded, no production database changes. Next: reliable small-model
+behavior/defaults, optional evaluated skills, project workflow, Duo and performance work in
+new-tasks.md. The owner's project-coding addition remains intact.
+
 ## Continuation — 2026-10-22
 
 T07.12 repairs external-model removal (including legacy rows): explicit copy/reference

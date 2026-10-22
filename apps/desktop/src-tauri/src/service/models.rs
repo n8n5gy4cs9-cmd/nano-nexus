@@ -845,6 +845,33 @@ pub fn delete(ctx: &AppCtx, caller: &Caller, id: &str) -> Result<(), NexusError>
     Ok(())
 }
 
+// Reference consent uses the existing broker; deny rules never become prompts.
+async fn reference_read(ctx: &Ctx, path: &Path) -> Result<PathBuf, NexusError> {
+    match ctx.perms.check("user", path, Access::Read) {
+        Ok(c) => return Ok(c.into_path_buf()),
+        Err(nexus_fs::FsError::NoGrant { .. }) => {}
+        Err(e) => return Err(e.into()),
+    }
+    let decision = super::permissions::ask(
+        ctx,
+        super::permissions::PermissionRequest {
+            id: nexus_core::ids::MessageId::new().0,
+            assistant: "Model Manager".into(),
+            path: path.display().to_string(),
+            needed: Access::Read,
+            reason: Some("to use this model in place without copying its files".into()),
+            requested_by: None,
+        },
+    )
+    .await;
+    if decision == super::permissions::Decision::Deny {
+        return Err(NexusError::PermissionDenied(
+            "Read access is required to reference this model. No model was added.".into(),
+        ));
+    }
+    Ok(ctx.perms.check("user", path, Access::Read)?.into_path_buf())
+}
+
 /// Add a local `.gguf`: copied into the app's folder, or referenced in place (needs a Read grant).
 pub async fn import_local(
     ctx: &Ctx,
@@ -853,7 +880,11 @@ pub async fn import_local(
     copy: bool,
 ) -> Result<InstalledModel, NexusError> {
     desktop_only(caller)?;
-    let src = PathBuf::from(path);
+    let src = if copy {
+        PathBuf::from(path)
+    } else {
+        reference_read(ctx, Path::new(path)).await?
+    };
     let ctx2 = Arc::clone(ctx);
     let id = tokio::task::spawn_blocking(move || -> Result<String, NexusError> {
         let meta = gguf::parse_file(&src)
@@ -1008,10 +1039,28 @@ pub async fn import_pack(
     progress: Arc<dyn Fn(PackProgress) + Send + Sync>,
 ) -> Result<PackImport, NexusError> {
     desktop_only(caller)?;
-    let dir = PathBuf::from(path);
+    let dir = if copy {
+        PathBuf::from(path)
+    } else {
+        reference_read(ctx, Path::new(path)).await?
+    };
     if !copy {
-        // Using the files where they are is a read of that folder: it needs the same grant as any other read.
-        ctx.perms.check("user", &dir, Access::Read)?;
+        let preflight_ctx = Arc::clone(ctx);
+        let pack_dir = dir.clone();
+        tokio::task::spawn_blocking(move || -> Result<(), NexusError> {
+            preflight_ctx
+                .perms
+                .check("user", &pack_dir.join("pack.json"), Access::Read)?;
+            let manifest = pack::read_pack(&pack_dir).map_err(models_err)?;
+            for model in manifest.models {
+                preflight_ctx
+                    .perms
+                    .check("user", &pack_dir.join("models").join(model.path), Access::Read)?;
+            }
+            Ok(())
+        })
+        .await
+        .map_err(|e| NexusError::Internal(e.to_string()))??;
     }
     let ctx2 = Arc::clone(ctx);
     let models_dir = ctx.paths.models.clone();
@@ -1551,6 +1600,104 @@ mod tests {
         delete(&ctx, &Caller::Desktop, &referenced.id).unwrap();
     }
 
+    #[tokio::test]
+    async fn referenced_pack_members_obey_nested_denies() {
+        let dir = tempfile::tempdir().unwrap();
+        let ctx = AppState::for_tests(dir.path());
+        let pack_dir = dir.path().join("pack");
+        let member = pack_dir.join("models/a/a.gguf");
+        std::fs::create_dir_all(member.parent().unwrap()).unwrap();
+        let bytes = model_bytes();
+        std::fs::write(&member, &bytes).unwrap();
+        std::fs::write(pack_dir.join("pack.json"), json!({
+            "schema": 1, "kind": "model-pack", "name": "fixture", "created_at": "test",
+            "models": [{"id": "a", "name": "A", "path": "a/a.gguf", "sha256": sha(&bytes), "bytes": bytes.len()}]
+        }).to_string()).unwrap();
+        super::super::fs::grant_add(
+            &ctx,
+            &Caller::Desktop,
+            pack_dir.to_str().unwrap(),
+            nexus_core::fs::GrantLevel::Read,
+            true,
+            None,
+            None,
+        )
+        .unwrap();
+        ctx.perms
+            .add_user_deny(member.parent().unwrap().to_path_buf(), "nested deny");
+        assert_eq!(
+            import_pack(
+                &ctx,
+                &Caller::Desktop,
+                pack_dir.to_str().unwrap(),
+                false,
+                "fixture",
+                Arc::new(|_| {})
+            )
+            .await
+            .unwrap_err()
+            .code(),
+            ErrorCode::PathDenied
+        );
+        assert!(ctx.store.list_models().unwrap().is_empty());
+        assert_eq!(std::fs::read(&member).unwrap(), bytes);
+    }
+
+    #[tokio::test]
+    async fn reference_consent_precedes_parsing_and_denies_cannot_be_overridden() {
+        let dir = tempfile::tempdir().unwrap();
+        let ctx = AppState::for_tests(dir.path());
+        let src = dir.path().join("model.gguf");
+        std::fs::write(&src, b"not a GGUF").unwrap();
+        let mut events = ctx.bus.subscribe();
+        let c = ctx.clone();
+        let input = src.clone();
+        let pending =
+            tokio::spawn(
+                async move { import_local(&c, &Caller::Desktop, input.to_str().unwrap(), false).await },
+            );
+        let AppEvent::PermissionRequest(req) = events.recv().await.unwrap() else {
+            panic!("expected consent before parsing");
+        };
+        super::super::permissions::respond(&ctx, &req.id, super::super::permissions::Decision::Deny).unwrap();
+        assert_eq!(
+            pending.await.unwrap().unwrap_err().code(),
+            ErrorCode::PermissionDenied
+        );
+        assert!(ctx.store.list_models().unwrap().is_empty());
+        std::fs::write(&src, model_bytes()).unwrap();
+        let c = ctx.clone();
+        let input = src.clone();
+        let pending =
+            tokio::spawn(
+                async move { import_local(&c, &Caller::Desktop, input.to_str().unwrap(), false).await },
+            );
+        let AppEvent::PermissionRequest(req) = events.recv().await.unwrap() else {
+            panic!("expected consent");
+        };
+        super::super::permissions::respond(
+            &ctx,
+            &req.id,
+            super::super::permissions::Decision::AllowFolder {
+                level: nexus_core::fs::GrantLevel::Read,
+            },
+        )
+        .unwrap();
+        let model = pending.await.unwrap().unwrap();
+        assert_eq!(model.removal, Removal::Unlink);
+        assert_eq!(std::fs::read_dir(&ctx.paths.models).unwrap().count(), 0);
+        assert!(ctx.store.get_model(&model.id).unwrap().is_some());
+        ctx.perms.add_user_deny(dir.path().to_path_buf(), "test deny");
+        assert_eq!(
+            import_local(&ctx, &Caller::Desktop, src.to_str().unwrap(), false)
+                .await
+                .unwrap_err()
+                .code(),
+            ErrorCode::PathDenied
+        );
+        assert!(ctx.broker.open_requests().is_empty());
+    }
+
     #[cfg(unix)]
     #[tokio::test]
     async fn owned_model_symlink_escape_is_unlinked_without_deleting_target() {
@@ -1604,14 +1751,23 @@ mod tests {
             .await
             .is_err()
         );
-        // Referencing in place needs a grant.
+        // Declining reference consent adds no registry row.
+        let mut events = ctx.bus.subscribe();
+        let c = ctx.clone();
+        let input = src.clone();
+        let pending =
+            tokio::spawn(
+                async move { import_local(&c, &Caller::Desktop, input.to_str().unwrap(), false).await },
+            );
+        let AppEvent::PermissionRequest(req) = events.recv().await.unwrap() else {
+            panic!("expected consent");
+        };
+        super::super::permissions::respond(&ctx, &req.id, super::super::permissions::Decision::Deny).unwrap();
         assert_eq!(
-            import_local(&ctx, &Caller::Desktop, src.to_str().unwrap(), false)
-                .await
-                .unwrap_err()
-                .code(),
+            pending.await.unwrap().unwrap_err().code(),
             ErrorCode::PermissionDenied
         );
+        assert_eq!(ctx.store.list_models().unwrap().len(), 1);
 
         let nas = dir.path().join("nas");
         std::fs::create_dir_all(&nas).unwrap();

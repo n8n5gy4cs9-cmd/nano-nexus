@@ -496,13 +496,19 @@ node scripts/fetch-model.mjs --list</code></pre>
 
 <h2 id="packs">6 · Add models later, without rebuilding <span class="badge b-now">Available now</span></h2>
 <p>A <b>model pack</b> is a folder with <code>pack.json</code> plus GGUF files. It works for macOS and Windows installs alike.</p>
+<h3>Add a GGUF you already have</h3>
+<p>Open <b>Models → Add a .gguf file → Choose model file</b>. By default NanoNexus uses
+that file directly. Allow the Read request to inspect and use it. No second model file is
+created. Keep it in the same location; removing its entry from NanoNexus preserves the original.
+For an independent copy, check <b>Copy the model into NanoNexus</b> before choosing the file.
+Deleting that copy frees its space. Switch away from an active model before removing it.</p>
 <h3>Make a pack</h3>
 <pre><code>node scripts/make-model-pack.mjs --id gemma-4-e4b-q4 --id qwen3.5-4b-q4 --out /Volumes/USB
 <span class="c"># or in the app: Models → select models → Export model pack…</span></code></pre>
 <h3>Install a pack (offline)</h3>
 <ol class="steps">
   <li>Plug in the USB drive. In NanoNexus open <b>Models → Import model pack…</b> and choose the <code>NanoNexus-ModelPack-…</code> folder.</li>
-  <li>Choose <b>Copy into NanoNexus</b> (recommended) or <b>Use from this folder</b> (saves disk, but the drive must stay connected).</li>
+  <li>Leave <b>Copy the models into NanoNexus</b> off to use the existing files and save disk space. Allow Read access when asked and keep the drive connected. Turn copying on only if you want an independent copy.</li>
   <li>Every file is SHA-256-verified, and tampered or corrupted files are rejected. The models then appear under Installed.</li>
 </ol>
 <p>You can also add a whole folder of GGUFs as a watched <b>extra model folder</b>: Settings → Models → Extra folders (for example, a NAS share).</p>

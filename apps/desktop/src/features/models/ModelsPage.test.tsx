@@ -188,7 +188,7 @@ test("Import model pack: picks a folder, shows progress, then the result", async
   await screen.findByText(/1 imported, 1 failed/);
   expect(screen.getByText(/b: checksum mismatch/)).toBeTruthy();
   const call = t.calls.find((c) => c.command === "models_pack_import");
-  expect(call?.args).toMatchObject({ path: "/Volumes/USB/NanoNexus-ModelPack-studio", copy: true });
+  expect(call?.args).toMatchObject({ path: "/Volumes/USB/NanoNexus-ModelPack-studio", copy: false });
   expect(typeof (call?.args as { jobId?: unknown }).jobId).toBe("string");
 });
 
@@ -205,4 +205,27 @@ test("Export model pack: all non-discovered models are preselected and the pack 
   fireEvent.click(screen.getByRole("button", { name: /Choose folder and export/ }));
   await screen.findByText(/Done: 1 model/);
   expect(t.calls.find((c) => c.command === "models_pack_export")?.args).toMatchObject({ ids: ["a"], dest: "/Volumes/USB", name: "models" });
+});
+
+
+test.each([false, true])("local import defaults to reference, with explicit copy=%s", async (copy) => {
+  const t = mount({
+    models_pick_file: () => "/Downloads/model.gguf",
+    models_import: () => installed({ source: "import", removal: copy ? "delete" : "unlink" }),
+  });
+  fireEvent.click(await screen.findByRole("button", { name: "Add a .gguf file" }));
+  const checkbox = screen.getByRole("checkbox", { name: /Copy the model into/ });
+  expect((checkbox as HTMLInputElement).checked).toBe(false);
+  expect(t.calls.some((c) => c.command === "models_import")).toBe(false);
+  if (copy) fireEvent.click(checkbox);
+  fireEvent.click(screen.getByRole("button", { name: "Choose model file" }));
+  await waitFor(() => expect(t.calls.find((c) => c.command === "models_import")?.args).toMatchObject({ path: "/Downloads/model.gguf", copy }));
+  await waitFor(() => expect(screen.queryByRole("button", { name: "Choose model file" })).toBeNull());
+});
+
+test("cancelling local import never picks or adds a model", async () => {
+  const t = mount({});
+  fireEvent.click(await screen.findByRole("button", { name: "Add a .gguf file" }));
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  expect(t.calls.some((c) => ["models_pick_file", "models_import"].includes(c.command))).toBe(false);
 });

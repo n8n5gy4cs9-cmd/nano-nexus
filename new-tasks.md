@@ -9,7 +9,7 @@ ends at T06.18. Read `handoff.md` before continuing.
   Acceptance: removing a reference preserves external bytes; owned copies still delete;
   bundled protection, active-model guard, canonical paths and deny rules remain enforced.
   Never test destructive removal against the user's Downloads model.
-- [ ] **P1 — Avoid duplicate model imports.** ModelsPage currently calls import with `true`.
+- [x] **P1 — Avoid duplicate model imports (T07.13, 2026-10-22).** ModelsPage currently calls import with `true`.
   Offer use-in-place by default and explicit copy, with existing read-permission consent.
   Test denied permission and reference persistence without copying bytes. Review pack import
   defaults too. Do not download a third model or duplicate Gemma.
@@ -121,3 +121,10 @@ assert external bytes and missing-reference removal; no user model was removed/c
 Full `scripts/check.sh` passed (76 app tests, 148 frontend tests), including permission and
 Journal/Undo suites. Log: `/tmp/nano-nexus-check-model-ownership.log`.
 Doctor passed with only the existing unset local signing identity warning.
+
+T07.13: local-file and pack dialogs now default to references and offer explicit copying.
+Existing permission broker obtains Read consent before reference parsing; protected paths
+fail without prompting. Pack manifest/member preflight respects nested deny rules. UI tests
+assert default/reference, explicit copy and cancel; service tests assert deny/allow, no copied
+bytes, registry persistence and nested pack denial. Full scripts/check.sh passed (78 app
+tests, 151 frontend tests); `/tmp/nano-nexus-check-copy-free-final.log`.

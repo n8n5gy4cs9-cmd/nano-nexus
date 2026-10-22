@@ -129,7 +129,7 @@ export function ExportPackDialog({ models, onClose }: { models: InstalledModel[]
 export function ImportPackDialog({ onClose }: { onClose: () => void }) {
   const qc = useQueryClient();
   const { progress, busy, run, cancel } = usePackJob<PackImport>();
-  const [copy, setCopy] = useState(true);
+  const [copy, setCopy] = useState(false);
   const [report, setReport] = useState<PackImport | null>(null);
 
   const start = async () => {
@@ -160,13 +160,13 @@ export function ImportPackDialog({ onClose }: { onClose: () => void }) {
             ))}
           </div>
         ) : busy ? (
-          <JobProgress p={progress} verb="Copying" />
+          <JobProgress p={progress} verb={copy ? "Copying" : "Checking"} />
         ) : (
           <label className="flex items-start gap-2 text-body">
             <input type="checkbox" className="mt-1" checked={copy} onChange={(e) => setCopy(e.target.checked)} />
             <span>
               Copy the models into NanoNexus
-              <span className="block text-small text-muted">Turn this off to use the files where they are. The drive then has to stay connected.</span>
+              <span className="block text-small text-muted">Off by default: use the files where they are, with Read consent. The drive must stay connected. Copying uses extra disk space.</span>
             </span>
           </label>
         )}

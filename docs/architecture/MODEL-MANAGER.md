@@ -16,6 +16,10 @@ New local and pack imports record `extra.storage = copy | reference`; references
 Legacy imports outside the app directory, missing paths, unknown sources and symlink escapes
 unlink conservatively. Built-ins stay protected and active models cannot be removed.
 An owned-file deletion error is surfaced before removing its registry row.
+The local-file and pack dialogs default to reference mode; copying is an explicit choice.
+Reference imports use the existing Read consent broker before parsing. Protected paths fail
+without a prompt; consent is rechecked by the permission engine. Pack manifests and every
+referenced member are checked too, so a parent grant cannot bypass a nested deny rule.
 
 Every installed model is a row in `models` (see DATA-AND-IPC.md) with `sha256`, `bytes`,
 `gguf_meta` (JSON), `source`, `repo`, `revision`, `file`, and `added_at`. `settings.active_model_id`
