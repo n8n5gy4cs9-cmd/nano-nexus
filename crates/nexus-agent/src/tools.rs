@@ -1568,6 +1568,10 @@ fn web(cx: &ToolCx) -> Result<&Arc<dyn WebSource>, ToolError> {
     ))
 }
 
+/// How many of the top results `search_web` also reads, and how much of each page it keeps.
+const SEARCH_FETCH_TOP: usize = 3;
+const SEARCH_PAGE_CHARS: usize = 2200;
+
 /// `search_web(query)`: top results from a web search.
 pub struct SearchWeb;
 
@@ -1577,7 +1581,7 @@ impl Tool for SearchWeb {
         "search_web"
     }
     fn description(&self) -> &'static str {
-        "Search the web for current information. Returns titles, links and snippets. Optional `time`: day, week, month or year."
+        "Search the web for current information. Returns numbered titles, links, snippets and text of the top pages. Optional `time`: day, week, month or year."
     }
     fn signature(&self) -> &'static str {
         "search_web(query)"
@@ -1611,16 +1615,29 @@ impl Tool for SearchWeb {
                 summary: format!("Searched the web for “{query}” (no results)"),
             });
         }
+        // Like the reference studio: read the first few results too, so the model has page text to cite.
+        let source = web(cx)?;
+        let pages = futures_util::future::join_all(
+            hits.iter()
+                .take(SEARCH_FETCH_TOP)
+                .map(|h| source.fetch(&h.url, SEARCH_PAGE_CHARS)),
+        )
+        .await;
         let mut text = String::new();
         for (i, h) in hits.iter().enumerate() {
-            text.push_str(&format!(
-                "{}. {}\n   {}\n   {}\n",
-                i + 1,
-                h.title,
-                h.url,
-                h.snippet
-            ));
+            text.push_str(&format!("[{}] {}\n    {}\n", i + 1, h.title, h.url));
+            if !h.snippet.is_empty() {
+                text.push_str(&format!("    Snippet: {}\n", h.snippet));
+            }
+            match pages.get(i) {
+                Some(Ok(p)) if !p.text.trim().is_empty() => {
+                    text.push_str(&format!("    Page text: {}\n", p.text.trim()));
+                }
+                Some(_) => text.push_str("    Page text: unavailable; use the title and snippet only.\n"),
+                None => {}
+            }
         }
+        text.push_str("Cite sources as [1], [2] when they support a claim. If they do not answer the question, say so.\n");
         let (body, _) = truncate_to_tokens(&text, cx.budget_tokens);
         Ok(ToolOutput {
             llm_text: format!(
@@ -2555,6 +2572,7 @@ mod tests {
         c.web = Some(Arc::new(FakeWeb));
         let out = SearchWeb.run(args(&[("query", "rust")]), &c).await.unwrap();
         assert!(out.llm_text.contains("https://example.org/a"));
+        assert!(out.llm_text.contains("[1] About rust") && out.llm_text.contains("Page text: Page text"));
         let page = FetchUrl
             .run(args(&[("url", "https://example.org/a")]), &c)
             .await

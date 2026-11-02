@@ -40,8 +40,9 @@ Fixed after the check: the parser required `class="result__a"` exactly and paire
 result with no snippet shifted every later snippet, and `<div>` snippets were not matched. It now tolerates extra
 classes, pairs each snippet with the result it follows, and drops duplicate URLs, like the reference.
 
-Still different, by design or not yet done: the reference fetches the top 3 pages itself and builds a numbered
-`sources` block with an instruction to cite `[n]` (NanoNexus leaves `fetch_url` to the model); no result cache;
+Added after the owner asked for it: `search_web` now also reads the top 3 results (2200 characters each, through the same
+public-address guard) and returns a numbered list with snippets, page text and a cite-`[n]` instruction. A page that
+fails to load is marked unavailable. Still different: no result cache;
 reference sends `kl=us-en` (not sent here); reference returns up to 8 results, NanoNexus returns 6.
 
 **Not verified:** DuckDuckGo's live HTML markup may differ from both parsers' assumptions, and no request or test
