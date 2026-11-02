@@ -171,7 +171,11 @@ pub fn sync_watchers(ctx: &Arc<AppCtx>) {
 
 fn load_folder_report(ctx: &AppCtx, id: &str) -> Option<FolderReport> {
     let row = ctx.store.get_report(id).ok().flatten()?;
-    let text = std::fs::read_to_string(row.json_path).ok()?;
+    let path = ctx
+        .paths
+        .resolve_storage_reference(&row.json_path, &ctx.paths.reports)
+        .ok()?;
+    let text = std::fs::read_to_string(path).ok()?;
     serde_json::from_str(&text).ok()
 }
 

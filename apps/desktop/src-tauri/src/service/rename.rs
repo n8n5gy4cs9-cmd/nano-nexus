@@ -175,7 +175,10 @@ fn load_index(ctx: &AppCtx, s: &RenameSessionRow) -> Result<Arc<CodeIndex>, Nexu
     {
         return Ok(i);
     }
-    let index = Arc::new(CodeIndex::load(Path::new(&s.index_path)).map_err(|e| {
+    let path = ctx
+        .paths
+        .resolve_storage_reference(&s.index_path, &ctx.paths.cache.join("rename"))?;
+    let index = Arc::new(CodeIndex::load(&path).map_err(|e| {
         NexusError::InvalidInput(format!(
             "The project index is gone ({e}); index the project again."
         ))
@@ -277,7 +280,7 @@ async fn session_create_job(
         )));
     }
     let id = MessageId::new().0;
-    let dir = ctx.paths.cache.join("rename").join(&id);
+    let dir = ctx.paths.owned_path(&ctx.paths.cache.join("rename").join(&id))?;
     std::fs::create_dir_all(&dir)?;
     let index_path = dir.join("index.bin");
     let now = now_ms();
@@ -285,7 +288,7 @@ async fn session_create_job(
         id: id.clone(),
         root: canon.display().to_string(),
         langs: "[]".into(),
-        index_path: index_path.display().to_string(),
+        index_path: ctx.paths.storage_reference(&index_path)?,
         status: "indexing".into(),
         created_at: now,
         updated_at: now,
@@ -397,11 +400,18 @@ pub fn sessions_list(ctx: &AppCtx, limit: u32) -> Result<Vec<RenameSessionView>,
 
 pub fn session_delete(ctx: &AppCtx, id: &str) -> Result<bool, NexusError> {
     if let Some(s) = ctx.store.get_rename_session(id)? {
-        // Only ever remove a folder inside our own cache.
-        if let Some(dir) = Path::new(&s.index_path).parent()
-            && dir.starts_with(&ctx.paths.cache)
-        {
-            let _ = std::fs::remove_dir_all(dir);
+        let owner = ctx.paths.cache.join("rename");
+        let path = ctx.paths.resolve_storage_reference(&s.index_path, &owner)?;
+        if let Some(dir) = path.parent() {
+            let expected = ctx.paths.owned_path(&owner.join(&s.id))?;
+            if dir != expected || dir == owner.canonicalize()? {
+                return Err(NexusError::InvalidInput(
+                    "index cache does not belong to this session".into(),
+                ));
+            }
+            if dir.try_exists()? {
+                std::fs::remove_dir_all(dir)?;
+            } // derived task cache only
         }
     }
     if let Ok(mut m) = ctx.renames.indexes.lock() {

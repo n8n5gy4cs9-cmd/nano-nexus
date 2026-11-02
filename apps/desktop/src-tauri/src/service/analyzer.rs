@@ -3,7 +3,7 @@
 //! a cleanup plan is only *planned* (a change set the user reviews on the Changes page).
 
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::{Arc, Mutex};
 
 use nexus_agent::tools::Gatekeeper;
@@ -117,8 +117,11 @@ fn row_of(ctx: &AppCtx, id: &str) -> Result<ReportRow, NexusError> {
         .ok_or_else(|| NexusError::NotFound(format!("report {id}")))
 }
 
-fn read_json<T: serde::de::DeserializeOwned>(row: &ReportRow) -> Result<T, NexusError> {
-    let text = std::fs::read_to_string(&row.json_path)?;
+fn read_json<T: serde::de::DeserializeOwned>(ctx: &AppCtx, row: &ReportRow) -> Result<T, NexusError> {
+    let path = ctx
+        .paths
+        .resolve_storage_reference(&row.json_path, &ctx.paths.reports)?;
+    let text = std::fs::read_to_string(path)?;
     serde_json::from_str(&text).map_err(|e| NexusError::Internal(format!("the saved report is damaged: {e}")))
 }
 
@@ -127,7 +130,7 @@ fn load_folder(ctx: &AppCtx, id: &str) -> Result<(ReportRow, FolderReport), Nexu
     if row.kind != "folder" {
         return Err(NexusError::InvalidInput("that is not a folder report".into()));
     }
-    let mut r: FolderReport = read_json(&row)?;
+    let mut r: FolderReport = read_json(ctx, &row)?;
     r.id = row.id.clone();
     Ok((row, r))
 }
@@ -239,7 +242,11 @@ pub fn report_folder(ctx: &AppCtx, id: &str) -> Result<FolderReportView, NexusEr
 
 /// The stored body of a non-folder report (file, secrets, logs) as JSON text for the viewer.
 pub fn report_body(ctx: &AppCtx, id: &str) -> Result<String, NexusError> {
-    Ok(std::fs::read_to_string(row_of(ctx, id)?.json_path)?)
+    let row = row_of(ctx, id)?;
+    let path = ctx
+        .paths
+        .resolve_storage_reference(&row.json_path, &ctx.paths.reports)?;
+    Ok(std::fs::read_to_string(path)?)
 }
 
 pub fn report_delete(ctx: &AppCtx, id: &str) -> Result<bool, NexusError> {
@@ -247,9 +254,12 @@ pub fn report_delete(ctx: &AppCtx, id: &str) -> Result<bool, NexusError> {
         return Ok(false);
     };
     // Only ever remove a file inside our own reports folder.
-    let p = PathBuf::from(&row.json_path);
-    if p.starts_with(&ctx.paths.reports) {
-        let _ = std::fs::remove_file(p);
+    let path = ctx
+        .paths
+        .resolve_storage_reference(&row.json_path, &ctx.paths.reports)?;
+    if path.try_exists()? {
+        nexus_fs::Trasher::trash(&nexus_fs::MoveToDirTrash::new(ctx.paths.trash.clone()), &path)
+            .map_err(NexusError::Internal)?;
     }
     Ok(ctx.store.delete_report(id)?)
 }

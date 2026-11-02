@@ -170,6 +170,74 @@ impl AppPaths {
         }
     }
 
+    /// Persist an application-owned path independently of this USB's mount name.
+    /// Installed-mode paths retain their absolute representation.
+    pub fn storage_reference(&self, path: &Path) -> std::io::Result<String> {
+        let checked = self.owned_path(path)?;
+        let Some(root) = &self.portable_root else {
+            return Ok(checked.to_string_lossy().into_owned());
+        };
+        let relative = checked.strip_prefix(root).map_err(std::io::Error::other)?;
+        let parts = relative
+            .components()
+            .map(|part| {
+                part.as_os_str().to_str().ok_or_else(|| {
+                    std::io::Error::new(
+                        std::io::ErrorKind::InvalidInput,
+                        "stored portable path must be UTF-8",
+                    )
+                })
+            })
+            .collect::<std::io::Result<Vec<_>>>()?;
+        if parts.is_empty() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "cannot store the distribution root as a file",
+            ));
+        }
+        Ok(format!("dist:{}", parts.join("/")))
+    }
+
+    /// Resolve a stored reference strictly below its owning subsystem directory.
+    /// Old absolute paths are accepted only when still canonically inside the current owner.
+    pub fn resolve_storage_reference(&self, value: &str, owner: &Path) -> std::io::Result<PathBuf> {
+        let invalid = || {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "invalid or unavailable owned storage reference",
+            )
+        };
+        let candidate = if let Some(relative) = value.strip_prefix("dist:") {
+            let root = self.portable_root.as_ref().ok_or_else(invalid)?;
+            if relative.is_empty()
+                || relative.contains('\\')
+                || relative
+                    .split('/')
+                    .any(|part| part.is_empty() || part == "." || part == "..")
+            {
+                return Err(invalid());
+            }
+            crate::portable::contained(root, Path::new(relative))?
+        } else {
+            let path = Path::new(value);
+            if !path.is_absolute() {
+                return Err(invalid());
+            }
+            path.to_path_buf()
+        };
+        let canonical_owner = owner.canonicalize()?;
+        let candidate = match candidate.strip_prefix(owner) {
+            Ok(relative) if !relative.as_os_str().is_empty() => {
+                crate::portable::contained(&canonical_owner, relative)?
+            }
+            _ => candidate.canonicalize()?,
+        };
+        if candidate == canonical_owner || !candidate.starts_with(&canonical_owner) {
+            return Err(invalid());
+        }
+        self.owned_path(&candidate)
+    }
+
     /// Explicit private worker environment; never mutate process-global HOME.
     pub fn worker_environment(&self) -> std::io::Result<std::collections::BTreeMap<String, PathBuf>> {
         let mut env = std::collections::BTreeMap::new();

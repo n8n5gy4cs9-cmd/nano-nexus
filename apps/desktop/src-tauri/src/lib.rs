@@ -246,6 +246,10 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         let ctx = app.state::<Ctx>();
         system::apply_settings(app.handle(), &ctx.settings_snapshot(), &ctx.share.status());
     }
+    {
+        let ctx = app.state::<Ctx>();
+        ctx.store.normalize_portable_file_references(&ctx.paths)?;
+    }
     service::knowledge::normalize_internal_paths(&app.state::<Ctx>());
     service::models::init(&app.state::<Ctx>());
     let share_ctx: Ctx = (*app.state::<Ctx>()).clone();

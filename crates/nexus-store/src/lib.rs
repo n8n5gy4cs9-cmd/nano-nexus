@@ -10,6 +10,7 @@ pub mod jobs;
 mod migrate;
 pub mod models;
 pub mod notifications;
+mod portable_paths;
 pub mod rename;
 pub mod reports;
 pub mod settings;

@@ -87,7 +87,9 @@ pub fn save_report(
 ) -> Result<String, NexusError> {
     let id = MessageId::new().0;
     std::fs::create_dir_all(&ctx.paths.reports)?;
-    let file = ctx.paths.reports.join(format!("{id}.json"));
+    let file = ctx
+        .paths
+        .owned_path(&ctx.paths.reports.join(format!("{id}.json")))?;
     std::fs::write(&file, json)?;
     ctx.store.insert_report(&ReportRow {
         id: id.clone(),
@@ -95,7 +97,7 @@ pub fn save_report(
         target: target.into(),
         title: title.into(),
         summary,
-        json_path: file.display().to_string(),
+        json_path: ctx.paths.storage_reference(&file)?,
         ai_narrative: None,
         created_at: now_ms(),
     })?;
