@@ -80,14 +80,34 @@ pub fn index_library(
     library_id: &str,
     opts: &IndexOpts,
     cancel: &CancellationToken,
-    mut progress: impl FnMut(&IndexProgress),
+    progress: impl FnMut(&IndexProgress),
 ) -> Result<IndexSummary, KbError> {
     let lib = repo::get_library(store, library_id)?;
     let root = Path::new(&lib.path);
-    if !root.is_dir() {
+    if !root.is_absolute() {
+        return Err(KbError::Invalid(
+            "library reference needs an explicit resolved root".into(),
+        ));
+    }
+    index_library_at(store, library_id, root, opts, cancel, |_| Ok(()), progress)
+}
+
+/// Index from a service-resolved root; authorize every file before hashing or extraction.
+/// Relative stored references are never resolved against the process working directory.
+pub fn index_library_at(
+    store: &Store,
+    library_id: &str,
+    root: &Path,
+    opts: &IndexOpts,
+    cancel: &CancellationToken,
+    mut authorize: impl FnMut(&Path) -> Result<(), KbError>,
+    mut progress: impl FnMut(&IndexProgress),
+) -> Result<IndexSummary, KbError> {
+    let _library = repo::get_library(store, library_id)?;
+    if !root.is_absolute() || !root.is_dir() {
         return Err(KbError::Invalid(format!(
             "library folder `{}` does not exist",
-            lib.path
+            root.display()
         )));
     }
     let files = list_files(root);
@@ -108,6 +128,7 @@ pub fn index_library(
             repo::refresh_counts(store, library_id)?;
             return Err(KbError::Cancelled);
         }
+        authorize(path)?;
         prog.current = rel.clone();
         let size = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
         let hash = match hash_file(path) {

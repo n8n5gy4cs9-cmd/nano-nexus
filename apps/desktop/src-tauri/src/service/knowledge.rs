@@ -10,7 +10,7 @@ use nexus_core::error::NexusError;
 use nexus_knowledge::extract::{is_supported, list_files};
 use nexus_knowledge::{
     AnswerStyle, DocumentRow, IndexOpts, KbError, Library, LibrarySource, Passage, SearchOpts,
-    build_context_styled, index_library, repo, search,
+    build_context_styled, index_library_at, repo, search,
 };
 use serde::{Deserialize, Serialize};
 use specta::Type;
@@ -77,6 +77,25 @@ fn knowledge_root(ctx: &AppCtx) -> PathBuf {
     ctx.paths.data.join("knowledge")
 }
 
+/// Normalize only currently resolvable internal directories; never infer a moved host prefix.
+pub fn normalize_internal_paths(ctx: &AppCtx) {
+    if ctx.paths.portable_root.is_none() {
+        return;
+    }
+    match repo::list_libraries(&ctx.store) {
+        Ok(libraries) => {
+            for library in libraries {
+                if (library.mode == "copy" || library.source == LibrarySource::Bundled)
+                    && let Err(error) = super::knowledge_paths::resolve(ctx, &library)
+                {
+                    tracing::warn!(library = %library.id, "internal library needs recovery: {error}");
+                }
+            }
+        }
+        Err(error) => tracing::warn!("could not normalize library references: {error}"),
+    }
+}
+
 /// Every library.
 pub fn list(ctx: &AppCtx) -> Result<Vec<Library>, NexusError> {
     repo::list_libraries(&ctx.store).map_err(kb)
@@ -92,7 +111,7 @@ pub fn detail(ctx: &AppCtx, id: &str) -> Result<KbLibraryDetail, NexusError> {
 
 /// Does any enabled library exist? (When not, chat and assistants behave exactly as before.)
 pub fn any_enabled(ctx: &AppCtx) -> bool {
-    list(ctx)
+    accessible(ctx)
         .map(|l| l.iter().any(|l| l.enabled && l.chunk_count > 0))
         .unwrap_or(false)
 }
@@ -116,7 +135,7 @@ fn check_allowed(ctx: &AppCtx, path: &Path) -> Result<PathBuf, NexusError> {
     Ok(canon.into_path_buf())
 }
 
-fn copy_into(dest: &Path, sources: &[PathBuf]) -> Result<usize, NexusError> {
+fn copy_into(ctx: &AppCtx, dest: &Path, sources: &[PathBuf]) -> Result<usize, NexusError> {
     std::fs::create_dir_all(dest)?;
     let mut n = 0;
     for src in sources {
@@ -128,18 +147,51 @@ fn copy_into(dest: &Path, sources: &[PathBuf]) -> Result<usize, NexusError> {
             for (file, rel) in list_files(src) {
                 let to = dest.join(&base).join(&rel);
                 if let Some(parent) = to.parent() {
-                    std::fs::create_dir_all(parent)?;
+                    std::fs::create_dir_all(ctx.paths.owned_path(parent)?)?;
                 }
-                std::fs::copy(&file, &to)?;
+                check_allowed(ctx, &file)?;
+                if ctx.paths.portable_root.is_some() {
+                    ctx.perms.check("user", &file, nexus_core::fs::Access::Read)?;
+                }
+                copy_new(&file, &ctx.paths.owned_path(&to)?)?;
                 n += 1;
             }
         } else if src.is_file() && is_supported(src) {
             let name = src.file_name().map(|s| s.to_owned()).unwrap_or_default();
-            std::fs::copy(src, dest.join(name))?;
+            if ctx.paths.portable_root.is_some() {
+                ctx.perms.check("user", src, nexus_core::fs::Access::Read)?;
+            }
+            copy_new(src, &ctx.paths.owned_path(&dest.join(name))?)?;
             n += 1;
         }
     }
     Ok(n)
+}
+
+fn copy_new(source: &Path, destination: &Path) -> Result<(), NexusError> {
+    let mut source = std::fs::File::open(source)?;
+    let mut destination = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(destination)?;
+    std::io::copy(&mut source, &mut destination)?;
+    destination.sync_all()?;
+    Ok(())
+}
+
+fn accessible(ctx: &AppCtx) -> Result<Vec<Library>, NexusError> {
+    Ok(list(ctx)?
+        .into_iter()
+        .filter(|library| library.enabled && super::knowledge_paths::resolve(ctx, library).is_ok())
+        .collect())
+}
+
+fn allowed_ids(ctx: &AppCtx, requested: Option<Vec<String>>) -> Result<Vec<String>, NexusError> {
+    Ok(accessible(ctx)?
+        .into_iter()
+        .filter(|library| requested.as_ref().is_none_or(|ids| ids.contains(&library.id)))
+        .map(|library| library.id)
+        .collect())
 }
 
 /// Create a library from folders and/or files. `reference` reads one folder in place; otherwise the
@@ -155,7 +207,18 @@ pub async fn add(
     }
     let mut sources = Vec::new();
     for p in &paths {
-        sources.push(check_allowed(ctx, Path::new(p))?);
+        let source = check_allowed(ctx, Path::new(p))?;
+        sources.push(if ctx.paths.portable_root.is_some() || reference {
+            super::models::reference_read_for(
+                ctx,
+                &source,
+                "Knowledge Library",
+                "to read the selected library source",
+            )
+            .await?
+        } else {
+            source
+        });
     }
     let default_name = sources
         .first()
@@ -185,7 +248,8 @@ pub async fn add(
     }
     let dest = ctx.paths.owned_path(&knowledge_root(ctx).join(uuid_dir()))?;
     let copy_dest = dest.clone();
-    let copied = tokio::task::spawn_blocking(move || copy_into(&copy_dest, &sources))
+    let copy_ctx = ctx.clone();
+    let copied = tokio::task::spawn_blocking(move || copy_into(&copy_ctx, &copy_dest, &sources))
         .await
         .map_err(|e| NexusError::Internal(e.to_string()))?;
     let copied = match copied {
@@ -205,7 +269,7 @@ pub async fn add(
         &ctx.store,
         &name,
         LibrarySource::User,
-        &dest.to_string_lossy(),
+        &super::knowledge_paths::stored(ctx, &dest)?,
         "copy",
     )
     .map_err(kb)
@@ -229,24 +293,53 @@ pub async fn reindex(
     job_id: &str,
     progress: Arc<dyn Fn(KbProgress) + Send + Sync>,
 ) -> Result<KbIndexResult, NexusError> {
+    let library = repo::get_library(&ctx.store, library_id).map_err(kb)?;
+    if library.mode == "reference" && library.source != LibrarySource::Bundled {
+        super::models::reference_read_for(
+            ctx,
+            Path::new(&library.path),
+            "Knowledge Library",
+            "to re-index this external library on this computer",
+        )
+        .await?;
+    }
+    let root = super::knowledge_paths::resolve(ctx, &library)?;
     let cancel = CancellationToken::new();
-    if let Ok(mut m) = jobs().lock() {
+    {
+        let mut m = jobs()
+            .lock()
+            .map_err(|_| NexusError::Internal("knowledge job lock poisoned".into()))?;
+        if m.contains_key(job_id) {
+            return Err(NexusError::Conflict("knowledge job ID is already running".into()));
+        }
         m.insert(job_id.to_owned(), cancel.clone());
     }
     let store = ctx.store.clone();
+    let index_ctx = ctx.clone();
     let id = library_id.to_owned();
     let lib_id = id.clone();
     let res = tokio::task::spawn_blocking(move || {
-        index_library(&store, &id, &IndexOpts::default(), &cancel, |p| {
-            progress(KbProgress {
-                library_id: id.clone(),
-                files_done: p.files_done as u32,
-                files_total: p.files_total as u32,
-                current: p.current.clone(),
-                chunks: p.chunks as u32,
-                skipped: p.skipped as u32,
-            })
-        })
+        index_library_at(
+            &store,
+            &id,
+            &root,
+            &IndexOpts::default(),
+            &cancel,
+            |file| {
+                super::knowledge_paths::authorize_file(&index_ctx, &library, &root, file)
+                    .map_err(|e| KbError::Invalid(e.to_string()))
+            },
+            |p| {
+                progress(KbProgress {
+                    library_id: id.clone(),
+                    files_done: p.files_done as u32,
+                    files_total: p.files_total as u32,
+                    current: p.current.clone(),
+                    chunks: p.chunks as u32,
+                    skipped: p.skipped as u32,
+                })
+            },
+        )
     })
     .await;
     if let Ok(mut m) = jobs().lock() {
@@ -279,10 +372,14 @@ pub fn cancel(job_id: &str) -> bool {
 }
 
 pub fn set_enabled(ctx: &AppCtx, id: &str, enabled: bool) -> Result<(), NexusError> {
+    if enabled {
+        let library = repo::get_library(&ctx.store, id).map_err(kb)?;
+        super::knowledge_paths::resolve(ctx, &library)?;
+    }
     repo::set_enabled(&ctx.store, id, enabled).map_err(kb)
 }
 
-/// Remove a library. Files the app copied are deleted; referenced folders and bundled libraries are never touched.
+/// Remove a library. Copied files go to application Trash; referenced and bundled sources stay untouched.
 pub fn remove(ctx: &AppCtx, id: &str) -> Result<(), NexusError> {
     let lib = repo::get_library(&ctx.store, id).map_err(kb)?;
     if lib.source == LibrarySource::Bundled {
@@ -290,12 +387,19 @@ pub fn remove(ctx: &AppCtx, id: &str) -> Result<(), NexusError> {
             "bundled libraries cannot be removed; disable them instead".into(),
         ));
     }
-    repo::remove_library(&ctx.store, id).map_err(kb)?;
-    let path = PathBuf::from(&lib.path);
-    if lib.mode == "copy" && path.starts_with(knowledge_root(ctx)) && path != knowledge_root(ctx) {
-        let _ = std::fs::remove_dir_all(&path);
+    if lib.mode == "copy" {
+        let path = super::knowledge_paths::resolve(ctx, &lib)?;
+        // Application-owned data is recoverable; filesystem failures leave the DB row intact.
+        nexus_fs::Trasher::trash(&nexus_fs::MoveToDirTrash::new(ctx.paths.trash.clone()), &path)
+            .map_err(NexusError::Internal)?;
     }
-    Ok(())
+    repo::remove_library(&ctx.store, id).map_err(kb)
+}
+
+fn readable_passage(ctx: &AppCtx, passage: &Passage) -> Result<(), NexusError> {
+    let library = repo::get_library(&ctx.store, &passage.library_id).map_err(kb)?;
+    let root = super::knowledge_paths::resolve(ctx, &library)?;
+    super::knowledge_paths::authorize_file(ctx, &library, &root, &root.join(&passage.doc_path))
 }
 
 /// Passage search for the Library page ("what does the model see?").
@@ -305,24 +409,34 @@ pub fn search_passages(
     library_ids: Option<Vec<String>>,
     k: u32,
 ) -> Result<Vec<Passage>, NexusError> {
+    let ids = allowed_ids(ctx, library_ids)?;
+    if ids.is_empty() {
+        return Ok(Vec::new());
+    }
     let opts = SearchOpts {
-        library_ids,
+        library_ids: Some(ids),
         k: (k as usize).clamp(1, 20),
         ..Default::default()
     };
-    search(&ctx.store, query, &opts).map_err(kb)
+    Ok(search(&ctx.store, query, &opts)
+        .map_err(kb)?
+        .into_iter()
+        .filter(|passage| readable_passage(ctx, passage).is_ok())
+        .collect())
 }
 
 /// One passage in full (a citation was clicked).
 pub fn passage(ctx: &AppCtx, chunk_id: i64) -> Result<Passage, NexusError> {
-    repo::get_passage(&ctx.store, chunk_id).map_err(kb)
+    let passage = repo::get_passage(&ctx.store, chunk_id).map_err(kb)?;
+    readable_passage(ctx, &passage)?;
+    Ok(passage)
 }
 
 /// The original text of the document a passage came from. Only text formats are returned (PDF and
 /// other binaries are refused); the file must resolve inside its library folder.
 pub fn document_source(ctx: &AppCtx, chunk_id: i64) -> Result<KbDocumentSource, NexusError> {
     use std::io::Read;
-    let p = repo::get_passage(&ctx.store, chunk_id).map_err(kb)?;
+    let p = passage(ctx, chunk_id)?;
     let lib = repo::get_library(&ctx.store, &p.library_id).map_err(kb)?;
     let kind = Path::new(&p.doc_path)
         .extension()
@@ -337,13 +451,13 @@ pub fn document_source(ctx: &AppCtx, chunk_id: i64) -> Result<KbDocumentSource, 
             "no text source for this document type".into(),
         ));
     }
-    let root = std::fs::canonicalize(&lib.path)
-        .map_err(|e| NexusError::InvalidInput(format!("library folder: {e}")))?;
+    let root = super::knowledge_paths::resolve(ctx, &lib)?;
     let file = std::fs::canonicalize(root.join(&p.doc_path))
         .map_err(|e| NexusError::InvalidInput(format!("{}: {e}", p.doc_path)))?;
     if !file.starts_with(&root) {
         return Err(NexusError::PathDenied(p.doc_path));
     }
+    super::knowledge_paths::authorize_file(ctx, &lib, &root, &file)?;
     let f =
         std::fs::File::open(&file).map_err(|e| NexusError::InvalidInput(format!("{}: {e}", p.doc_path)))?;
     let mut buf = Vec::new();
@@ -396,7 +510,13 @@ pub async fn sync_bundled(ctx: &Arc<AppCtx>) {
             continue;
         }
         let dir = root.join(&m.dir);
-        let path = dir.to_string_lossy().into_owned();
+        let path = match super::knowledge_paths::stored(ctx, &dir) {
+            Ok(path) => path,
+            Err(error) => {
+                tracing::warn!(library = %m.id, "bundled library path is unavailable: {error}");
+                continue;
+            }
+        };
         let existing = list(ctx)
             .ok()
             .and_then(|l| l.into_iter().find(|l| l.path == path));
@@ -492,9 +612,9 @@ impl AppKnowledge {
         max_tokens: u32,
         style: AnswerStyle,
     ) -> Result<KnowledgeHits, String> {
-        let libs = list(&self.ctx).map_err(|e| e.to_string())?;
-        let library_ids = match library.map(str::trim).filter(|s| !s.is_empty()) {
-            None => None,
+        let libs = accessible(&self.ctx).map_err(|e| e.to_string())?;
+        let library_ids: Option<Vec<String>> = match library.map(str::trim).filter(|s| !s.is_empty()) {
+            None => Some(libs.iter().map(|library| library.id.clone()).collect()),
             Some(want) => {
                 let ids: Vec<String> = libs
                     .iter()
@@ -507,12 +627,25 @@ impl AppKnowledge {
                 Some(ids)
             }
         };
+        if library_ids.as_ref().is_some_and(|ids| ids.is_empty()) {
+            if let Ok(mut last) = self.last.lock() {
+                last.clear();
+            }
+            return Ok(KnowledgeHits {
+                context: String::new(),
+                passages: 0,
+            });
+        }
         let opts = SearchOpts {
             library_ids,
             max_tokens: max_tokens as usize,
             ..Default::default()
         };
-        let passages = search(&self.ctx.store, query, &opts).map_err(|e| e.to_string())?;
+        let passages: Vec<_> = search(&self.ctx.store, query, &opts)
+            .map_err(|e| e.to_string())?
+            .into_iter()
+            .filter(|passage| readable_passage(&self.ctx, passage).is_ok())
+            .collect();
         let (context, kept) = build_context_styled(&passages, max_tokens as usize, style);
         let n = kept.len();
         if let Ok(mut last) = self.last.lock() {

@@ -973,6 +973,15 @@ pub fn delete(ctx: &AppCtx, caller: &Caller, id: &str) -> Result<(), NexusError>
 
 // Reference consent uses the existing broker; deny rules never become prompts.
 pub(super) async fn reference_read(ctx: &Ctx, path: &Path) -> Result<PathBuf, NexusError> {
+    reference_read_for(ctx, path, "Model Manager", "to read the selected model source").await
+}
+
+pub(super) async fn reference_read_for(
+    ctx: &Ctx,
+    path: &Path,
+    assistant: &str,
+    reason: &str,
+) -> Result<PathBuf, NexusError> {
     match ctx.perms.check("user", path, Access::Read) {
         Ok(c) => return Ok(c.into_path_buf()),
         Err(nexus_fs::FsError::NoGrant { .. }) => {}
@@ -982,17 +991,17 @@ pub(super) async fn reference_read(ctx: &Ctx, path: &Path) -> Result<PathBuf, Ne
         ctx,
         super::permissions::PermissionRequest {
             id: nexus_core::ids::MessageId::new().0,
-            assistant: "Model Manager".into(),
+            assistant: assistant.into(),
             path: path.display().to_string(),
             needed: Access::Read,
-            reason: Some("to use this model in place without copying its files".into()),
+            reason: Some(reason.into()),
             requested_by: None,
         },
     )
     .await;
     if decision == super::permissions::Decision::Deny {
         return Err(NexusError::PermissionDenied(
-            "Read access is required to reference this model. No model was added.".into(),
+            "Read access is required for the selected source. No files were read.".into(),
         ));
     }
     Ok(ctx.perms.check("user", path, Access::Read)?.into_path_buf())

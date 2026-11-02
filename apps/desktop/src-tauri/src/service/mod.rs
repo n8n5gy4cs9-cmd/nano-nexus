@@ -14,6 +14,7 @@ pub mod editor;
 pub mod fs;
 pub mod jobs;
 pub mod knowledge;
+mod knowledge_paths;
 pub mod media;
 pub mod models;
 pub mod notifications;

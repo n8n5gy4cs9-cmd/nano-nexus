@@ -112,6 +112,22 @@ pub fn list_libraries(store: &Store) -> Result<Vec<Library>, KbError> {
     })?)
 }
 
+/// Replace only the expected old reference; concurrent changes are never overwritten.
+pub fn set_path(store: &Store, id: &str, previous: &str, path: &str) -> Result<(), KbError> {
+    let changed = store.with_conn(|c| {
+        Ok(c.execute(
+            "UPDATE kb_libraries SET path=?3 WHERE id=?1 AND path=?2",
+            params![id, previous, path],
+        )?)
+    })?;
+    if changed != 1 {
+        return Err(KbError::Invalid(
+            "library reference changed; reload and retry".into(),
+        ));
+    }
+    Ok(())
+}
+
 /// Enable or disable a library (disabled libraries are invisible to search and chat).
 pub fn set_enabled(store: &Store, id: &str, enabled: bool) -> Result<(), KbError> {
     let n = store.with_conn(|c| {
