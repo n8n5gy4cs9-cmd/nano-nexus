@@ -30,3 +30,19 @@ reference code is not ported.
 - Providers beyond DuckDuckGo, and any provider needing a key (would need memory-only secrets, UP.080).
 - Parallel fetch of top results with a source-citation block. The model can call `fetch_url` itself.
 - Tests were added (`web.rs`, `tools.rs`) but have not been run.
+
+## Parity check against the reference (follow-up, source reading only)
+
+Compared `scripts/search/providers.js` / `core.js` with `web.rs` / `tools.rs`. Same provider and endpoint
+(`html.duckduckgo.com/html/`), same `df` time codes, same `uddg=` redirect unwrapping.
+
+Fixed after the check: the parser required `class="result__a"` exactly and paired snippets by position, so a
+result with no snippet shifted every later snippet, and `<div>` snippets were not matched. It now tolerates extra
+classes, pairs each snippet with the result it follows, and drops duplicate URLs, like the reference.
+
+Still different, by design or not yet done: the reference fetches the top 3 pages itself and builds a numbered
+`sources` block with an instruction to cite `[n]` (NanoNexus leaves `fetch_url` to the model); no result cache;
+reference sends `kl=us-en` (not sent here); reference returns up to 8 results, NanoNexus returns 6.
+
+**Not verified:** DuckDuckGo's live HTML markup may differ from both parsers' assumptions, and no request or test
+has been run. Whether search "really works" against the live site is unproven until a network test is authorised.

@@ -302,37 +302,60 @@ fn strip_tags(s: &str) -> String {
 
 /// Pull results out of DuckDuckGo's HTML page.
 pub fn parse_search(html: &str, max: usize) -> Vec<SearchHit> {
+    // Tolerate extra classes on the anchors (`result__a result__url`), as the reference parser does,
+    // and let a snippet be an `<a>` or a `<div>`.
     let (Ok(link), Ok(snip)) = (
-        Regex::new(r#"(?s)<a[^>]*class="result__a"[^>]*href="([^"]+)"[^>]*>(.*?)</a>"#),
-        Regex::new(r#"(?s)class="result__snippet"[^>]*>(.*?)</a>"#),
+        Regex::new(r#"(?s)<a[^>]*class="[^"]*\bresult__a\b[^"]*"[^>]*href="([^"]+)"[^>]*>(.*?)</a>"#),
+        Regex::new(r#"(?s)class="[^"]*\bresult__snippet\b[^"]*"[^>]*>(.*?)</(?:a|div|td)>"#),
     ) else {
         return Vec::new();
     };
-    let snippets: Vec<String> = snip.captures_iter(html).map(|c| strip_tags(&c[1])).collect();
-    link.captures_iter(html)
-        .enumerate()
-        .filter_map(|(i, c)| {
-            let href = decode_entities(&c[1]);
-            let target = match href.split_once("uddg=") {
-                Some((_, rest)) => percent_decode(rest.split('&').next().unwrap_or("")),
-                None => href.clone(),
-            };
-            let target = if target.starts_with("//") {
-                format!("https:{target}")
-            } else {
-                target
-            };
-            if !(target.starts_with("http://") || target.starts_with("https://")) {
-                return None;
-            }
-            Some(SearchHit {
-                title: strip_tags(&c[2]),
-                url: target,
-                snippet: snippets.get(i).cloned().unwrap_or_default(),
-            })
-        })
-        .take(max)
-        .collect()
+    let links: Vec<_> = link.captures_iter(html).collect();
+    let snippets: Vec<(usize, String)> = snip
+        .captures_iter(html)
+        .filter_map(|c| Some((c.get(0)?.start(), strip_tags(&c[1]))))
+        .collect();
+    let mut seen = std::collections::HashSet::new();
+    let mut out = Vec::new();
+    for (i, c) in links.iter().enumerate() {
+        let Some(whole) = c.get(0) else { continue };
+        let href = decode_entities(&c[1]);
+        let target = match href.split_once("uddg=") {
+            Some((_, rest)) => percent_decode(rest.split('&').next().unwrap_or("")),
+            None => href.clone(),
+        };
+        let target = if target.starts_with("//") {
+            format!("https:{target}")
+        } else {
+            target
+        };
+        if !(target.starts_with("http://") || target.starts_with("https://")) {
+            continue;
+        }
+        let title = strip_tags(&c[2]);
+        if title.is_empty() || !seen.insert(target.clone()) {
+            continue;
+        }
+        // A snippet belongs to this result only if it appears before the next result's link.
+        let next = links
+            .get(i + 1)
+            .and_then(|n| n.get(0))
+            .map_or(usize::MAX, |m| m.start());
+        let snippet = snippets
+            .iter()
+            .find(|(at, _)| *at >= whole.end() && *at < next)
+            .map(|(_, t)| t.clone())
+            .unwrap_or_default();
+        out.push(SearchHit {
+            title,
+            url: target,
+            snippet,
+        });
+        if out.len() >= max {
+            break;
+        }
+    }
+    out
 }
 
 /// `(title, text)` of an HTML (or plain text) body. Scripts, styles and page chrome are dropped.
@@ -441,6 +464,18 @@ mod tests {
         assert_eq!(hits[0].title, "The Rust Book");
         assert_eq!(hits[0].snippet, "Learn & build Rust.");
         assert_eq!(parse_search(html, 1).len(), 1);
+    }
+
+    #[test]
+    fn missing_snippets_do_not_shift_and_duplicates_are_dropped() {
+        let html = r#"
+<a class="result__a result__x" href="https://a.example/">A</a>
+<a class="result__a" href="https://b.example/">B</a><div class="result__snippet">About B</div>
+<a class="result__a" href="https://b.example/">B again</a>"#;
+        let hits = parse_search(html, 5);
+        assert_eq!(hits.len(), 2);
+        assert_eq!(hits[0].snippet, "");
+        assert_eq!(hits[1].snippet, "About B");
     }
 
     #[test]
