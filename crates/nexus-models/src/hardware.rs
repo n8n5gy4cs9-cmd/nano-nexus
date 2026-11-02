@@ -125,7 +125,7 @@ pub fn parse_llama_devices(output: &str) -> Vec<GpuInfo> {
             })
         })
         .collect();
-    out.sort_by(|a, b| b.vram_bytes.cmp(&a.vram_bytes));
+    out.sort_by_key(|b| std::cmp::Reverse(b.vram_bytes));
     out
 }
 
@@ -230,7 +230,7 @@ fn ctx_for(budget_bytes: u64) -> u32 {
 /// build rather than assuming a GPU. CUDA is never chosen automatically: it needs a host driver that this
 /// function cannot confirm, so Vulkan is offered instead and CUDA remains a manual choice.
 pub fn recommend(os: Os, cpu: &CpuInfo, mem: &MemoryInfo, gpus: &[GpuInfo]) -> Recommendation {
-    let threads = cpu.physical_cores.unwrap_or_else(|| cpu.logical_cores / 2).max(1);
+    let threads = cpu.physical_cores.unwrap_or(cpu.logical_cores / 2).max(1);
     let budget = crate::fit::budget(mem);
     let mut notes = Vec::new();
 

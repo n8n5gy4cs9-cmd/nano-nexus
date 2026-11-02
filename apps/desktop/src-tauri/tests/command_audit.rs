@@ -11,6 +11,8 @@ const SHELL_ONLY: &[&str] = &[
     "fs_pick_any_file",
     "models_pick_file",
     "models_pick_folder",
+    "studio_pick_asset",
+    "speech_pick_audio",
     "os_open_privacy_settings",
     "notifications_send_test",
     "permission_requests",

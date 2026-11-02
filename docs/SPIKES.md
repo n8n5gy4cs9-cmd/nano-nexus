@@ -12,7 +12,18 @@ Decision: …   (update the ADR/catalog/doc if this changes anything)
 ```
 
 ## Environment (T00.08)
-_Not yet recorded. Paste `scripts/doctor.sh` output plus the Mac model, chip, RAM, and macOS version._
+Recorded 2026-11-02 with `scripts/doctor.sh` (all required checks passed, 1 warning):
+
+- macOS 26.5.1, Apple Silicon (arm64), 32 GB RAM, 129 GB free disk
+- Xcode Command Line Tools at /Applications/Xcode.app/Contents/Developer
+- git 2.55.0, cmake 4.3.3, rustc 1.96.0, cargo 1.96.0, node 26.5.0, pnpm 10.28.0, tauri-cli 2.11.4, clippy installed
+- `vendor/`: runtime `llama-server-aarch64-apple-darwin`; 3 models, default `minicpm5-1b-fable5-v2-q8`
+- Warning: `NEXUS_SIGN_IDENTITY` not set (no local signing certificate yet)
+
+`scripts/check.sh` is green on this Mac. It first needed fixes for Rust 1.96 lint and format drift, a
+`MediaStatus` initializer missing five fields, `OutputRecord.details` breaking the bindings export, a
+macOS `/var` symlink in a knowledge test, and two native file-picker commands missing from the
+command-audit shell-only list.
 
 ## S1: Thinking toggle
 _Pending (T01.04)._

@@ -273,17 +273,17 @@ impl ImageEngine {
         loop {
             {
                 let mut w = self.worker.lock().await;
-                if let Some((worker, _)) = w.as_mut() {
-                    if let Some(code) = worker.exited() {
-                        let tail = worker.log_tail(8).join("\n");
-                        let msg = lock(&self.inner)
-                            .error
-                            .clone()
-                            .unwrap_or_else(|| format!("The image engine exited with code {code}.\n{tail}"));
-                        *w = None;
-                        lock(&self.inner).load.active = false;
-                        return Err(StudioError::NotReady(msg));
-                    }
+                if let Some((worker, _)) = w.as_mut()
+                    && let Some(code) = worker.exited()
+                {
+                    let tail = worker.log_tail(8).join("\n");
+                    let msg = lock(&self.inner)
+                        .error
+                        .clone()
+                        .unwrap_or_else(|| format!("The image engine exited with code {code}.\n{tail}"));
+                    *w = None;
+                    lock(&self.inner).load.active = false;
+                    return Err(StudioError::NotReady(msg));
                 }
             }
             let answered = client

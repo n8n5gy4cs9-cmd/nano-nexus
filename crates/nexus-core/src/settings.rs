@@ -305,9 +305,7 @@ impl Settings {
             ));
         }
         if next.ui_default_assistant.is_empty() || next.ui_default_assistant.len() > 128 {
-            return Err(NexusError::InvalidInput(
-                "Invalid default assistant ID".into(),
-            ));
+            return Err(NexusError::InvalidInput("Invalid default assistant ID".into()));
         }
         *self = next;
         Ok(())

@@ -12,9 +12,9 @@ export function formatBuildDate(iso: string): string {
 
 /** Settings → About: app version, platform, and (in a built app) the bundle profile, commit and build date. */
 export function AboutSection() {
-  const info = useQuery({ queryKey: ["app-info"], queryFn: api.app.info, staleTime: Infinity, retry: false });
+  const info = useQuery({ queryKey: ["app-info"], queryFn: api.app.info, retry: false });
   if (!info.data) return null;
-  const { version, os, arch, build, data_dir } = info.data;
+  const { version, os, arch, build, locations } = info.data;
   const models = build?.models ?? [];
   return (
     <Section title="About">
@@ -47,12 +47,20 @@ export function AboutSection() {
           <span className="text-body text-muted">dev</span>
         </Row>
       )}
-      {data_dir ? (
-        <Row label="Data folder">
-          <span className="max-w-72 truncate text-small text-muted" title={data_dir}>
-            {data_dir}
-          </span>
-        </Row>
+      {locations.length ? (
+        <div className="py-3">
+          <h3 className="text-body font-medium">Where this version stores files</h3>
+          <p className="text-small text-muted">These are the paths used by the app running now. Missing sources are marked below.</p>
+          <div className="mt-2 space-y-3">
+            {locations.map((location, index) => (
+              <div key={`${location.label}-${location.path}-${index}`} className="min-w-0">
+                <div className="text-body font-medium">{location.label}{location.exists ? "" : " · Missing"}</div>
+                <p className="text-small text-muted">{location.purpose}</p>
+                <code className="block select-text break-all text-small" title={location.path}>{location.path}</code>
+              </div>
+            ))}
+          </div>
+        </div>
       ) : null}
     </Section>
   );

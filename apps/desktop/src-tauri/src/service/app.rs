@@ -28,8 +28,18 @@ pub struct AppInfo {
     pub arch: String,
     pub data_dir: String,
     pub log_dir: String,
+    /// Desktop-only paths for this running install, including registered external sources.
+    pub locations: Vec<StorageLocation>,
     /// `None` in dev builds, which have no `bundle.json`.
     pub build: Option<BuildInfo>,
+}
+
+#[derive(Clone, Debug, Serialize, Type)]
+pub struct StorageLocation {
+    pub label: String,
+    pub path: String,
+    pub purpose: String,
+    pub exists: bool,
 }
 
 /// Read `<resource_dir>/bundle.json`; a missing or broken file is simply "no build info".
@@ -68,8 +78,97 @@ pub fn info(ctx: &AppCtx, caller: &Caller) -> AppInfo {
         arch: std::env::consts::ARCH.to_owned(),
         data_dir,
         log_dir,
+        locations: if caller.is_desktop() {
+            locations(ctx)
+        } else {
+            Vec::new()
+        },
         build: read_build_info(&ctx.resource_dir),
     }
+}
+
+fn locations(ctx: &AppCtx) -> Vec<StorageLocation> {
+    let mut out = Vec::new();
+    let mut add = |label: &str, path: &std::path::Path, purpose: &str| {
+        out.push(StorageLocation {
+            label: label.into(),
+            path: path.to_string_lossy().into_owned(),
+            purpose: purpose.into(),
+            exists: path.exists(),
+        });
+    };
+    if let Ok(executable) = std::env::current_exe() {
+        add(
+            "Running executable",
+            &executable,
+            "The app binary currently running; an .app or launcher may contain it.",
+        );
+    }
+    add(
+        "Executable folder",
+        &ctx.exe_dir,
+        "The folder beside this app binary; portable.flag here selects portable data.",
+    );
+    add(
+        "Bundled resources",
+        &ctx.resource_dir,
+        "Models and other files shipped with this build.",
+    );
+    add(
+        "App data",
+        &ctx.paths.data,
+        "The data root for this running install.",
+    );
+    add(
+        "Database",
+        &ctx.paths.db_file(),
+        "Chats, settings, model registrations and library indexes.",
+    );
+    add(
+        "Managed models",
+        &ctx.paths.models,
+        "Models copied or downloaded into app data.",
+    );
+    add(
+        "Change journal",
+        &ctx.paths.journal,
+        "Change previews, Apply and Undo records.",
+    );
+    add("Reports", &ctx.paths.reports, "Saved analysis reports.");
+    add(
+        "Runtime state",
+        &ctx.paths.runtime,
+        "Local model server state and runtime files.",
+    );
+    add("Cache", &ctx.paths.cache, "Rebuildable cached data.");
+    add("Logs", &ctx.paths.logs, "Local diagnostic logs.");
+    let settings = ctx.settings_snapshot();
+    for path in &settings.models_extra_dirs {
+        add(
+            "Extra model folder",
+            std::path::Path::new(path),
+            "Configured folder scanned for GGUF models.",
+        );
+    }
+    if let Ok(models) = ctx.store.list_models() {
+        for model in models {
+            add(
+                &format!("Model: {}", model.name),
+                std::path::Path::new(&model.path),
+                "Registered GGUF file; the file may be stored outside app data.",
+            );
+        }
+    }
+    if let Ok(libraries) = super::knowledge::list(ctx) {
+        for library in libraries {
+            add(
+                &format!("Library: {}", library.name),
+                std::path::Path::new(&library.path),
+                "Library source folder; referenced sources stay at this path.",
+            );
+        }
+    }
+    out
 }
 
 #[cfg(test)]
@@ -122,12 +221,26 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let ctx = AppCtx::for_tests(dir.path());
         assert!(!info(&ctx, &Caller::Desktop).data_dir.is_empty());
+        let desktop = info(&ctx, &Caller::Desktop);
+        assert!(
+            desktop
+                .locations
+                .iter()
+                .any(|p| p.label == "Database" && p.path.ends_with("nexus.db"))
+        );
+        assert!(
+            desktop
+                .locations
+                .iter()
+                .any(|p| p.label == "Managed models" && p.path == ctx.paths.models.to_string_lossy())
+        );
         let remote = Caller::Remote {
             device_id: "d".into(),
             policy: SharePolicy::ChatRead,
         };
         let i = info(&ctx, &remote);
         assert!(i.data_dir.is_empty() && i.log_dir.is_empty());
+        assert!(i.locations.is_empty());
         assert_eq!(i.version, env!("CARGO_PKG_VERSION"));
     }
 }

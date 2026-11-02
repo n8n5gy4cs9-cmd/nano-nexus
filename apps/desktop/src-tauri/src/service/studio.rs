@@ -48,10 +48,10 @@ fn transfers() -> &'static Mutex<HashMap<String, Transfer>> {
 struct TransferGuard(String, Arc<super::portable_store::Lease>);
 impl Drop for TransferGuard {
     fn drop(&mut self) {
-        if let Ok(mut jobs) = transfers().lock() {
-            if let Some(job) = jobs.remove(&self.0) {
-                job.cancel.cancel();
-            }
+        if let Ok(mut jobs) = transfers().lock()
+            && let Some(job) = jobs.remove(&self.0)
+        {
+            job.cancel.cancel();
         }
     }
 }

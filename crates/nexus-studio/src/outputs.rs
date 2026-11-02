@@ -38,6 +38,7 @@ pub struct OutputRecord {
     pub metadata: String,
     pub created_at: String,
     /// Remaining sidecar fields (prompt, seed, voice, text, ...), as written.
+    #[specta(type = specta_typescript::Unknown)]
     pub details: Value,
 }
 

@@ -308,6 +308,10 @@ fingerprint, remote policy, allowed assistants, session lifetime, max devices, p
 table, notifications on pairing; see LAN-SHARE §2) · Privacy (network downloads, deny list,
 clear history) · Notifications (per kind) · Shortcuts · Advanced (data folder, journal
 retention, reset app, open logs) · About (version, bundle profile, build date, git commit).
+About also lists full, selectable paths for the running executable, bundled
+resources, app-owned storage, registered model files and library source folders,
+with plain-language contents and a missing-path indicator. Local paths stay in
+the desktop view and are not sent to LAN clients.
 
 ### 4.11 Onboarding (first run, 4 steps, skippable)
 1. **Welcome**: logo animation (gradient ring forming a hexagon "nexus"), then "Private AI on your Mac".

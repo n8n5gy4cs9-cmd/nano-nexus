@@ -680,10 +680,9 @@ mod tests {
         )
         .await
         .unwrap();
-        assert!(
-            lib.path
-                .starts_with(&knowledge_root(&ctx).to_string_lossy().into_owned())
-        );
+        // `stored` canonicalizes (macOS /var -> /private/var), so compare against the canonical root.
+        let root = knowledge_root(&ctx).canonicalize().unwrap();
+        assert!(Path::new(&lib.path).starts_with(&root));
         let res = reindex(&ctx, &lib.id, "job-1", Arc::new(|_| {})).await.unwrap();
         assert_eq!(res.indexed, 1);
 

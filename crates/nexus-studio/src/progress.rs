@@ -80,34 +80,32 @@ pub fn parse_sd_line(raw: &str) -> Vec<SdEvent> {
     if line.contains("decoding") {
         out.push(SdEvent::Decoding);
     }
-    if let Ok(step) = Regex::new(r"\|\s*[^|]*\s*\|\s*(\d+)/(\d+)\s*-\s*([\d.]+\s*(?:it/s|s/it))") {
-        if let Some(c) = step.captures(line) {
-            if let (Ok(step), Ok(steps)) = (c[1].parse(), c[2].parse()) {
-                out.push(SdEvent::Step {
-                    step,
-                    steps,
-                    speed: c[3].trim().to_owned(),
-                });
-            }
-        }
+    if let Ok(step) = Regex::new(r"\|\s*[^|]*\s*\|\s*(\d+)/(\d+)\s*-\s*([\d.]+\s*(?:it/s|s/it))")
+        && let Some(c) = step.captures(line)
+        && let (Ok(step), Ok(steps)) = (c[1].parse(), c[2].parse())
+    {
+        out.push(SdEvent::Step {
+            step,
+            steps,
+            speed: c[3].trim().to_owned(),
+        });
     }
-    if !line.contains("it/s") && !line.contains("s/it") {
-        if let Ok(load) = Regex::new(r"\|\s*(\d+)/(\d+)\s*-\s*([^|]+)$") {
-            if let Some(c) = load.captures(line) {
-                if let (Ok(current), Ok(total)) = (c[1].parse(), c[2].parse()) {
-                    out.push(SdEvent::Loading {
-                        current,
-                        total,
-                        label: c[3].trim().to_owned(),
-                    });
-                }
-            }
-        }
+    if !line.contains("it/s")
+        && !line.contains("s/it")
+        && let Ok(load) = Regex::new(r"\|\s*(\d+)/(\d+)\s*-\s*([^|]+)$")
+        && let Some(c) = load.captures(line)
+        && let (Ok(current), Ok(total)) = (c[1].parse(), c[2].parse())
+    {
+        out.push(SdEvent::Loading {
+            current,
+            total,
+            label: c[3].trim().to_owned(),
+        });
     }
-    if let Ok(dev) = Regex::new(r"(?:Device\s+\d+:|GPU name:)\s*([^,\r\n]+)") {
-        if let Some(c) = dev.captures(line) {
-            out.push(SdEvent::Device(c[1].trim().to_owned()));
-        }
+    if let Ok(dev) = Regex::new(r"(?:Device\s+\d+:|GPU name:)\s*([^,\r\n]+)")
+        && let Some(c) = dev.captures(line)
+    {
+        out.push(SdEvent::Device(c[1].trim().to_owned()));
     }
     if line.contains("[ERROR]") {
         out.push(SdEvent::Error(line.to_owned()));

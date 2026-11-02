@@ -6,7 +6,7 @@
 //! facing deletion moves files to the application Trash, never unlinks them.
 
 use super::Caller;
-use crate::state::{AppCtx, Ctx};
+use crate::state::Ctx;
 use nexus_core::error::NexusError;
 use nexus_core::fs::Access;
 use nexus_fs::Trasher;
@@ -289,9 +289,21 @@ pub async fn status(ctx: &Ctx, caller: &Caller) -> Result<MediaStatus, NexusErro
     let speech_v = variants_of(&root, "speech", "whisper-cli");
     let tts_installed = platform_dir(&root).join("tts").join("node_modules").is_dir()
         && platform_dir(&root).join("tts").join(exe("node")).is_file();
-    let rec = hardware::current_os()
-        .map(|os| hardware::recommend(os, &hardware::detect_cpu(), &system_memory(), &[]));
+    let cpu = hardware::detect_cpu();
+    let memory = system_memory();
+    let gpus: Vec<hardware::GpuInfo> = Vec::new();
+    let rec = hardware::current_os().map(|os| hardware::recommend(os, &cpu, &memory, &gpus));
+    let threads = rec.as_ref().map_or_else(
+        || cpu.physical_cores.unwrap_or(cpu.logical_cores / 2).max(1),
+        |r| r.threads,
+    );
+    let ctx_size = rec.as_ref().map_or(2048, |r| r.ctx_size);
     Ok(MediaStatus {
+        cpu,
+        total_memory_bytes: memory.total_bytes,
+        gpus,
+        threads,
+        ctx_size,
         platform: format!("{}-{}", std::env::consts::OS, std::env::consts::ARCH),
         engines: vec![
             EngineInfo {

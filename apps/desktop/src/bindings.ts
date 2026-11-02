@@ -5,6 +5,31 @@ import * as __TAURI_EVENT from "@tauri-apps/api/event";
 
 /** Commands */
 export const commands = {
+	mediaStatus: () => typedError<MediaStatus, IpcError>(__TAURI_INVOKE("media_status")),
+	mediaCancel: (jobId: string) => typedError<boolean, IpcError>(__TAURI_INVOKE("media_cancel", { jobId })),
+	hardwareTelemetry: () => typedError<Telemetry, IpcError>(__TAURI_INVOKE("hardware_telemetry")),
+	imageStart: (input: ImageStartInput) => typedError<string, IpcError>(__TAURI_INVOKE("image_start", { input })),
+	imageStop: () => typedError<null, IpcError>(__TAURI_INVOKE("image_stop")),
+	imageGenerate: (jobId: string, input: ImageGenerateInput) => typedError<OutputRecord, IpcError>(__TAURI_INVOKE("image_generate", { jobId, input })),
+	/**  `progress`: percent 0-100 while whisper reports it, `null` while it cannot tell. */
+	speechTranscribe: (jobId: string, input: TranscribeInput, onEvent: Channel<number | null>) => typedError<TranscribeOutput, IpcError>(__TAURI_INVOKE("speech_transcribe", { jobId, input, onEvent })),
+	speechPickAudio: () => typedError<string | null, IpcError>(__TAURI_INVOKE("speech_pick_audio")),
+	ttsVoices: () => typedError<VoiceInfo[], IpcError>(__TAURI_INVOKE("tts_voices")),
+	ttsSpeak: (jobId: string, request: SpeakRequest, onEvent: Channel<TtsProgress>) => typedError<OutputRecord, IpcError>(__TAURI_INVOKE("tts_speak", { jobId, request, onEvent })),
+	outputsList: (kind: OutputKind) => typedError<OutputRecord[], IpcError>(__TAURI_INVOKE("outputs_list", { kind })),
+	outputsRead: (kind: OutputKind, name: string) => typedError<string, IpcError>(__TAURI_INVOKE("outputs_read", { kind, name })),
+	outputsDelete: (kind: OutputKind, names: string[]) => typedError<number, IpcError>(__TAURI_INVOKE("outputs_delete", { kind, names })),
+	studioAdoptLegacy: (jobId: string, onEvent: Channel<DownloadProgress>) => typedError<MigrationResult, IpcError>(__TAURI_INVOKE("studio_adopt_legacy", { jobId, onEvent })),
+	studioPackImport: (jobId: string, path: string, onEvent: Channel<DownloadProgress>) => typedError<MigrationResult, IpcError>(__TAURI_INVOKE("studio_pack_import", { jobId, path, onEvent })),
+	studioSelect: (id: string) => typedError<null, IpcError>(__TAURI_INVOKE("studio_select", { id })),
+	studioUnload: (kind: ModelKind) => typedError<null, IpcError>(__TAURI_INVOKE("studio_unload", { kind })),
+	studioRemove: (id: string) => typedError<null, IpcError>(__TAURI_INVOKE("studio_remove", { id })),
+	studioReclassify: (id: string, kind: ModelKind) => typedError<null, IpcError>(__TAURI_INVOKE("studio_reclassify", { id, kind })),
+	studioModels: () => typedError<ModelView[], IpcError>(__TAURI_INVOKE("studio_models")),
+	studioDownload: (jobId: string, url: string, input: ModelInput, onEvent: Channel<DownloadProgress>) => typedError<StudioModel, IpcError>(__TAURI_INVOKE("studio_download", { jobId, url, input, onEvent })),
+	studioImport: (jobId: string, path: string, input: ModelInput, onEvent: Channel<DownloadProgress>) => typedError<StudioModel, IpcError>(__TAURI_INVOKE("studio_import", { jobId, path, input, onEvent })),
+	studioTransferCancel: (jobId: string, discard: boolean) => typedError<boolean, IpcError>(__TAURI_INVOKE("studio_transfer_cancel", { jobId, discard })),
+	studioPickAsset: () => typedError<string | null, IpcError>(__TAURI_INVOKE("studio_pick_asset")),
 	appInfo: () => typedError<AppInfo, IpcError>(__TAURI_INVOKE("app_info")),
 	/**  Open a web link in the OS browser (https/http only). */
 	openExternal: (url: string) => typedError<null, IpcError>(__TAURI_INVOKE("open_external", { url })),
@@ -342,8 +367,16 @@ export type AppInfo = {
 	arch: string,
 	data_dir: string,
 	log_dir: string,
+	/**  Desktop-only paths for this running install, including registered external sources. */
+	locations: StorageLocation[],
 	/**  `None` in dev builds, which have no `bundle.json`. */
 	build: BuildInfo | null,
+};
+
+/**  Named role of a shared asset (weights, projector, voices, tokenizer, etc.). */
+export type AssetRole = {
+	role: string,
+	asset: StudioAsset,
 };
 
 /**  What the gallery and switcher show. */
@@ -687,6 +720,21 @@ export type ConversationWithMessages = {
 	messages: Message[],
 };
 
+/**  CPU facts that decide which prebuilt engine can start. */
+export type CpuInfo = {
+	/**  `x86_64`, `aarch64` or whatever `std::env::consts::ARCH` says. */
+	arch: string,
+	/**  `None` when the OS did not say. */
+	physical_cores: number | null,
+	logical_cores: number,
+	/**  x86 only; always `false` elsewhere. */
+	avx: boolean,
+	avx2: boolean,
+	fma: boolean,
+	/**  Apple Silicon and other ARM64 CPUs always have NEON. */
+	neon: boolean,
+};
+
 export type Decision = { decision: "deny" } | { decision: "allow_once" } | 
 /**  Persistent grant on the folder at this level. */
 { decision: "allow_folder"; level: GrantLevel };
@@ -726,6 +774,14 @@ export type DocumentRow = {
 	/**  `indexed | skipped | failed` */
 	status: string,
 	note: string | null,
+};
+
+export type DownloadProgress = {
+	bytes: number,
+	total: number,
+	bytes_per_sec: number | null,
+	eta_secs: number | null,
+	phase: Phase,
 };
 
 /**  Global event `download:progress`: sent about 4 times a second while a download runs, and on every status change. */
@@ -775,6 +831,13 @@ export type EditorSaveResult = {
 	changeset_id: string,
 	/**  blake3 of the saved contents: the base hash of the next save. */
 	hash: string,
+};
+
+export type EngineInfo = {
+	name: string,
+	installed: boolean,
+	/**  Variants found under `runtimes/<platform>/<kind>/`, for example `cpu`, `vulkan`. */
+	variants: string[],
 };
 
 /**  Stable machine-readable error code (see DATA-AND-IPC §4). Serialized as snake_case. */
@@ -898,6 +961,17 @@ export type Found = {
 	usages: UsageCounts,
 };
 
+/**  Sampling progress of one image. */
+export type GenState = {
+	active: boolean,
+	step: number,
+	steps: number,
+	/**  For example `1.23it/s`. */
+	speed: string,
+	/**  The VAE is decoding; step counts no longer move. */
+	decoding: boolean,
+};
+
 /**  A downloadable model: one GGUF, or all shards of a split one. */
 export type GgufFile = {
 	/**  File name to show and to load (the first shard for split models). */
@@ -931,6 +1005,16 @@ export type GgufMeta = {
 	supports_thinking_toggle: boolean,
 };
 
+/**  A graphics device the caller already knows about. */
+export type GpuInfo = {
+	vendor: GpuVendor,
+	name: string,
+	/**  `None` = unknown. */
+	vram_bytes: number | null,
+};
+
+export type GpuVendor = "apple" | "nvidia" | "amd" | "intel" | "other";
+
 /**  A folder (or single file) the app may use. */
 export type Grant = {
 	id: GrantId,
@@ -954,6 +1038,56 @@ export type GrantLevel = "read" | "read_write" | "full";
 
 /**  Persistent grants live in the database; session grants vanish when the app quits. */
 export type GrantScope = "persistent" | "session";
+
+/**  Where the sampling runs. */
+export type ImageBackend = "cpu" | "vulkan" | "cuda" | "rocm" | "metal";
+
+/**  Checkpoint families the image engine can load. */
+export type ImageFamily = "sd15" | "sdxl";
+
+export type ImageGenerateInput = {
+	request: ImageRequest,
+	family: ImageFamily,
+	/**  Base64 PNG/JPEG for image-to-image. */
+	init_image: string | null,
+	denoising_strength: number | null,
+};
+
+export type ImageRequest = {
+	prompt: string,
+	negative_prompt: string,
+	width: number,
+	height: number,
+	steps: number,
+	cfg_scale: number | null,
+	/**  `None` = pick a random seed (the engine records the one it used). */
+	seed: number | null,
+	batch: number,
+	sampler: string,
+};
+
+export type ImageStartInput = {
+	/**  `None` = follow the hardware recommendation. */
+	backend: ImageBackend | null,
+	family: ImageFamily,
+	steps: number,
+	cfg_scale: number | null,
+	sampler: string,
+	threads: number | null,
+	flash_attn: boolean,
+	vae_tiling: boolean,
+	vae_on_cpu: boolean,
+};
+
+/**  Snapshot for the UI. */
+export type ImageStatus = {
+	running: boolean,
+	ready: boolean,
+	load: LoadState,
+	generation: GenState,
+	device: string,
+	error: string | null,
+};
 
 export type InstalledModel = {
 	id: string,
@@ -1079,6 +1213,17 @@ export type LibrarySource =
 /**  Added by the user. */
 "user";
 
+/**  Model-loading progress of the image server. */
+export type LoadState = {
+	active: boolean,
+	phase: string,
+	/**  0 to 99 while loading. */
+	progress: number,
+	current: number,
+	total: number,
+	speed: string,
+};
+
 /**  A transcript line the parser could not make sense of (format drift). */
 export type LogDrift = {
 	lines: number,
@@ -1087,6 +1232,21 @@ export type LogDrift = {
 
 /**  How well a name matched the query (best first). */
 export type MatchKind = "exact" | "prefix" | "substring" | "fuzzy";
+
+export type MediaStatus = {
+	platform: string,
+	engines: EngineInfo[],
+	image: ImageStatus,
+	busy: string | null,
+	recommended_backend: string | null,
+	notes: string[],
+	cpu: CpuInfo,
+	total_memory_bytes: number,
+	/**  Graphics devices reported by an installed chat engine. Empty = none reported or unknown. */
+	gpus: GpuInfo[],
+	threads: number,
+	ctx_size: number,
+};
 
 export type MemoryInfo = {
 	total_bytes: number,
@@ -1123,6 +1283,13 @@ export type MessageRole = "system" | "user" | "assistant" | "tool" | "event";
 
 export type MessageStatus = "streaming" | "done" | "stopped" | "error";
 
+/**  Summary of explicit legacy adoption or offline-pack import. Sources are never removed. */
+export type MigrationResult = {
+	imported: string[],
+	skipped: string[],
+	failed: string[],
+};
+
 /**  Access the plan needs but no grant gives. The UI asks for permission before Apply is enabled. */
 export type MissingGrant = {
 	op_index: number,
@@ -1132,6 +1299,18 @@ export type MissingGrant = {
 
 /**  Global event `model:changed`: the active model id (the runtime is restarting on it). */
 export type ModelChanged = string;
+
+/**  Explicit model/companion identity shared by imports and downloads. */
+export type ModelInput = {
+	id: string,
+	name: string,
+	kind: ModelKind,
+	role: string,
+	variant: string,
+};
+
+/**  Engine-compatible model category, independent of the platform executable. */
+export type ModelKind = "chat" | "image" | "speech" | "tts";
 
 /**
  *  Sampling for the final (streamed) answer. Values are relative intents; the effective temperature
@@ -1153,6 +1332,13 @@ export type ModelVerifyResult = {
 	ok: boolean,
 	missing: boolean,
 	actual_sha256: string | null,
+};
+
+/**  Registry view reports missing media and selection without pretending an engine is running. */
+export type ModelView = {
+	model: StudioModel,
+	available: boolean,
+	selected: boolean,
 };
 
 /**  Global event `models:list_changed`: models were added in the background (pack import, offline kit); refetch the list. */
@@ -1223,6 +1409,20 @@ export type OsPermissionsStatus = {
 	folders: OsFolderStatus[],
 	/**  Full Disk Access (macOS only); `None` elsewhere. */
 	full_disk_access: string | null,
+};
+
+/**  Which saved-output collection a call refers to. */
+export type OutputKind = "images" | "audio" | "transcripts";
+
+/**  A saved output as listed to the UI. */
+export type OutputRecord = {
+	/**  Data file name inside the outputs directory. */
+	file: string,
+	/**  Sidecar file name. */
+	metadata: string,
+	created_at: string,
+	/**  Remaining sidecar fields (prompt, seed, voice, text, ...), as written. */
+	details: unknown,
 };
 
 /**  What an export wrote. */
@@ -1486,6 +1686,10 @@ export type SettingValue = null | boolean | number | number | null | string | st
 export type Settings = {
 	"ui.theme"?: Theme,
 	"ui.accent"?: string,
+	/**  UI scale shared with the portable SQLite settings store. */
+	"ui.zoom"?: number | null,
+	/**  Assistant selected for new conversations; no host filesystem paths. */
+	"ui.default_assistant"?: string,
 	"ui.show_perf_stats"?: boolean,
 	/**  Comma-separated ids of UI plugins the user turned off (see `apps/desktop/src/plugins`). */
 	"plugins.disabled"?: string,
@@ -1615,11 +1819,53 @@ export type SourceView = {
 	last_ms: number | null,
 };
 
+export type SpeakRequest = {
+	text: string,
+	/**  Voice id from the installed voice asset, never a path. */
+	voice: string,
+	speed: number | null,
+};
+
+export type StorageLocation = {
+	label: string,
+	path: string,
+	purpose: string,
+	exists: boolean,
+};
+
+/**  One physical file shared by any number of models and platform applications. */
+export type StudioAsset = {
+	sha256: string,
+	/**  Validated DIST-relative path, resolved only at the service boundary. */
+	path: string,
+	bytes: number,
+};
+
+/**  Model identity, asset set and optional backend-specific conversion variant. */
+export type StudioModel = {
+	id: string,
+	name: string,
+	kind: ModelKind,
+	/**  `universal` for shared weights, or an explicit backend/target variant. */
+	variant: string,
+	/**  Bounded JSON of provenance/license/configuration; never credentials. */
+	metadata: string,
+	assets: AssetRole[],
+};
+
 /**  A symbol id (index into [`CodeIndex::symbols`]). */
 export type SymbolId = number;
 
 /**  What a symbol is. Files and folders are symbols too (their "references" are imports and config entries). */
 export type SymbolKind = "function" | "method" | "variable" | "constant" | "parameter" | "field" | "class" | "interface" | "enum" | "enum_member" | "module" | "file" | "folder";
+
+/**  Live load figures; `None` means the OS did not report it (shown as unavailable, never as zero). */
+export type Telemetry = {
+	cpu_percent: number | null,
+	ram_used_bytes: number,
+	ram_total_bytes: number,
+	swap_used_bytes: number,
+};
 
 export type TextFile = {
 	path: string,
@@ -1657,6 +1903,22 @@ export type Totals = {
 	bytes: number,
 };
 
+export type TranscribeInput = {
+	/**  Absolute path of a WAV file the user chose. */
+	path: string,
+	language: string,
+	translate_to_english: boolean,
+	threads: number | null,
+	/**  `false` = dictation: return the text without saving a transcript. */
+	save: boolean,
+};
+
+export type TranscribeOutput = {
+	text: string,
+	duration_ms: number,
+	saved: OutputRecord | null,
+};
+
 /**  One file in a repo. */
 export type TreeFile = {
 	path: string,
@@ -1676,6 +1938,13 @@ export type TreeNode = {
 	/**  Several small items merged together. */
 	other: boolean,
 	children: TreeNode[],
+};
+
+/**  The Kokoro worker reports `@@progress {json}` on stderr. */
+export type TtsProgress = {
+	phase: string,
+	done: number,
+	total: number,
 };
 
 export type UiSpec = UiSpec_Serialize | UiSpec_Deserialize;
@@ -1754,6 +2023,11 @@ export type VerifyResult = {
 	missing: boolean,
 	/**  The first lines that look like errors. */
 	first_errors: string[],
+};
+
+export type VoiceInfo = {
+	id: string,
+	name: string,
 };
 
 /**  One watch as the UI shows it. */

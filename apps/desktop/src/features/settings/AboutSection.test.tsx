@@ -11,7 +11,7 @@ import { AboutSection, formatBuildDate } from "./AboutSection";
 afterEach(() => setTransport(tauriTransport));
 
 function mount(build: unknown) {
-  setTransport(createMockTransport({ app_info: () => ({ version: "0.1.0", os: "macos", arch: "aarch64", data_dir: "/Users/me/Library/NanoNexus", log_dir: "", build }) }));
+  setTransport(createMockTransport({ app_info: () => ({ version: "0.1.0", os: "macos", arch: "aarch64", data_dir: "/Users/me/Library/NanoNexus", log_dir: "", locations: [{ label: "App data", path: "/Users/me/Library/NanoNexus", purpose: "Chats and settings.", exists: true }], build }) }));
   render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
       <AboutSection />
@@ -32,6 +32,8 @@ test("a dev build says so", async () => {
   mount(null);
   expect(await screen.findByText("dev")).toBeTruthy();
   expect(screen.queryByText("Commit")).toBeNull();
+  expect(screen.getByText("Where this version stores files")).toBeTruthy();
+  expect(screen.getByText("/Users/me/Library/NanoNexus")).toBeTruthy();
 });
 
 test("odd dates are shown as is", () => {

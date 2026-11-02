@@ -22,10 +22,9 @@ impl Store {
                 // Table/column names are fixed above, never supplied by a caller or database row.
                 let rows: Vec<(String, String)> = {
                     let mut statement = transaction.prepare(&format!("SELECT id, {column} FROM {table}"))?;
-                    let values = statement
+                    statement
                         .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
-                        .collect::<Result<_, _>>()?;
-                    values
+                        .collect::<Result<_, _>>()?
                 };
                 for (id, previous) in rows {
                     if previous.starts_with("dist:") {
