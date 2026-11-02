@@ -59,7 +59,7 @@ Use Terra for one task at a time with explicit files/contracts and completion cr
 
 ## Undone — reference features and retained features
 
-- [ ] **UP.040** [TERRA+REVIEW] Map and retain chat/history/streaming/settings capabilities from both applications.
+- [x] **UP.040** [TERRA+REVIEW] Map and retain chat/history/streaming/settings capabilities from both applications. (2026-11-02; docs/portable/CHAT-RETENTION.md; source inspection only, gaps listed there are not implemented)
 - [ ] **UP.041** [LEAD] Image engine lifecycle, generation parameters, progress/cancel and model compatibility validation.
 - [ ] **UP.042** [TERRA+REVIEW] Image gallery, metadata, export and journal-governed deletion.
 - [ ] **UP.043** [LEAD] Whisper file/microphone transcription, progress/cancel, transcript storage/export and permission UI.
