@@ -293,6 +293,28 @@ function VoiceTab({ status }: { status: MediaStatus | undefined }) {
   </div>;
 }
 
+const gib = (b: number) => `${(b / 1024 / 1024 / 1024).toFixed(1)} GB`;
+
+/** CPU, memory and engine recommendation. Unreported values say "unavailable", never zero. */
+function ThisComputer({ status }: { status: MediaStatus | undefined }) {
+  const t = useQuery({ queryKey: ["studio", "telemetry"], queryFn: api.media.telemetry, retry: false, refetchInterval: 2000 });
+  if (!status) return null;
+  const cpu = status.cpu;
+  const features = [cpu.avx2 ? "AVX2" : cpu.avx ? "AVX (no AVX2)" : null, cpu.fma ? "FMA" : null, cpu.neon ? "NEON" : null].filter(Boolean).join(", ");
+  const gpu = status.gpus[0];
+  return <Panel title="This computer">
+    <dl className="grid gap-2 text-small sm:grid-cols-2">
+      <div><dt className="text-muted">Processor</dt><dd>{cpu.arch}, {cpu.physical_cores ?? "?"} cores ({cpu.logical_cores} threads){features ? ` · ${features}` : ""}</dd></div>
+      <div><dt className="text-muted">Memory</dt><dd>{gib(status.total_memory_bytes)}{t.data ? ` · ${gib(t.data.ram_used_bytes)} in use` : " · usage unavailable"}</dd></div>
+      <div><dt className="text-muted">CPU load</dt><dd>{t.data?.cpu_percent != null ? `${t.data.cpu_percent.toFixed(0)}%` : "unavailable"}</dd></div>
+      <div><dt className="text-muted">Graphics</dt><dd>{gpu ? `${gpu.name}${gpu.vram_bytes ? ` · ${gib(gpu.vram_bytes)}` : ""}` : "none reported"}</dd></div>
+      <div><dt className="text-muted">Recommended engine</dt><dd>{status.recommended_backend ?? "none: this computer is not supported"}</dd></div>
+      <div><dt className="text-muted">Suggested defaults</dt><dd>{status.threads} threads · {status.ctx_size} context</dd></div>
+    </dl>
+    <ul className="list-disc pl-5 text-small text-muted">{status.notes.map((n) => <li key={n}>{n}</li>)}</ul>
+  </Panel>;
+}
+
 /** Image, speech-to-text and text-to-speech workspaces (UP.041-044). */
 export function StudioPage() {
   const [tab, setTab] = useState("images");
@@ -302,10 +324,11 @@ export function StudioPage() {
     {status.isError ? <p role="alert" className="rounded-panel border border-border p-3 text-small text-muted">{message(status.error)}</p> : null}
     {status.data?.busy ? <p role="status" className="text-small text-muted">{status.data.busy} is running; other jobs wait for it.</p> : null}
     <Tabs value={tab} onValueChange={setTab}>
-      <TabsList><TabsTrigger value="images">Images</TabsTrigger><TabsTrigger value="speech">Transcribe</TabsTrigger><TabsTrigger value="voice">Voice</TabsTrigger></TabsList>
+      <TabsList><TabsTrigger value="images">Images</TabsTrigger><TabsTrigger value="speech">Transcribe</TabsTrigger><TabsTrigger value="voice">Voice</TabsTrigger><TabsTrigger value="computer">This computer</TabsTrigger></TabsList>
       <TabsContent value="images" className="pt-4"><ImagesTab status={status.data} /></TabsContent>
       <TabsContent value="speech" className="pt-4"><TranscribeTab status={status.data} /></TabsContent>
       <TabsContent value="voice" className="pt-4"><VoiceTab status={status.data} /></TabsContent>
+      <TabsContent value="computer" className="pt-4"><ThisComputer status={status.data} /></TabsContent>
     </Tabs>
   </div>;
 }

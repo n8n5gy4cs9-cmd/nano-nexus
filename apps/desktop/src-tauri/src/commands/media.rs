@@ -131,3 +131,8 @@ pub async fn outputs_read(ctx: Ctx<'_>, kind: OutputKind, name: String) -> CmdRe
 pub async fn outputs_delete(ctx: Ctx<'_>, kind: OutputKind, names: Vec<String>) -> CmdResult<usize> {
     service::media::delete_outputs(&ctx, &Caller::Desktop, kind, names).map_err(IpcError::from)
 }
+#[tauri::command]
+#[specta::specta]
+pub async fn hardware_telemetry() -> CmdResult<nexus_models::hardware::Telemetry> {
+    service::media::telemetry(&Caller::Desktop).map_err(IpcError::from)
+}

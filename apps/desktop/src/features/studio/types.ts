@@ -8,7 +8,15 @@ export interface LoadState { active: boolean; phase: string; progress: number; c
 export interface GenState { active: boolean; step: number; steps: number; speed: string; decoding: boolean }
 export interface ImageStatus { running: boolean; ready: boolean; load: LoadState; generation: GenState; device: string; error: string | null }
 export interface EngineInfo { name: string; installed: boolean; variants: string[] }
+export interface CpuInfo { arch: string; physical_cores: number | null; logical_cores: number; avx: boolean; avx2: boolean; fma: boolean; neon: boolean }
+export interface GpuInfo { vendor: string; name: string; vram_bytes: number | null }
+export interface Telemetry { cpu_percent: number | null; ram_used_bytes: number; ram_total_bytes: number; swap_used_bytes: number }
 export interface MediaStatus {
+  cpu: CpuInfo;
+  total_memory_bytes: number;
+  gpus: GpuInfo[];
+  threads: number;
+  ctx_size: number;
   platform: string;
   engines: EngineInfo[];
   image: ImageStatus;

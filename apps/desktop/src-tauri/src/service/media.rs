@@ -232,6 +232,20 @@ pub struct MediaStatus {
     pub busy: Option<String>,
     pub recommended_backend: Option<String>,
     pub notes: Vec<String>,
+    pub cpu: hardware::CpuInfo,
+    pub total_memory_bytes: u64,
+    /// Graphics devices reported by an installed chat engine. Empty = none reported or unknown.
+    pub gpus: Vec<hardware::GpuInfo>,
+    pub threads: u32,
+    pub ctx_size: u32,
+}
+
+/// Live CPU and memory load.
+pub fn telemetry(caller: &Caller) -> Result<hardware::Telemetry, NexusError> {
+    if !caller.is_desktop() {
+        return Err(NexusError::ForbiddenRemote);
+    }
+    Ok(hardware::sample_telemetry())
 }
 
 fn variants_of(root: &Path, kind: &str, bin: &str) -> Vec<String> {

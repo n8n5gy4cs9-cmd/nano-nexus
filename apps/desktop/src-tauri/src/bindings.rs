@@ -15,6 +15,7 @@ pub fn builder() -> Builder<tauri::Wry> {
         .commands(collect_commands![
             media::media_status,
             media::media_cancel,
+            media::hardware_telemetry,
             media::image_start,
             media::image_stop,
             media::image_generate,

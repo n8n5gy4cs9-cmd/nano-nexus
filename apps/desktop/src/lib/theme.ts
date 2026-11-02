@@ -1,6 +1,7 @@
 export type ThemePreference = "light" | "dark" | "system";
 export type ResolvedTheme = "light" | "dark";
-export const ACCENTS = ["violet", "cyan", "emerald", "amber", "rose", "graphite"] as const;
+/** The first six are NanoNexus originals; the rest carry over the reference studio's theme presets (Nord, Sakura, Dracula, Cyberpunk, Forest, OLED blue). */
+export const ACCENTS = ["violet", "cyan", "emerald", "amber", "rose", "graphite", "nord", "sakura", "dracula", "cyberpunk", "forest", "ocean"] as const;
 export type Accent = (typeof ACCENTS)[number];
 
 export function isThemePreference(v: unknown): v is ThemePreference {

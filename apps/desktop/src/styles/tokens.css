@@ -79,6 +79,20 @@
 :root[data-theme="light"][data-accent="rose"] { --accent: oklch(0.58 0.2 10); --accent-fg: oklch(1 0 0); --accent-2: oklch(0.64 0.17 350); --ring: oklch(0.6 0.2 10 / 0.45); }
 :root[data-theme="light"][data-accent="graphite"] { --accent: oklch(0.45 0.02 260); --accent-2: oklch(0.6 0.03 260); --ring: oklch(0.45 0.02 260 / 0.45); }
 
+/* Reference studio presets, expressed as accents so surfaces, contrast and focus rings stay token-driven. */
+:root[data-theme="dark"][data-accent="nord"] { --accent: oklch(0.72 0.09 245); --accent-2: oklch(0.82 0.08 205); --accent-fg: oklch(0.18 0.03 245); --ring: oklch(0.72 0.09 245 / 0.55); }
+:root[data-theme="dark"][data-accent="sakura"] { --accent: oklch(0.76 0.12 5); --accent-2: oklch(0.84 0.08 10); --accent-fg: oklch(0.2 0.03 5); --ring: oklch(0.76 0.12 5 / 0.55); }
+:root[data-theme="dark"][data-accent="dracula"] { --accent: oklch(0.72 0.16 300); --accent-2: oklch(0.76 0.18 350); --accent-fg: oklch(0.18 0.03 300); --ring: oklch(0.72 0.16 300 / 0.55); }
+:root[data-theme="dark"][data-accent="cyberpunk"] { --accent: oklch(0.68 0.27 355); --accent-2: oklch(0.86 0.15 200); --accent-fg: oklch(0.16 0.04 355); --ring: oklch(0.68 0.27 355 / 0.55); }
+:root[data-theme="dark"][data-accent="forest"] { --accent: oklch(0.7 0.14 165); --accent-2: oklch(0.78 0.13 160); --accent-fg: oklch(0.18 0.04 165); --ring: oklch(0.7 0.14 165 / 0.55); }
+:root[data-theme="dark"][data-accent="ocean"] { --accent: oklch(0.66 0.19 260); --accent-2: oklch(0.76 0.13 250); --accent-fg: oklch(0.16 0.04 260); --ring: oklch(0.66 0.19 260 / 0.55); }
+:root[data-theme="light"][data-accent="nord"] { --accent: oklch(0.55 0.08 245); --accent-2: oklch(0.65 0.08 205); --accent-fg: oklch(0.99 0 0); --ring: oklch(0.55 0.08 245 / 0.45); }
+:root[data-theme="light"][data-accent="sakura"] { --accent: oklch(0.6 0.15 5); --accent-2: oklch(0.72 0.1 10); --accent-fg: oklch(0.99 0 0); --ring: oklch(0.6 0.15 5 / 0.45); }
+:root[data-theme="light"][data-accent="dracula"] { --accent: oklch(0.54 0.2 300); --accent-2: oklch(0.6 0.2 350); --accent-fg: oklch(0.99 0 0); --ring: oklch(0.54 0.2 300 / 0.45); }
+:root[data-theme="light"][data-accent="cyberpunk"] { --accent: oklch(0.58 0.25 355); --accent-2: oklch(0.62 0.13 215); --accent-fg: oklch(0.99 0 0); --ring: oklch(0.58 0.25 355 / 0.45); }
+:root[data-theme="light"][data-accent="forest"] { --accent: oklch(0.52 0.13 165); --accent-2: oklch(0.6 0.12 160); --accent-fg: oklch(0.99 0 0); --ring: oklch(0.52 0.13 165 / 0.45); }
+:root[data-theme="light"][data-accent="ocean"] { --accent: oklch(0.52 0.19 260); --accent-2: oklch(0.62 0.13 250); --accent-fg: oklch(0.99 0 0); --ring: oklch(0.52 0.19 260 / 0.45); }
+
 /* Assistant hues: avatar tiles are a 2-stop gradient at 135deg. */
 :root {
   --hue-violet: linear-gradient(135deg, oklch(0.7 0.18 288), oklch(0.62 0.2 310));

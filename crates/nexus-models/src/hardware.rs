@@ -91,6 +91,91 @@ pub struct Recommendation {
     pub notes: Vec<String>,
 }
 
+/// Parse `llama-server --list-devices` output (ported from the reference `parseLlamaDeviceList`), e.g.
+/// `Vulkan0: NVIDIA GeForce RTX 3060 (12288 MiB, 11000 MiB free)`. Largest memory first.
+pub fn parse_llama_devices(output: &str) -> Vec<GpuInfo> {
+    let Ok(re) =
+        regex::Regex::new(r"(?i)(CUDA|Vulkan|SYCL|HIP|ROCm|Metal)\d*\s*:\s*(.+?)\s+\(([\d.]+)\s+MiB")
+    else {
+        return Vec::new();
+    };
+    let mut out: Vec<GpuInfo> = re
+        .captures_iter(output)
+        .filter_map(|c| {
+            let mib: f64 = c[3].parse().ok().filter(|m: &f64| *m > 0.0)?;
+            let name = c[2].trim().to_owned();
+            let lower = name.to_lowercase();
+            let vendor = match c[1].to_ascii_lowercase().as_str() {
+                "cuda" => GpuVendor::Nvidia,
+                "hip" | "rocm" => GpuVendor::Amd,
+                "sycl" => GpuVendor::Intel,
+                "metal" => GpuVendor::Apple,
+                _ if lower.contains("nvidia") || lower.contains("geforce") || lower.contains("rtx") => {
+                    GpuVendor::Nvidia
+                }
+                _ if lower.contains("amd") || lower.contains("radeon") => GpuVendor::Amd,
+                _ if lower.contains("intel") => GpuVendor::Intel,
+                _ if lower.contains("apple") => GpuVendor::Apple,
+                _ => GpuVendor::Other,
+            };
+            Some(GpuInfo {
+                vendor,
+                name,
+                vram_bytes: Some((mib * 1024.0 * 1024.0) as u64),
+            })
+        })
+        .collect();
+    out.sort_by(|a, b| b.vram_bytes.cmp(&a.vram_bytes));
+    out
+}
+
+/// Ask an engine binary which graphics devices it can use. Failure or timeout means "unknown": an empty list,
+/// never a guessed GPU. The binary runs with a cleared environment.
+pub async fn probe_gpus(engine_bin: &std::path::Path) -> Vec<GpuInfo> {
+    let run = tokio::process::Command::new(engine_bin)
+        .arg("--list-devices")
+        .env_clear()
+        .stdin(std::process::Stdio::null())
+        .kill_on_drop(true)
+        .output();
+    match tokio::time::timeout(std::time::Duration::from_secs(10), run).await {
+        Ok(Ok(o)) => parse_llama_devices(&format!(
+            "{}\n{}",
+            String::from_utf8_lossy(&o.stdout),
+            String::from_utf8_lossy(&o.stderr)
+        )),
+        _ => Vec::new(),
+    }
+}
+
+/// Live load figures; `None` means the OS did not report it (shown as unavailable, never as zero).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
+pub struct Telemetry {
+    pub cpu_percent: Option<f32>,
+    pub ram_used_bytes: u64,
+    pub ram_total_bytes: u64,
+    pub swap_used_bytes: u64,
+}
+
+/// Sample CPU and memory. CPU usage needs two samples, so the first call after start reports `None`.
+pub fn sample_telemetry() -> Telemetry {
+    use std::sync::{Mutex, OnceLock};
+    static SYS: OnceLock<Mutex<(sysinfo::System, bool)>> = OnceLock::new();
+    let cell = SYS.get_or_init(|| Mutex::new((sysinfo::System::new(), false)));
+    let mut guard = cell.lock().unwrap_or_else(|e| e.into_inner());
+    let (sys, primed) = &mut *guard;
+    sys.refresh_cpu_usage();
+    sys.refresh_memory();
+    let cpu = (*primed).then(|| sys.global_cpu_usage());
+    *primed = true;
+    Telemetry {
+        cpu_percent: cpu,
+        ram_used_bytes: sys.total_memory().saturating_sub(sys.available_memory()),
+        ram_total_bytes: sys.total_memory(),
+        swap_used_bytes: sys.used_swap(),
+    }
+}
+
 /// Memory below which no useful chat model fits.
 pub const MIN_MEMORY_BYTES: u64 = 3 * 1024 * 1024 * 1024;
 const GIB: u64 = 1024 * 1024 * 1024;
@@ -260,6 +345,17 @@ mod tests {
             name: "Test GPU".into(),
             vram_bytes: Some(8 * GIB),
         }
+    }
+
+    #[test]
+    fn device_lines_are_parsed_largest_first() {
+        let out = "Available devices:\n  Vulkan0: Intel(R) UHD Graphics (1024 MiB, 900 MiB free)\n  CUDA0: NVIDIA GeForce RTX 3060 (12288 MiB, 11000 MiB free)\n";
+        let g = parse_llama_devices(out);
+        assert_eq!(g.len(), 2);
+        assert_eq!(g[0].vendor, GpuVendor::Nvidia);
+        assert_eq!(g[0].vram_bytes, Some(12288 * 1024 * 1024));
+        assert_eq!(g[1].vendor, GpuVendor::Intel);
+        assert!(parse_llama_devices("no devices").is_empty());
     }
 
     #[test]

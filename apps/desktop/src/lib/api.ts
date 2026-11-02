@@ -65,7 +65,7 @@ import type { KbIndexResult, KbLibrary, KbDocumentSource, KbLibraryDetail, KbPas
 import { getTransport } from "./transport";
 import type { ModelKind, StudioModel, StudioModelView, StudioModelInput, StudioProgress, StudioMigrationResult } from "@/features/models/studio-types";
 import type {
-  ImageGenerateInput, ImageStartInput, MediaStatus, OutputKind, OutputRecord, SpeakRequest, TranscribeInput, TranscribeOutput, TtsProgress, VoiceInfo,
+  ImageGenerateInput, ImageStartInput, MediaStatus, Telemetry, OutputKind, OutputRecord, SpeakRequest, TranscribeInput, TranscribeOutput, TtsProgress, VoiceInfo,
 } from "@/features/studio/types";
 import type { ReportDelta, WatchSchedule, WatchView } from "@/features/analyzer/watches";
 import type { JobSummary } from "@/features/jobs/types";
@@ -79,6 +79,7 @@ export const api = {
   media: {
     status: () => getTransport().call<MediaStatus>("media_status"),
     cancel: (jobId: string) => getTransport().call<boolean>("media_cancel", { jobId }),
+    telemetry: () => getTransport().call<Telemetry>("hardware_telemetry"),
     imageStart: (input: ImageStartInput) => getTransport().call<string>("image_start", { input }),
     imageStop: () => getTransport().call<null>("image_stop"),
     imageGenerate: (jobId: string, input: ImageGenerateInput) => getTransport().call<OutputRecord>("image_generate", { jobId, input }),
