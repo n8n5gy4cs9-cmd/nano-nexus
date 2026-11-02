@@ -76,7 +76,7 @@ Use Terra for one task at a time with explicit files/contracts and completion cr
 - [ ] **UP.052** [LEAD] Package prebuilt Windows Rust app/engines, private fixed WebView2 and private workers; no target installers or package managers.
 - [ ] **UP.053** [LEAD] Pin runtime artifacts/digests, collect licenses and disable target-side source builds/implicit downloads.
 - [ ] **UP.054** [LEAD] Implement versioned staged updates, running-process guard, rollback and data preservation; never clear DIST.
-- [ ] **UP.055** [TERRA+REVIEW] Bound build scratch space and optional Colima resources; cleanup only task-owned resources after approved builds.
+- [x] **UP.055** [TERRA+REVIEW] Bound build scratch space and optional Colima resources; cleanup only task-owned resources after approved builds. (2026-11-02; source-only ownership/budget watchdog and guarded cleanup helper plus BUILD-WORKSPACES.md; sampled limits/overshoot and external-output gaps explicit; no Colima resources created, legacy build integration remains UP.050–054/062; script not executed, untested)
 
 ## Undone — user documentation [TERRA: whole category]
 

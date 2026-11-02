@@ -45,3 +45,5 @@ dist-bundles/
 
 
 REFE/
+# Task-owned, budgeted portable build scratch (UP.055)
+/.portable-build/
