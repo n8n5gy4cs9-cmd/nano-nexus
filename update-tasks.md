@@ -80,7 +80,7 @@ Use Terra for one task at a time with explicit files/contracts and completion cr
 
 ## Undone — user documentation [TERRA: whole category]
 
-- [ ] **UP.060** [TERRA] Update `guide.html`: back up before formatting, choose exFAT, copy the entire DIST folder, launch each OS, download to USB, work offline, update safely and eject safely. Formatting erases data; never format automatically.
+- [x] **UP.060** [TERRA] Update `guide.html`: back up before formatting, choose exFAT, copy the entire DIST folder, launch each OS, download to USB, work offline, update safely and eject safely. Formatting erases data; never format automatically. (2026-11-02; guide USB workflow added; pending launchers/updater explicitly labelled; documentation only)
 - [ ] **UP.061** [TERRA] Document OS/CPU minimums, hardware drivers, unsupported acceleration, USB speed/capacity and OS-managed trace limits.
 ## Undone — build approval and delivery [LEAD + BUILD APPROVAL]
 

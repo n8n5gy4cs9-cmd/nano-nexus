@@ -116,6 +116,7 @@
     <li><a href="#dummies">★ For beginners: start here</a></li>
     <li><a href="#duo">★ Duo: two models in one chat</a></li>
     <li><a href="#activity">★ Activity: see what is running</a></li>
+    <li><a href="#usb-dist">Portable AI Stick (in development)</a></li>
     <li><a href="#overview">Overview (building the app)</a></li>
     <li><a href="#quick">★ Quick start: bundle my model + books</a></li>
     <li><a href="#setup">1 · One-time setup (Mac)</a></li>
@@ -146,6 +147,31 @@
   </p>
 </header>
 
+
+<h2 id="usb-dist">Portable AI Stick: one USB folder <span class="badge b-plan">In development · UP</span></h2>
+<div class="note warn"><strong>No ready-made DIST release yet</strong>The shared USB distribution is source work in progress, unbuilt and untested. The steps below describe the intended delivered package. Platform launchers, private runtimes and safe updates are still pending. The build recipes elsewhere in this guide produce legacy packages; they do not produce this shared DIST.</div>
+<h3>Prepare the drive without losing files</h3>
+<ol>
+  <li>Back up everything on the USB drive to a separate device, and confirm the backup is readable. <b>Formatting erases the selected drive.</b> NanoNexus never formats drives automatically.</li>
+  <li>For a drive shared between Mac and Windows, choose <b>exFAT</b>. It supports large model files on both systems. FAT32 cannot hold individual files larger than 4 GiB. If you format manually in Disk Utility or Windows, check the selected device and capacity before erasing. Leave existing data alone if the drive is already suitable.</li>
+  <li>Use a fast, reliable USB SSD where possible. Allow space for the full package, selected models and companions, outputs, caches, download partials and a separate backup. A drive with space only for the model file is insufficient.</li>
+</ol>
+<h3>Copy and launch the delivered package</h3>
+<p>When a release is available, copy the <b>entire DIST folder</b>, including <code>portable.json</code>, <code>apps/</code>, <code>runtimes/</code>, <code>models/</code>, <code>data/</code>, <code>outputs/</code>, <code>licenses/</code> and the guide. Keep their relative locations. Do not copy just the executable or move the Mac app out of this layout. The Mac and Windows apps share compatible weights in one model store.</p>
+<ul>
+  <li><b>Apple Silicon Mac:</b> the planned entry point is <code>Start-Mac.command</code>. Launcher signing, Gatekeeper and exFAT execution handling remain delivery work. Follow the release's signed launch instructions; do not disable OS security or remove quarantine indiscriminately.</li>
+  <li><b>Windows x64:</b> the planned entry point is <code>Start-Windows.cmd</code>. The release must include private WebView2 and CPU engines. Do not install Node, Python, CUDA or package managers to compensate for an incomplete DIST.</li>
+  <li>Run only one copy against the same DIST at a time, including across computers. Missing marker, read-only/full storage or a busy distribution must be resolved before launch; do not redirect storage to the host profile.</li>
+</ul>
+<h3>Models, offline use and project folders</h3>
+<p>In <b>Models → USB Studio</b>, explicitly import local assets or download supported Hugging Face file URLs while online. Keep models in the shared USB store; media engines may need companion assets. Wait for completion before disconnecting. Selection and format checks do not prove engine compatibility or memory fit. Removing a model entry currently retains shared bytes and does not reclaim space.</p>
+<p>For offline use, obtain all required models, companion files and platform runtimes in advance. Downloads, web search and cloud providers require networking; local inference is the default. No target-side source compilation or automatic dependency installation is intended. Current engine packaging is incomplete, so offline operation has not been demonstrated for this DIST.</p>
+<p>Grant access explicitly to a coding project, for example a sibling <code>Projects/</code> folder on the USB. The protected DIST itself is not an agent workspace. File changes still require proposals and Journal approval. USB startup requests fresh host-folder permissions; do not assume another computer's paths or grants transfer. Keep backups of projects separately.</p>
+<h3>Update, back up and eject</h3>
+<p><b>A safe DIST updater is not delivered yet.</b> Do not merge a new release over live files or delete the old DIST to update. Until a documented update package is available, retain your existing copy. The planned updater stages application/runtime replacements, checks integrity, preserves models/data/outputs, and retains rollback information. An older executable may be incompatible with an upgraded database; restoring only the app is not a safe database rollback.</p>
+<p>Before an update or backup, stop jobs and downloads, quit NanoNexus and wait for its engines to exit. Copy the complete stopped DIST to separate storage; copying only <code>nexus.db</code> while it is open can omit SQLite sidecar data. Leave your original copy intact until recovery is established. Backups also need room for large weights.</p>
+<p>Before removing the drive, finish or cancel active work, quit the app, wait for writes to finish, then use Finder's <b>Eject</b> or Windows <b>Safely Remove Hardware</b>. If the OS says the drive is busy, close its users and retry. Never unplug during a model transfer, database write or update. Sudden removal can lose data; the app cannot make disconnected-device writes durable.</p>
+<p>Read the <a href="#usb-limits">hardware and storage limits</a> before choosing a computer or drive.</p>
 
 <h2 id="dummies">★ For beginners: start here <span class="badge b-now">Available now</span></h2>
 <p>You do not need to know anything about AI to use NanoNexus. This part is written for someone who has never run an AI model before. The sections after it (building apps, Windows, USB packs) are for when you want to <i>make</i> a NanoNexus app for yourself or someone else.</p>
