@@ -218,7 +218,14 @@ pub fn active_model_id(ctx: &AppCtx) -> Option<String> {
 }
 
 fn removal(ctx: &AppCtx, row: &ModelRow) -> Removal {
-    if row.source == "builtin" {
+    if row.source == "builtin"
+        || row
+            .extra
+            .as_deref()
+            .and_then(|s| serde_json::from_str::<serde_json::Value>(s).ok())
+            .is_some_and(|v| v.get("storage").and_then(|v| v.as_str()) == Some("studio"))
+    {
+        // Shared content is managed through Studio reference accounting, never legacy file deletion.
         return Removal::Protected;
     }
     let referenced = row

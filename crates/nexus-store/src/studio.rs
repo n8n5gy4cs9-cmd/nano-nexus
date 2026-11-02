@@ -56,6 +56,18 @@ pub struct StudioModel {
 }
 
 impl Store {
+    /// Persist or clear the selected model for one workspace.
+    pub fn studio_select(&self, kind: ModelKind, id: Option<&str>) -> Result<(), StoreError> {
+        self.with_conn(|c| {
+            if let Some(id)=id {
+                let matches:bool=c.query_row("SELECT EXISTS(SELECT 1 FROM studio_models WHERE id=?1 AND kind=?2)",params![id,kind.as_str()],|r|r.get(0))?;
+                if !matches { return Err(StoreError::NotFound("workspace model")); }
+                c.execute("INSERT INTO studio_selections(kind,model_id) VALUES(?1,?2) ON CONFLICT(kind) DO UPDATE SET model_id=?2",params![kind.as_str(),id])?;
+            } else { c.execute("DELETE FROM studio_selections WHERE kind=?1",[kind.as_str()])?; }
+            Ok(())
+        })
+    }
+
     /// Selected model per workspace; selection is separate from engine running state.
     pub fn list_studio_selections(&self) -> Result<Vec<(String, String)>, StoreError> {
         self.with_conn(|c| {

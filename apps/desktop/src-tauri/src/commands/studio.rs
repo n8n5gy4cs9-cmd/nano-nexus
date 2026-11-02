@@ -9,7 +9,7 @@ use crate::{
 };
 use nexus_core::error::{IpcError, NexusError};
 use nexus_models::download::DownloadProgress;
-use nexus_store::studio::StudioModel;
+use nexus_store::studio::{ModelKind, StudioModel};
 use std::sync::Arc;
 use tauri::{AppHandle, State, ipc::Channel};
 use tauri_plugin_dialog::DialogExt;
@@ -96,4 +96,29 @@ pub async fn studio_pick_asset(app: AppHandle) -> CmdResult<Option<String>> {
     Ok(picked
         .and_then(|p| p.into_path().ok())
         .map(|p| p.display().to_string()))
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn studio_select(ctx: Ctx<'_>, id: String) -> CmdResult<()> {
+    service::studio::select(&ctx, &Caller::Desktop, &id)
+        .await
+        .map_err(IpcError::from)
+}
+#[tauri::command]
+#[specta::specta]
+pub async fn studio_unload(ctx: Ctx<'_>, kind: ModelKind) -> CmdResult<()> {
+    service::studio::unload(&ctx, &Caller::Desktop, kind)
+        .await
+        .map_err(IpcError::from)
+}
+#[tauri::command]
+#[specta::specta]
+pub async fn studio_remove(ctx: Ctx<'_>, id: String) -> CmdResult<()> {
+    service::studio::remove(&ctx, &Caller::Desktop, &id).map_err(IpcError::from)
+}
+#[tauri::command]
+#[specta::specta]
+pub async fn studio_reclassify(ctx: Ctx<'_>, id: String, kind: ModelKind) -> CmdResult<()> {
+    service::studio::reclassify(&ctx, &Caller::Desktop, &id, kind).map_err(IpcError::from)
 }

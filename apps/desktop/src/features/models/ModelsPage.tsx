@@ -26,6 +26,8 @@ import { DuoPanel } from "./DuoPanel";
 import { ModelDrawer } from "./ModelDrawer";
 import { ExportPackDialog, ImportPackDialog } from "./PackDialogs";
 import { RuntimePanel } from "./RuntimePanel";
+import { StudioModels } from "./StudioModels";
+import { IS_WEB } from "@/lib/target";
 import { SearchTab } from "./SearchTab";
 import { useModels } from "./useModels";
 
@@ -146,6 +148,7 @@ export function ModelsPage() {
             <TabsTrigger value="installed">Installed</TabsTrigger>
             <TabsTrigger value="discover">Discover</TabsTrigger>
             <TabsTrigger value="search">Search</TabsTrigger>
+            {IS_WEB ? null : <TabsTrigger value="studio">USB Studio</TabsTrigger>}
           </TabsList>
           <div className="flex flex-wrap gap-2">
             <Button size="sm" disabled={verify.isPending} onClick={() => verify.mutate()}>
@@ -166,6 +169,7 @@ export function ModelsPage() {
           </div>
         </div>
 
+        {IS_WEB ? null : <TabsContent value="studio"><StudioModels /></TabsContent>}
         <TabsContent value="installed" className="mt-4 flex flex-col gap-5">
           {active.length > 0 ? (
             <Section title="Downloading">

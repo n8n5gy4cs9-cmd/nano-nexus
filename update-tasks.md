@@ -34,7 +34,7 @@ Updated: 2026-11-02. `[x]` means the stated deliverable is complete; it does not
 
 - [x] **UP.030** Add transactional model/kind/variant/asset-role registry, digest-based physical storage with cross-model reuse, bounded verified/cancellable imports and root-relative paths. Add consistent USB-local DB backup before schema upgrade. (2026-11-02; source only, unbuilt/untested; UI/downloader/legacy migration wiring remains UP.031–033)
 - [x] **UP.031** Preserve catalog downloader and add shared-registry HF file-URL transfers with resolved revisions/digests, generic asset validation, streamed progress, partial-file resume/pause/cancel, disk budgeting and desktop-only services/commands. (2026-11-02; source only, unbuilt/untested; no network requests run)
-- [ ] **UP.032** Import/select/unload/delete/reclassify UI, duplicate detection, supported companion assets and safe reference accounting.
+- [x] **UP.032** Add Models → USB Studio with typed Transport API, category/variant/companion roles, streamed import/download progress, pause/resume/cancel, availability/error states, chat activation, workspace selection/unload, reclassification and confirmed logical removal. Shared bytes are retained safely and legacy deletion protects Studio assets. (2026-11-02; source only, unbuilt/untested; media engine integration and orphan reclaim remain pending)
 - [ ] **UP.033** Migrate existing models without destructive moves or avoidable copies; keep offline pack compatibility.
 
 ## Undone — reference features and retained features

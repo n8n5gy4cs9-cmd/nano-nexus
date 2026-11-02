@@ -63,6 +63,7 @@ import type { PairingView, SharePolicy, ShareDevice, ShareStatus } from "@/featu
 import type { KbIndexResult, KbLibrary, KbDocumentSource, KbLibraryDetail, KbPassage, KbProgress } from "@/features/library/types";
 
 import { getTransport } from "./transport";
+import type { ModelKind, StudioModel, StudioModelView, StudioModelInput, StudioProgress } from "@/features/models/studio-types";
 import type { ReportDelta, WatchSchedule, WatchView } from "@/features/analyzer/watches";
 import type { JobSummary } from "@/features/jobs/types";
 import type { Checker, Found, RenameItem, RenamePlan, RenamePlanOptions, RenameProgress, RenameSession, RenameVerifyResult, Usage } from "@/features/rename/types";
@@ -72,6 +73,19 @@ import type { Unsubscribe } from "./transport";
 export type SettingValue = null | boolean | number | string | string[] | Record<string, boolean> | Record<string, string[]>;
 
 export const api = {
+  studio: {
+    list: () => getTransport().call<StudioModelView[]>("studio_models"),
+    pickAsset: () => getTransport().call<string | null>("studio_pick_asset"),
+    download: (jobId: string, url: string, input: StudioModelInput, onProgress: (p: StudioProgress) => void) =>
+      getTransport().stream<StudioProgress, StudioModel>("studio_download", { jobId, url, input }, onProgress),
+    import: (jobId: string, path: string, input: StudioModelInput, onProgress: (p: StudioProgress) => void) =>
+      getTransport().stream<StudioProgress, StudioModel>("studio_import", { jobId, path, input }, onProgress),
+    cancel: (jobId: string, discard: boolean) => getTransport().call<boolean>("studio_transfer_cancel", { jobId, discard }),
+    select: (id: string) => getTransport().call<null>("studio_select", { id }),
+    unload: (kind: ModelKind) => getTransport().call<null>("studio_unload", { kind }),
+    remove: (id: string) => getTransport().call<null>("studio_remove", { id }),
+    reclassify: (id: string, kind: ModelKind) => getTransport().call<null>("studio_reclassify", { id, kind }),
+  },
   app: {
     info: () => getTransport().call<AppInfo>("app_info"),
     /** Open an http(s) link in the OS browser. */

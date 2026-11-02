@@ -37,6 +37,7 @@ pub struct ModelView {
 }
 
 struct Transfer {
+    model_id: String,
     cancel: CancellationToken,
     discard: bool,
 }
@@ -48,18 +49,20 @@ struct TransferGuard(String);
 impl Drop for TransferGuard {
     fn drop(&mut self) {
         if let Ok(mut jobs) = transfers().lock() {
-            jobs.remove(&self.0);
+            if let Some(job) = jobs.remove(&self.0) {
+                job.cancel.cancel();
+            }
         }
     }
 }
-fn begin(id: &str) -> Result<(TransferGuard, CancellationToken), NexusError> {
+fn begin(id: &str, model_id: &str) -> Result<(TransferGuard, CancellationToken), NexusError> {
     if id.is_empty() || id.len() > 128 {
         return Err(invalid("invalid transfer id"));
     }
     let mut jobs = transfers()
         .lock()
         .map_err(|_| invalid("transfer lock poisoned"))?;
-    if jobs.len() >= 8 || jobs.contains_key(id) {
+    if jobs.len() >= 8 || jobs.contains_key(id) || jobs.values().any(|job| job.model_id == model_id) {
         return Err(NexusError::Conflict(
             "transfer already running or queue full".into(),
         ));
@@ -68,6 +71,7 @@ fn begin(id: &str) -> Result<(TransferGuard, CancellationToken), NexusError> {
     jobs.insert(
         id.into(),
         Transfer {
+            model_id: model_id.into(),
             cancel: token.clone(),
             discard: false,
         },
@@ -159,7 +163,10 @@ fn publish(
     });
     let mut metadata: serde_json::Value =
         serde_json::from_str(&model.metadata).unwrap_or_else(|_| serde_json::json!({}));
-    metadata[&input.role] = provenance;
+    let object = metadata
+        .as_object_mut()
+        .ok_or_else(|| invalid("stored model provenance is not an object"))?;
+    object.insert(input.role.clone(), provenance);
     model.metadata = metadata.to_string();
     studio::register(&ctx.store, root, &model)?;
     project_chat(ctx, root, &model)?;
@@ -209,7 +216,8 @@ pub async fn import(
 ) -> Result<StudioModel, NexusError> {
     let root = root(ctx, caller)?;
     validate_input(&input)?;
-    let (_guard, cancel) = begin(job_id)?;
+    idle_model(ctx, &input.id)?;
+    let (_guard, cancel) = begin(job_id, &input.id)?;
     let source = PathBuf::from(path);
     // Native picker/drag-drop is user intent; still enforce built-in and user deny rules.
     let source = super::models::reference_read(ctx, &source).await?;
@@ -236,21 +244,20 @@ pub async fn download(
     if !ctx.settings_snapshot().privacy_allow_network_downloads {
         return Err(invalid("enable model downloads in Privacy settings first"));
     }
-    let (_guard, cancel) = begin(job_id)?;
+    idle_model(ctx, &input.id)?;
+    let (_guard, cancel) = begin(job_id, &input.id)?;
     if url.len() > 8192 {
         return Err(invalid("model URL is too long"));
     }
     let (repo, revision, file) = studio::hugging_face_location(url)?;
-    let revision = ctx
-        .hf
-        .resolve_revision(&repo, &revision)
-        .await
-        .map_err(|e| invalid(&e.to_string()))?;
-    let tree = ctx
-        .hf
-        .tree(&repo, &revision.sha)
-        .await
-        .map_err(|e| invalid(&e.to_string()))?;
+    let revision = tokio::select! {
+        ()=cancel.cancelled()=>return Err(NexusError::Cancelled),
+        result=ctx.hf.resolve_revision(&repo,&revision)=>result.map_err(|e|invalid(&e.to_string()))?,
+    };
+    let tree = tokio::select! {
+        ()=cancel.cancelled()=>return Err(NexusError::Cancelled),
+        result=ctx.hf.tree(&repo,&revision.sha)=>result.map_err(|e|invalid(&e.to_string()))?,
+    };
     let selected = tree
         .into_iter()
         .find(|f| f.path == file)
@@ -336,4 +343,123 @@ pub fn cancel(caller: &Caller, id: &str, discard: bool) -> Result<bool, NexusErr
 }
 fn invalid(message: &str) -> NexusError {
     NexusError::InvalidInput(message.into())
+}
+
+fn get_model(ctx: &AppCtx, id: &str) -> Result<StudioModel, NexusError> {
+    ctx.store
+        .studio_models()?
+        .into_iter()
+        .find(|m| m.id == id)
+        .ok_or_else(|| NexusError::NotFound("Studio model".into()))
+}
+fn idle_model(ctx: &AppCtx, id: &str) -> Result<(), NexusError> {
+    if transfers()
+        .lock()
+        .map_err(|_| invalid("transfer lock poisoned"))?
+        .values()
+        .any(|j| j.model_id == id)
+    {
+        return Err(NexusError::Conflict(
+            "wait for this model's transfer to finish".into(),
+        ));
+    }
+    if ctx
+        .store
+        .list_studio_selections()?
+        .iter()
+        .any(|(_, selected)| selected == id)
+    {
+        return Err(NexusError::Conflict(
+            "unload this workspace model before changing its assets or category".into(),
+        ));
+    }
+    match ctx.supervisor.state() {
+        nexus_core::events::RuntimeState::Starting { .. } | nexus_core::events::RuntimeState::Loading => {
+            return Err(NexusError::Conflict(
+                "wait for the chat engine to finish loading".into(),
+            ));
+        }
+        nexus_core::events::RuntimeState::Ready { model_id, .. } if model_id == format!("studio-{id}") => {
+            return Err(NexusError::Conflict("unload this model first".into()));
+        }
+        _ => {}
+    }
+    Ok(())
+}
+
+/// Select an available model. Chat starts the existing engine; media selection is configuration only.
+pub async fn select(ctx: &Ctx, caller: &Caller, id: &str) -> Result<(), NexusError> {
+    let root = root(ctx, caller)?;
+    let (_guard, _cancel) = begin(&format!("select-{id}"), id)?;
+    let model = get_model(ctx, id)?;
+    if !model.assets.iter().any(|a| a.role == "weights") {
+        return Err(invalid("add the weights asset before selecting this model"));
+    }
+    if model.variant != "universal" {
+        return Err(invalid(
+            "this backend-specific variant needs its workspace engine integration before selection",
+        ));
+    }
+    for role in &model.assets {
+        studio::validate_asset(&root, &role.asset)?;
+    }
+    if model.kind == ModelKind::Chat {
+        project_chat(ctx, &root, &model)?;
+        super::models::activate(ctx, caller, &format!("studio-{id}")).await?;
+    }
+    ctx.store.studio_select(model.kind, Some(id))?;
+    Ok(())
+}
+
+/// Stop the chat engine or clear a media selection. Never claim an unimplemented media engine ran.
+pub async fn unload(ctx: &Ctx, caller: &Caller, kind: ModelKind) -> Result<(), NexusError> {
+    root(ctx, caller)?;
+    if kind == ModelKind::Chat {
+        ctx.supervisor.shutdown().await;
+        super::settings::set(
+            ctx,
+            caller,
+            "models.active_model_id",
+            super::settings::SettingValue::Text("builtin".into()),
+        )?;
+    }
+    ctx.store.studio_select(kind, None)?;
+    Ok(())
+}
+
+/// Remove a logical entry only. Shared/orphan bytes are retained for recovery; never unlinked blindly.
+pub fn remove(ctx: &AppCtx, caller: &Caller, id: &str) -> Result<(), NexusError> {
+    root(ctx, caller)?;
+    idle_model(ctx, id)?;
+    let (_guard, _cancel) = begin(&format!("remove-{id}"), id)?;
+    get_model(ctx, id)?;
+    ctx.store.studio_remove(id)?;
+    ctx.store.delete_model(&format!("studio-{id}"))?;
+    Ok(())
+}
+
+/// Reclassify after checking all asset formats. Selected or running models cannot be reclassified.
+pub fn reclassify(ctx: &AppCtx, caller: &Caller, id: &str, kind: ModelKind) -> Result<(), NexusError> {
+    let root = root(ctx, caller)?;
+    idle_model(ctx, id)?;
+    let (_guard, _cancel) = begin(&format!("reclassify-{id}"), id)?;
+    let mut model = get_model(ctx, id)?;
+    for role in &model.assets {
+        let path = studio::validate_asset(&root, &role.asset)?;
+        studio::validate_format(&path, kind, &role.role)?;
+    }
+    model.kind = kind;
+    studio::register(&ctx.store, &root, &model)?;
+    ctx.store.delete_model(&format!("studio-{id}"))?;
+    project_chat(ctx, &root, &model)?;
+    Ok(())
+}
+
+/// Cancel owned transfers during shutdown, before releasing the portable distribution lock.
+pub fn cancel_all() {
+    if let Ok(jobs) = transfers().lock() {
+        for transfer in jobs.values() {
+            transfer.cancel.cancel();
+        }
+    }
 }

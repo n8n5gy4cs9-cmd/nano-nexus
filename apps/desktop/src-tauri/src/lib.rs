@@ -263,6 +263,7 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 /// process group), and the audit queue. Safe to call more than once.
 async fn shutdown_all(ctx: &Ctx) {
     ctx.chats.cancel_all();
+    service::studio::cancel_all();
     service::share::stop(ctx).await;
     ctx.supervisor.shutdown().await;
     ctx.audit.flush().await;
