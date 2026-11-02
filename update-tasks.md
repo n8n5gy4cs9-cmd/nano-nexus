@@ -76,3 +76,13 @@ Updated: 2026-11-02. `[x]` means the stated deliverable is complete; it does not
 - [ ] **UP.071** App storage/write-activity view with outside-root destinations and subsystem filters; never claim to observe all OS writes.
 - [ ] **UP.072** Package Windows CPU-only baseline independently of CUDA/Vulkan; add conservative non-AVX2 variant and CPU-instruction selection before engine startup.
 - [ ] **UP.073** RAM-aware model recommendations and conservative context/thread defaults; explain older-PC image/speech limitations and unsupported OS/CPU cases.
+
+## Coding references — added during active batch
+
+- [x] **UP.079** Source-audit ClaudeCode-Portable and code-stick; record feature map, useful patterns, license obligations and Journal conflicts in docs/portable/CODING-REFERENCES.md. (2026-11-02; no runtime claims)
+- [ ] **UP.080** Provider/model profiles with local default, explicit network consent, tool capability flags and memory-only secrets.
+- [ ] **UP.081** Optional private official coding runtime integration with license gate and proposal-only isolation; never enable direct-write bypass.
+- [ ] **UP.082** Streaming protocol adapters with tool-argument validation, bounded results, cancellation and explicit compatibility errors.
+- [ ] **UP.083** Per-engine session resume/terminal integration without conflating IDs or replaying writes; show engine/provider identity.
+- [ ] **UP.084** Project/projectless coding sessions, USB-local attachments and reconfirmed project grants across hosts.
+- [ ] **UP.085** Complete coding turn lifecycle: real read/search/list results, validated proposals, approval/Journal apply, visible tool failures, timeouts/cancel and honest completion receipts.
