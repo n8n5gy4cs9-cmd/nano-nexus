@@ -24,6 +24,7 @@ pub mod runtime;
 pub mod settings;
 pub mod share;
 pub mod sink;
+pub mod studio;
 pub mod watches;
 
 use nexus_core::settings::SharePolicy;

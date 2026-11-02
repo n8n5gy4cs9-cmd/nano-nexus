@@ -199,3 +199,96 @@ fn identifier(value: &str) -> bool {
 fn invalid(message: &str) -> NexusError {
     NexusError::InvalidInput(message.into())
 }
+
+/// Parse a pinned-file Hugging Face URL, never an arbitrary download/SSRF target.
+pub fn hugging_face_location(url: &str) -> Result<(String, String, String), NexusError> {
+    let url = reqwest::Url::parse(url).map_err(|_| invalid("enter a Hugging Face resolve file URL"))?;
+    if url.scheme() != "https"
+        || url.host_str() != Some("huggingface.co")
+        || url.port().is_some()
+        || !url.username().is_empty()
+        || url.password().is_some()
+        || url.query().is_some()
+        || url.fragment().is_some()
+    {
+        return Err(invalid(
+            "use https://huggingface.co/owner/repo/resolve/revision/file without credentials or query parameters",
+        ));
+    }
+    let segments: Vec<_> = url.path().trim_start_matches('/').split('/').collect();
+    if segments.len() < 5
+        || !matches!(segments[2], "resolve" | "blob")
+        || segments
+            .iter()
+            .any(|s| s.is_empty() || *s == "." || *s == ".." || s.contains(['%', '\\', ':']))
+    {
+        return Err(invalid("choose a single Hugging Face repository file URL"));
+    }
+    Ok((
+        format!("{}/{}", segments[0], segments[1]),
+        segments[3].into(),
+        segments[4..].join("/"),
+    ))
+}
+
+/// Reject incompatible standalone model files without executing their contents.
+pub fn validate_format(
+    path: &Path,
+    kind: nexus_store::studio::ModelKind,
+    role: &str,
+) -> Result<(), NexusError> {
+    use nexus_store::studio::ModelKind;
+    let extension = path
+        .extension()
+        .and_then(|x| x.to_str())
+        .unwrap_or("")
+        .to_ascii_lowercase();
+    if role != "weights" {
+        if !matches!(
+            extension.as_str(),
+            "gguf" | "json" | "bin" | "onnx" | "txt" | "npy" | "npz" | "model"
+        ) {
+            return Err(invalid("unsupported companion asset extension"));
+        }
+        if extension == "gguf" {
+            crate::gguf::parse_file(path).map_err(|e| invalid(&e.to_string()))?;
+        }
+        return Ok(());
+    }
+    match (kind, extension.as_str()) {
+        (ModelKind::Chat, "gguf") | (ModelKind::Image, "gguf") => {
+            crate::gguf::parse_file(path).map_err(|e| invalid(&e.to_string()))?;
+        }
+        (ModelKind::Image, "safetensors") => {
+            let mut file = std::fs::File::open(path)?;
+            let mut length = [0_u8; 8];
+            file.read_exact(&mut length)?;
+            let length = u64::from_le_bytes(length);
+            if !(2..=1024 * 1024).contains(&length) || length.saturating_add(8) >= file.metadata()?.len() {
+                return Err(invalid("invalid safetensors header length"));
+            }
+            let mut header = vec![0_u8; length as usize];
+            file.read_exact(&mut header)?;
+            let value: serde_json::Value =
+                serde_json::from_slice(&header).map_err(|_| invalid("invalid safetensors header"))?;
+            if !value.is_object() {
+                return Err(invalid("invalid safetensors tensor metadata"));
+            }
+        }
+        (ModelKind::Speech, "bin") => {
+            let mut magic = [0_u8; 4];
+            std::fs::File::open(path)?.read_exact(&mut magic)?;
+            if &magic != b"lmgg" {
+                return Err(invalid("expected a whisper.cpp GGML model"));
+            }
+        }
+        (ModelKind::Tts, "onnx") => {} // Digest/size verified; compatibility is checked by the private ONNX worker.
+        (ModelKind::Image, "ckpt") => {
+            return Err(invalid(
+                "checkpoint import requires a pinned native backend capability; unsafe Python pickle loading is disabled",
+            ));
+        }
+        _ => return Err(invalid("file format does not match the selected model category")),
+    }
+    Ok(())
+}

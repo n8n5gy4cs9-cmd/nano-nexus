@@ -220,6 +220,34 @@ impl Downloader {
         progress: &(dyn Fn(DownloadProgress) + Send + Sync),
         cancel: &CancellationToken,
     ) -> Result<Downloaded, DownloadError> {
+        self.download_checked(spec, progress, cancel, true).await
+    }
+
+    /// Download a non-GGUF asset with the same pinned revision, size, digest and resume checks.
+    /// The owning workspace validates the format before registering it as a model.
+    pub async fn download_asset(
+        &self,
+        spec: &DownloadSpec,
+        progress: &(dyn Fn(DownloadProgress) + Send + Sync),
+        cancel: &CancellationToken,
+    ) -> Result<Downloaded, DownloadError> {
+        self.download_checked(spec, progress, cancel, false).await
+    }
+
+    async fn download_checked(
+        &self,
+        spec: &DownloadSpec,
+        progress: &(dyn Fn(DownloadProgress) + Send + Sync),
+        cancel: &CancellationToken,
+        require_gguf: bool,
+    ) -> Result<Downloaded, DownloadError> {
+        if spec.expected_bytes == 0
+            || !crate::studio::valid_digest(&spec.expected_sha256.to_ascii_lowercase())
+        {
+            return Err(DownloadError::Network(
+                "a nonempty asset with a verified SHA-256 is required".into(),
+            ));
+        }
         if let Some(dir) = spec.dest.parent() {
             std::fs::create_dir_all(dir)?;
         }
@@ -315,11 +343,12 @@ impl Downloader {
             discard_part(&spec.dest);
             return Err(DownloadError::ChecksumMismatch);
         }
-        if let Err(e) = gguf::parse_file(&part) {
+        if require_gguf && let Err(e) = gguf::parse_file(&part) {
             discard_part(&spec.dest);
             return Err(DownloadError::NotGguf(e.to_string()));
         }
         progress(emitter.frame(done, Phase::Finalizing, true));
+        std::fs::OpenOptions::new().write(true).open(&part)?.sync_all()?;
         std::fs::rename(&part, &spec.dest)?;
         let _ = std::fs::remove_file(meta_path(&spec.dest));
         Ok(Downloaded {

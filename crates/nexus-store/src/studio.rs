@@ -56,6 +56,16 @@ pub struct StudioModel {
 }
 
 impl Store {
+    /// Selected model per workspace; selection is separate from engine running state.
+    pub fn list_studio_selections(&self) -> Result<Vec<(String, String)>, StoreError> {
+        self.with_conn(|c| {
+            let mut stmt = c.prepare("SELECT kind,model_id FROM studio_selections ORDER BY kind")?;
+            Ok(stmt
+                .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?
+                .collect::<Result<Vec<_>, _>>()?)
+        })
+    }
+
     /// Record a verified physical asset before a model references it.
     pub fn studio_publish_asset(&self, asset: &StudioAsset) -> Result<(), StoreError> {
         self.with_conn(|c| {

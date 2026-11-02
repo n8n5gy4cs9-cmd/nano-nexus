@@ -6,13 +6,18 @@ use tauri_specta::{Builder, collect_commands, collect_events};
 
 use crate::commands::{
     analyzer, app, assistants, attachments, chat, conversations, editor, fs, jobs, knowledge, models,
-    notifications, observe, permissions, rename, runtime, settings, share, watches,
+    notifications, observe, permissions, rename, runtime, settings, share, studio, watches,
 };
 
 /// All commands and events.
 pub fn builder() -> Builder<tauri::Wry> {
     Builder::<tauri::Wry>::new()
         .commands(collect_commands![
+            studio::studio_models,
+            studio::studio_download,
+            studio::studio_import,
+            studio::studio_transfer_cancel,
+            studio::studio_pick_asset,
             app::app_info,
             app::open_external,
             app::app_diagnostics,

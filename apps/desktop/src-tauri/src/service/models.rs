@@ -846,7 +846,7 @@ pub fn delete(ctx: &AppCtx, caller: &Caller, id: &str) -> Result<(), NexusError>
 }
 
 // Reference consent uses the existing broker; deny rules never become prompts.
-async fn reference_read(ctx: &Ctx, path: &Path) -> Result<PathBuf, NexusError> {
+pub(super) async fn reference_read(ctx: &Ctx, path: &Path) -> Result<PathBuf, NexusError> {
     match ctx.perms.check("user", path, Access::Read) {
         Ok(c) => return Ok(c.into_path_buf()),
         Err(nexus_fs::FsError::NoGrant { .. }) => {}
