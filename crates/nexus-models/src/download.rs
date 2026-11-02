@@ -103,8 +103,23 @@ fn meta_path(dest: &Path) -> PathBuf {
 
 /// Delete a partial download (Cancel; Pause keeps it).
 pub fn discard_part(dest: &Path) {
-    let _ = std::fs::remove_file(part_path(dest));
-    let _ = std::fs::remove_file(meta_path(dest));
+    if let Err(error) = discard_part_checked(dest) {
+        tracing::warn!(%error, "partial download cleanup failed; recovery may be needed");
+    }
+}
+
+/// Remove partial bytes and identity metadata, reporting errors rather than claiming cancellation cleaned them.
+pub fn discard_part_checked(dest: &Path) -> std::io::Result<()> {
+    let mut failure = None;
+    for path in [part_path(dest), meta_path(dest)] {
+        if let Err(error) = std::fs::remove_file(path)
+            && error.kind() != std::io::ErrorKind::NotFound
+            && failure.is_none()
+        {
+            failure = Some(error);
+        }
+    }
+    failure.map_or(Ok(()), Err)
 }
 
 /// Bytes already on disk for a resumable download of `dest`.
@@ -264,7 +279,7 @@ impl Downloader {
             .and_then(|t| serde_json::from_str::<PartMeta>(&t).ok())
             .is_some_and(|m| m == meta);
         if !meta_ok {
-            discard_part(&spec.dest);
+            discard_part_checked(&spec.dest)?;
         }
         let resume_from = if meta_ok { have_part } else { 0 };
 
@@ -332,7 +347,7 @@ impl Downloader {
         // Verify.
         progress(emitter.frame(done, Phase::Verifying, true));
         if done != spec.expected_bytes {
-            discard_part(&spec.dest);
+            discard_part_checked(&spec.dest)?;
             return Err(DownloadError::SizeMismatch {
                 got: done,
                 expected: spec.expected_bytes,
@@ -340,11 +355,11 @@ impl Downloader {
         }
         let digest = hex(&hasher.finalize());
         if !digest.eq_ignore_ascii_case(&spec.expected_sha256) {
-            discard_part(&spec.dest);
+            discard_part_checked(&spec.dest)?;
             return Err(DownloadError::ChecksumMismatch);
         }
         if require_gguf && let Err(e) = gguf::parse_file(&part) {
-            discard_part(&spec.dest);
+            discard_part_checked(&spec.dest)?;
             return Err(DownloadError::NotGguf(e.to_string()));
         }
         if cancel.is_cancelled() {
@@ -438,7 +453,7 @@ impl Downloader {
                 Some(Ok(chunk)) => {
                     if *done + chunk.len() as u64 > spec.expected_bytes {
                         out.flush()?;
-                        discard_part(&spec.dest);
+                        discard_part_checked(&spec.dest)?;
                         return Err(DownloadError::SizeMismatch {
                             got: *done + chunk.len() as u64,
                             expected: spec.expected_bytes,

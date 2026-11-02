@@ -728,8 +728,12 @@ async fn run_download(
         }
         Err(DownloadError::Cancelled) => {
             if intent.load(Ordering::SeqCst) == INTENT_CANCEL {
-                download::discard_part(Path::new(&row.dest));
-                let _ = ctx.store.set_download_status(&row.id, "cancelled", None);
+                match download::discard_part_checked(Path::new(&row.dest)) {
+                    Ok(()) => {
+                        let _ = ctx.store.set_download_status(&row.id, "cancelled", None);
+                    }
+                    Err(error) => finish_failed(ctx, &row, &DownloadError::Io(error)),
+                }
             } else {
                 let _ = ctx
                     .store
@@ -887,7 +891,7 @@ pub fn cancel(ctx: &AppCtx, caller: &Caller, id: &str) -> Result<(), NexusError>
     } else {
         None
     };
-    download::discard_part(&download_destination(ctx, &d)?);
+    download::discard_part_checked(&download_destination(ctx, &d)?)?;
     ctx.store.set_download_status(id, "cancelled", None)?;
     emit_download(ctx, id);
     Ok(())

@@ -320,7 +320,9 @@ pub async fn download(
                 .and_then(|j| j.get(job_id).map(|t| t.discard))
                 .unwrap_or(false);
             if discard {
-                nexus_models::download::discard_part(&dest);
+                nexus_models::download::discard_part_checked(&dest).map_err(|error| {
+                    invalid(&format!("Transfer stopped, but partial-file cleanup failed; retry cleanup after reconnecting the drive: {error}"))
+                })?;
             }
             return Err(if cancel.is_cancelled() {
                 NexusError::Cancelled
