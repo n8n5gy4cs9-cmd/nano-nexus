@@ -64,7 +64,7 @@ Use Terra for one task at a time with explicit files/contracts and completion cr
 - [ ] **UP.042** [TERRA+REVIEW] Image gallery, metadata, export and journal-governed deletion.
 - [ ] **UP.043** [LEAD] Whisper file/microphone transcription, progress/cancel, transcript storage/export and permission UI.
 - [ ] **UP.044** [LEAD] Kokoro voice/model selection, speech generation/playback, saved audio and progress/cancel.
-- [ ] **UP.045** [LEAD] Hardware detection, recommendations, backend selection/download and resource-aware engine switching; CPU fallback and unsupported states.
+- [ ] **UP.045** [LEAD] Hardware detection, recommendations, backend selection/download and resource-aware engine switching; CPU fallback and unsupported states. (PARTIAL 2026-11-02: crates/nexus-models/src/hardware.rs has CPU/RAM detection, backend recommendation with CPU/baseline fallback and unsupported states, unit tests written not run. Not done: GPU probing, service/command/UI wiring, backend download/switching, which need pinned artifacts from UP.053)
 - [ ] **UP.046** [TERRA+REVIEW] Telemetry/performance display and reference settings/themes through NanoNexus design tokens.
 - [x] **UP.047** [LEAD] Opt-in web search with current outbound-network and credential boundaries. (2026-11-02; kept ADR-016 WebClient, added time filter and query limits, docs/portable/WEB-SEARCH.md; source only, unbuilt/untested; chat-composer toggle and cache deliberately not ported)
 - [x] **UP.048** [TERRA+REVIEW] Retain assistants/Duo, file proposals/journal, analyzer, knowledge, authenticated LAN Share, Activity and offline help; document any incompatible reference behavior explicitly. (2026-11-02; docs/portable/RETENTION.md; docs only, nothing exercised)

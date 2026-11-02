@@ -6,6 +6,7 @@ pub mod catalog;
 pub mod download;
 pub mod fit;
 pub mod gguf;
+pub mod hardware;
 pub mod hf;
 pub mod pack;
 pub mod web;
