@@ -67,7 +67,7 @@ Use Terra for one task at a time with explicit files/contracts and completion cr
 - [ ] **UP.045** [LEAD] Hardware detection, recommendations, backend selection/download and resource-aware engine switching; CPU fallback and unsupported states.
 - [ ] **UP.046** [TERRA+REVIEW] Telemetry/performance display and reference settings/themes through NanoNexus design tokens.
 - [x] **UP.047** [LEAD] Opt-in web search with current outbound-network and credential boundaries. (2026-11-02; kept ADR-016 WebClient, added time filter and query limits, docs/portable/WEB-SEARCH.md; source only, unbuilt/untested; chat-composer toggle and cache deliberately not ported)
-- [ ] **UP.048** [TERRA+REVIEW] Retain assistants/Duo, file proposals/journal, analyzer, knowledge, authenticated LAN Share, Activity and offline help; document any incompatible reference behavior explicitly.
+- [x] **UP.048** [TERRA+REVIEW] Retain assistants/Duo, file proposals/journal, analyzer, knowledge, authenticated LAN Share, Activity and offline help; document any incompatible reference behavior explicitly. (2026-11-02; docs/portable/RETENTION.md; docs only, nothing exercised)
 
 ## Undone — packaging and updates
 
