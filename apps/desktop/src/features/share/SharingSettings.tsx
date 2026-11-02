@@ -81,7 +81,17 @@ export function SharingSettings() {
   const set = (key: string, value: SettingValue) => setSetting.mutate({ key, value });
   const failure = [setSetting, enable].find((m) => m.isError)?.error;
 
-  if (!s) return <div className="p-6 text-muted">Loading…</div>;
+  if (settings.isError)
+    return (
+      <div role="alert" className="mx-auto max-w-2xl p-6">
+        <h1 className="text-lead font-semibold">Sharing</h1>
+        <p className="mt-2 text-small text-danger">Couldn't load sharing settings: {toIpcException(settings.error).message}</p>
+        <Button className="mt-3" size="sm" onClick={() => void settings.refetch()}>
+          Try again
+        </Button>
+      </div>
+    );
+  if (!s) return <div role="status" className="p-6 text-muted">Loading…</div>;
   const allowed: string[] = s["share.allowed_assistants"] ?? ["*"];
   const allowedAll = allowed.includes("*");
   const portText = port ?? String(s["share.port"]);
@@ -256,6 +266,15 @@ export function SharingSettings() {
             </li>
           ))}
         </ul>
+      ) : devices.isError ? (
+        <p role="alert" className="mt-2 text-small text-danger">
+          Couldn't load paired devices: {toIpcException(devices.error).message}{" "}
+          <button type="button" className="underline" onClick={() => void devices.refetch()}>
+            Try again
+          </button>
+        </p>
+      ) : devices.isLoading ? (
+        <p role="status" className="mt-2 text-small text-muted">Loading devices…</p>
       ) : (
         <p className="mt-2 text-small text-muted">No devices yet. Turn sharing on and scan the QR code.</p>
       )}

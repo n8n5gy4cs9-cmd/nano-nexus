@@ -6,7 +6,7 @@
 > Run `scripts/progress.sh` for a summary. `scripts/progress.sh --write` refreshes the block below.
 
 <!-- progress:start -->
-**Progress:** 236/272 tasks done (86%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
+**Progress:** 237/272 tasks done (87%) · **Next:** T00.08 🍎 Run `scripts/doctor.sh` and `scripts/check.sh` on the Mac; record the environment in `docs/SPIKES.md` — ⏳ Mac-only; owner to run (skipped in the Linux container)
 <!-- progress:end -->
 
 Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs the Mac · 🪟 needs Windows (VM or PC) · ⭐ milestone exit check
@@ -288,7 +288,7 @@ Legend: 🔬 spike (answer a question, record in `docs/SPIKES.md`) · 🍎 needs
 - [ ] **T15.06** Performance budgets (cold start, idle RAM, 60 fps, scan speed) → SPIKES.md §perf
 - [x] **T15.07** `scripts/eval-assistants.sh` + golden transcripts for all assistants → pass table (2026-10-12) — `scripts/eval-assistants.sh` (+ `.mjs`), `crates/nexus-agent/examples/render_prompt.rs`, 10 golden files in `tests/golden/` (3 cases each, structural checks), pass table with the 80% rule. **Written, not run**: no model here; run it on the Mac with the default model and record the table in docs/SPIKES.md
 - [ ] **T15.08** (optional) Precompiled Metal shaders comparison
-- [ ] **T15.09** Empty/error/loading states everywhere
+- [x] **T15.09** Empty/error/loading states everywhere (2026-11-02) — audited every `useQuery` screen; most already handled. Added error+retry to Sharing settings (settings, paired devices), Activity sources panel and the chat header. Typechecked only, not tested; About section left alone (uncommitted work by others)
 - [ ] **T15.10** Visual QA: screenshots of every screen, light/dark, macOS/Windows/mobile → fix list done
 - [ ] ⭐ **T15.11** Exit check: budgets met; keyboard-only walkthrough; eval ≥ 80% per assistant
 

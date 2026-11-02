@@ -232,7 +232,7 @@ export function ChatView() {
   return (
     <div className="flex h-full flex-col">
       <header className="flex h-[52px] shrink-0 items-center gap-3 border-b border-border px-5 backdrop-blur">
-        <h2 className="min-w-0 flex-1 truncate text-body font-semibold">{conv.data?.conversation.title ?? ""}</h2>
+        <h2 className="min-w-0 flex-1 truncate text-body font-semibold">{conv.data?.conversation.title ?? (conv.isError ? "Couldn't open this chat" : "")}</h2>
         <button
           type="button"
           onClick={() => setSwitcherOpen(true)}

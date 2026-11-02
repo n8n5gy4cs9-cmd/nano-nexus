@@ -45,6 +45,14 @@ export function SourcesPanel({ view, compact = false }: { view?: ObserveView | u
 
   return (
     <div className="flex flex-col gap-3 text-body">
+      {settings.isError ? (
+        <p role="alert" className="text-small text-danger">
+          Couldn't load your saved choices, so the switches below show defaults: {toIpcException(settings.error).message}{" "}
+          <button type="button" className="underline" onClick={() => void settings.refetch()}>
+            Try again
+          </button>
+        </p>
+      ) : null}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="font-medium">NanoNexus</div>
