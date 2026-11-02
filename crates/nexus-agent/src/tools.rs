@@ -235,7 +235,12 @@ pub trait WebSource: Send + Sync {
     async fn search(&self, query: &str, max_results: usize) -> Result<Vec<WebHit>, String>;
     /// Search limited to `within` (`day`, `week`, `month` or `year`, already validated). Sources that
     /// cannot filter by date ignore it.
-    async fn search_within(&self, query: &str, max_results: usize, _within: &str) -> Result<Vec<WebHit>, String> {
+    async fn search_within(
+        &self,
+        query: &str,
+        max_results: usize,
+        _within: &str,
+    ) -> Result<Vec<WebHit>, String> {
         self.search(query, max_results).await
     }
     async fn fetch(&self, url: &str, max_chars: usize) -> Result<WebPage, String>;
@@ -1582,10 +1587,18 @@ impl Tool for SearchWeb {
     }
     async fn run(&self, args: ToolArgs, cx: &ToolCx) -> Result<ToolOutput, ToolError> {
         let query = arg_str(&args, "query")?;
-        let within = match args.get("time").and_then(Value::as_str).map(|t| t.trim().to_ascii_lowercase()) {
+        let within = match args
+            .get("time")
+            .and_then(Value::as_str)
+            .map(|t| t.trim().to_ascii_lowercase())
+        {
             None => "any".to_owned(),
             Some(t) if ["", "any", "day", "week", "month", "year"].contains(&t.as_str()) => t,
-            Some(_) => return Err(ToolError::Invalid("`time` must be day, week, month or year.".into())),
+            Some(_) => {
+                return Err(ToolError::Invalid(
+                    "`time` must be day, week, month or year.".into(),
+                ));
+            }
         };
         let hits = web(cx)?
             .search_within(query, 6, &within)

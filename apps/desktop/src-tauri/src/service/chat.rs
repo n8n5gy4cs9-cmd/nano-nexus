@@ -141,7 +141,11 @@ impl nexus_agent::tools::WebSource for ChatWeb {
         within: &str,
     ) -> Result<Vec<nexus_agent::tools::WebHit>, String> {
         let within = nexus_models::web::TimeFilter::parse(within).unwrap_or_default();
-        let hits = self.0.search_within(query, max, within).await.map_err(|e| e.to_string())?;
+        let hits = self
+            .0
+            .search_within(query, max, within)
+            .await
+            .map_err(|e| e.to_string())?;
         Ok(hits
             .into_iter()
             .map(|h| nexus_agent::tools::WebHit {
