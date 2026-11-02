@@ -120,3 +120,8 @@ Use Terra for one task at a time with explicit files/contracts and completion cr
 - [ ] **UP.034** [LEAD] Harden transfer coordination/recovery across legacy and Studio APIs, cross-volume Trash routing, shared-asset repair and engine shutdown; review actual error propagation before release. Source-only implementation has not proved these paths.
 - [ ] **UP.035** [LEAD] Add explicit reference-counted orphan-asset reclaim with preview and recoverable removal. Current Remove entry retains physical bytes and says so.
 - [ ] **UP.036** [LEAD] Ensure moved/translocated portable app bundles cannot fall back to installed-mode storage; add a packaged portable-required marker and actionable early startup errors on Windows.
+
+## Done — model guidance and session handoff
+
+- [x] **UP.090** [TERRA] Mark whole user-documentation and focused-UI categories as Terra-suitable; mark review/lead/platform boundaries and cite current official model guidance. (2026-11-02)
+- [x] **UP.091** [TERRA] Write update-handoff.md with the exact completed batch, source map, remaining limitations, protected dirty files, task-owner guidance and short next-session prompt. (2026-11-02)

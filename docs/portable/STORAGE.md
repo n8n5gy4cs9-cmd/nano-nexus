@@ -73,7 +73,7 @@ or configured destinations observed writes. Bounded logs stay on USB and never s
 
 No automatic reads/copies from host app-data or legacy app bundle directories. Empty new DIST
 starts empty. To migrate, owner selects source; app requires both versions stopped, previews
-source/destination/estimated bytes, and refuses destination conflicts. Use SQLite backup API
+source/destination/estimated bytes, and refuses destination conflicts. Use SQLite backup API or SQLite VACUUM INTO
 for a consistent database snapshot, never copy a live WAL database alone. Write backup under
 DIST/data/backups with version/hash manifest before changing schema. Existing migrations must
 not mutate an imported source DB. Rebind model/library paths only after resolving and verifying
