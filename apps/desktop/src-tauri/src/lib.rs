@@ -307,8 +307,14 @@ pub fn run() {
     // Resolve portable storage before any webview or plugin is initialized.
     let mut context = tauri::generate_context!();
     let portable = (|| -> Result<_, Box<dyn std::error::Error>> {
-        let executable = std::env::current_exe()?;
+        let executable = std::env::current_exe()?.canonicalize()?;
         let Some(root) = nexus_core::paths::distribution_root(&executable)? else {
+            if cfg!(feature = "portable-dist") {
+                return Err(
+                    "This app requires the complete USB DIST. Restore it to apps/macos-arm64/NanoNexus.app or apps/windows-x64 inside DIST, keep portable.json at the DIST root, and launch from that folder. A moved or macOS-translocated app cannot use host-profile storage."
+                        .into(),
+                );
+            }
             return Ok(None);
         };
         let lock = nexus_core::portable::DistributionLock::acquire(&root)?;
@@ -343,7 +349,18 @@ pub fn run() {
     let portable = match portable {
         Ok(portable) => portable,
         Err(error) => {
-            eprintln!("Cannot open portable storage: {error}");
+            let message = format!(
+                "Cannot open portable storage: {error}\n\nNo host-profile fallback was used. Check that the whole DIST is present on a connected writable drive, close other NanoNexus instances, and free disk space if needed. Keep the app in its supplied layout."
+            );
+            eprintln!("{message}");
+            // Release Windows apps have no console. Show the failure before a webview,
+            // plugin, logger or host-profile database can be initialized.
+            #[cfg(windows)]
+            rfd::MessageDialog::new()
+                .set_title("NanoNexus — USB startup failed")
+                .set_description(&message)
+                .set_level(rfd::MessageLevel::Error)
+                .show();
             std::process::exit(1);
         }
     };

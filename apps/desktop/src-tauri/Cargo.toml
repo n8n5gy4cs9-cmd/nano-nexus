@@ -5,6 +5,11 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 
+[features]
+# Immutable portable-required marker, retained when the executable/app is moved.
+# Shared DIST assembly must require this feature; installed builds omit it.
+portable-dist = []
+
 [lib]
 name = "nano_nexus"
 crate-type = ["staticlib", "cdylib", "rlib"]
@@ -50,6 +55,7 @@ tracing.workspace = true
 time.workspace = true
 
 [target.'cfg(windows)'.dependencies]
+rfd.workspace = true
 window-vibrancy.workspace = true
 
 [dev-dependencies]
