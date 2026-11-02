@@ -169,3 +169,7 @@ Linux uses `~/.local/share/dev.nanonexus.app` and Windows uses
 | SQLite schema, commands, events, error codes | [DATA-AND-IPC.md](DATA-AND-IPC.md) |
 | LAN Share server, pairing, web/mobile UI | [LAN-SHARE.md](LAN-SHARE.md) |
 | Visual design, screens, components | [../design/UI-DESIGN.md](../design/UI-DESIGN.md) |
+
+## Portable Studio conversion (ADR-018)
+
+The owner-authorized USB distribution retains NanoNexus services and adds reference Studio capabilities in phases. Its layout and migration contract are docs/portable/STORAGE.md. Platform executables share one model store; app/runtime updates preserve data. Application-controlled large files stay on USB. Small OS-managed traces can exist and are disclosed rather than claiming system-wide zero writes. Windows CPU-only operation is a delivery requirement, including a conservative instruction-set build for older PCs. Existing safety and permission contracts remain in force.

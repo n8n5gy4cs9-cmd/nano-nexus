@@ -171,3 +171,7 @@ Same `models[]` entries as the manifest (paths relative to the pack folder), plu
   → reject any mismatch → register (`source = 'import'`) → notification "3 models imported".
 - **Offline kit (Windows):** the NSIS hook copies `models-extra/` next to the exe, and the first
   launch runs the same import pipeline in "reference in place" mode.
+
+## Shared USB model store (ADR-018)
+
+Portable assets belong once under DIST/models/, independent of OS executable and release. New registry entries use validated relative component paths and verified SHA-256/byte counts; resolve/canonicalize against the shared root before opening files. Track model kind (chat/image/speech/tts), companion assets and backend-specific variants explicitly. Deduplicate bytes by digest without hard links or symlinks (exFAT). Never import a host-only external link as a self-contained model. Download partials and import staging remain under USB cache and completed weights become visible only after integrity checks. Deleting one model must preserve assets referenced by another model. Migration is explicit and non-destructive; retain legacy offline pack interoperability. Existing installed-mode registry/API behavior remains supported. No runtime/model duplication in platform packaging.

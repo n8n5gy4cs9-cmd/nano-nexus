@@ -268,3 +268,7 @@ llama.cpp opens GGUF files **by path** (mmap). Never use `include_bytes!` and ne
 - At first launch the app registers each manifest library as `bundled` (read-only, cannot be removed,
   can be disabled) and indexes it incrementally by file hash (`service::knowledge::sync_bundled`).
   Shipping a prebuilt index (ATTACH of `knowledge.db`) is a later optimization, see QUESTIONS Q-6.
+
+## USB distribution override (ADR-018)
+
+For the new USB distribution, update-plan.md and docs/portable/STORAGE.md supersede the embedded-model and installer layouts above. Keep legacy builders supported, but assemble one DIST with platform apps under apps/, engines under runtimes/, shared models/, and preserved data/outputs/cache/logs. Models never enter either app bundle, platform archive or disposable staging tree. Updates replace only application/runtime assets and retain a rollback manifest. No recursive DIST cleanup. Windows must include private fixed WebView2 and a CPU backend independent of NVIDIA/CUDA/Vulkan; older non-AVX2 CPUs require a compatible baseline artifact, never a guessed compatibility claim. Target machines run prebuilt code and install no package managers, runtime packages or GPU drivers. Build commands require owner approval; testing remains prohibited in the current conversion session.
