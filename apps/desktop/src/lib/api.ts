@@ -64,6 +64,9 @@ import type { KbIndexResult, KbLibrary, KbDocumentSource, KbLibraryDetail, KbPas
 
 import { getTransport } from "./transport";
 import type { ModelKind, StudioModel, StudioModelView, StudioModelInput, StudioProgress, StudioMigrationResult } from "@/features/models/studio-types";
+import type {
+  ImageGenerateInput, ImageStartInput, MediaStatus, OutputKind, OutputRecord, SpeakRequest, TranscribeInput, TranscribeOutput, TtsProgress, VoiceInfo,
+} from "@/features/studio/types";
 import type { ReportDelta, WatchSchedule, WatchView } from "@/features/analyzer/watches";
 import type { JobSummary } from "@/features/jobs/types";
 import type { Checker, Found, RenameItem, RenamePlan, RenamePlanOptions, RenameProgress, RenameSession, RenameVerifyResult, Usage } from "@/features/rename/types";
@@ -73,6 +76,22 @@ import type { Unsubscribe } from "./transport";
 export type SettingValue = null | boolean | number | string | string[] | Record<string, boolean> | Record<string, string[]>;
 
 export const api = {
+  media: {
+    status: () => getTransport().call<MediaStatus>("media_status"),
+    cancel: (jobId: string) => getTransport().call<boolean>("media_cancel", { jobId }),
+    imageStart: (input: ImageStartInput) => getTransport().call<string>("image_start", { input }),
+    imageStop: () => getTransport().call<null>("image_stop"),
+    imageGenerate: (jobId: string, input: ImageGenerateInput) => getTransport().call<OutputRecord>("image_generate", { jobId, input }),
+    pickAudio: () => getTransport().call<string | null>("speech_pick_audio"),
+    transcribe: (jobId: string, input: TranscribeInput, onProgress: (p: number | null) => void) =>
+      getTransport().stream<number | null, TranscribeOutput>("speech_transcribe", { jobId, input }, onProgress),
+    voices: () => getTransport().call<VoiceInfo[]>("tts_voices"),
+    speak: (jobId: string, request: SpeakRequest, onProgress: (p: TtsProgress) => void) =>
+      getTransport().stream<TtsProgress, OutputRecord>("tts_speak", { jobId, request }, onProgress),
+    outputs: (kind: OutputKind) => getTransport().call<OutputRecord[]>("outputs_list", { kind }),
+    readOutput: (kind: OutputKind, name: string) => getTransport().call<string>("outputs_read", { kind, name }),
+    deleteOutputs: (kind: OutputKind, names: string[]) => getTransport().call<number>("outputs_delete", { kind, names }),
+  },
   studio: {
     adoptLegacy: (jobId: string, onProgress: (p: StudioProgress) => void) =>
       getTransport().stream<StudioProgress, StudioMigrationResult>("studio_adopt_legacy", { jobId }, onProgress),

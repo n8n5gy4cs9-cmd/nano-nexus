@@ -11,6 +11,7 @@ import {
   Settings,
   Shield,
   Sparkles,
+  Palette,
   type LucideIcon,
 } from "lucide-react";
 import { Navigate, createHashRouter, type RouteObject } from "react-router-dom";
@@ -32,6 +33,7 @@ import { DesktopOnly } from "@/web/DesktopOnly";
 import { EditorPage } from "@/features/editor/EditorPage";
 import { RenamePage } from "@/features/rename/RenamePage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
+import { StudioPage } from "@/features/studio/StudioPage";
 import { PlaceholderPage } from "@/features/placeholders/PlaceholderPage";
 
 export interface NavSection {
@@ -48,6 +50,7 @@ export const NAV: NavSection[] = [
   { path: "/", label: "Chat", icon: MessageSquare, tagline: "Talk to a private assistant running on your computer.", digit: 1 },
   { path: "/assistants", label: "Assistants", icon: Sparkles, tagline: "Specialists for files, code, and writing.", digit: 2 },
   { path: "/models", label: "Models", icon: Download, tagline: "Download, switch, and manage models.", digit: 3 },
+  { path: "/studio", label: "Studio", icon: Palette, tagline: "Make images, transcribe audio, and speak text." },
   { path: "/analyzer", label: "Analyzer", icon: FolderSearch, tagline: "Scan a folder or file and get a report.", digit: 4 },
   { path: "/rename", label: "Rename Forge", icon: PenLine, tagline: "Rename symbols and files across a project.", digit: 5 },
   { path: "/editor", label: "Editor", icon: Code2, tagline: "A code editor with AI at hand.", digit: 6 },
@@ -71,13 +74,14 @@ export const SETTINGS_SECTION: NavSection = {
   tagline: "Appearance, runtime, models, and privacy.",
 };
 
-const DESKTOP_ONLY = new Set(["/rename", "/editor", "/changes", "/permissions", "/models", "/library", "/activity"]);
+const DESKTOP_ONLY = new Set(["/rename", "/editor", "/changes", "/permissions", "/models", "/library", "/activity", "/studio"]);
 
 function pageFor(s: NavSection) {
   if (IS_WEB && DESKTOP_ONLY.has(s.path)) return <DesktopOnly title={s.label} />;
   if (s.path === "/") return <ChatView />;
   if (s.path === "/assistants") return <AssistantsPage />;
   if (s.path === "/models") return <ModelsPage />;
+  if (s.path === "/studio") return <StudioPage />;
   if (s.path === "/analyzer") return <AnalyzerPage />;
   if (s.path === "/editor") return <EditorPage />;
   if (s.path === "/changes") return <ChangesPage />;

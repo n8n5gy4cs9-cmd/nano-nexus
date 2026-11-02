@@ -109,7 +109,7 @@ export function StudioModels() {
         <Button variant="secondary" disabled={busy} onClick={() => migration.mutate("pack")}>Import offline model pack</Button>
       </div>
       <p className="text-small text-muted">Unload chat before adoption. Adoption verifies registered files already inside this USB model folder without copying them. Pack import verifies and copies only missing content into shared storage. Source files remain unchanged.</p>
-      <p className="text-small text-muted">Chat uses the existing runtime. Image, speech and voice selections are saved for their workspace engines, whose integration is still pending. Format validation does not guarantee a model fits this computer.</p>
+      <p className="text-small text-muted">Chat uses the existing runtime. Image, speech and voice selections are used by the Studio page when its engine is installed in this distribution. Format validation does not guarantee a model fits this computer.</p>
     </section>
     {(models.data ?? []).length === 0 ? <p className="p-4 text-muted">No shared Studio models yet. Download weights or import a local model to start.</p> : (models.data ?? []).map((view) => <section key={view.model.id} className="flex flex-col gap-2 rounded-panel border border-border bg-surface-1 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-semibold">{view.model.name}</h3><span className="text-small text-muted">{view.model.kind} · {view.model.variant}{view.selected ? " · selected" : ""}</span></div>
