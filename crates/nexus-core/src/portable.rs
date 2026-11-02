@@ -14,7 +14,12 @@ impl DistributionLock {
     /// Acquire the single writer lock. Unsupported filesystem locking fails closed.
     pub fn acquire(root: &Path) -> io::Result<Self> {
         let path = contained(root, Path::new(".nexus.lock"))?;
-        let file = OpenOptions::new().create(true).truncate(false).read(true).write(true).open(path)?;
+        let file = OpenOptions::new()
+            .create(true)
+            .truncate(false)
+            .read(true)
+            .write(true)
+            .open(path)?;
         file.try_lock().map_err(|e| io::Error::other(format!(
             "Cannot lock the portable folder (another instance may be running, or this drive does not support locking): {e}"
         )))?;
@@ -32,9 +37,13 @@ pub fn contained(root: &Path, relative: &Path) -> io::Result<PathBuf> {
     let mut path = root.clone();
     for component in relative.components() {
         let Component::Normal(name) = component else {
-            return Err(invalid("portable paths must contain only relative normal components"));
+            return Err(invalid(
+                "portable paths must contain only relative normal components",
+            ));
         };
-        let name_str = name.to_str().ok_or_else(|| invalid("portable path must be UTF-8"))?;
+        let name_str = name
+            .to_str()
+            .ok_or_else(|| invalid("portable path must be UTF-8"))?;
         if name_str.contains(['\\', ':', '\0']) {
             return Err(invalid("invalid portable path component"));
         }
@@ -43,7 +52,10 @@ pub fn contained(root: &Path, relative: &Path) -> io::Result<PathBuf> {
             Ok(_) => {
                 let canonical = path.canonicalize()?;
                 if !canonical.starts_with(&root) {
-                    return Err(io::Error::new(io::ErrorKind::PermissionDenied, "portable path escapes the USB folder"));
+                    return Err(io::Error::new(
+                        io::ErrorKind::PermissionDenied,
+                        "portable path escapes the USB folder",
+                    ));
                 }
                 path = canonical;
             }
@@ -70,12 +82,19 @@ pub fn ensure_directory(root: &Path, relative: &Path) -> io::Result<PathBuf> {
 pub fn require_writable(directory: &Path) -> io::Result<()> {
     let probe = directory.join(format!(".nexus-write-{}", uuid::Uuid::now_v7()));
     let mut file = OpenOptions::new().create_new(true).write(true).open(&probe)?;
-    let result = file.write_all(b"NanoNexus portable storage\n").and_then(|()| file.sync_all());
+    let result = file
+        .write_all(b"NanoNexus portable storage\n")
+        .and_then(|()| file.sync_all());
     drop(file);
     let cleanup = std::fs::remove_file(probe);
-    result.and(cleanup).map_err(|e| io::Error::new(e.kind(), format!(
-        "The portable folder is not writable; reconnect the USB drive and check its free space: {e}"
-    )))
+    result.and(cleanup).map_err(|e| {
+        io::Error::new(
+            e.kind(),
+            format!(
+                "The portable folder is not writable; reconnect the USB drive and check its free space: {e}"
+            ),
+        )
+    })
 }
 
 fn invalid(message: &str) -> io::Error {

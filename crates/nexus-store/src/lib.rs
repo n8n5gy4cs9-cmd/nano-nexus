@@ -14,6 +14,7 @@ pub mod rename;
 pub mod reports;
 pub mod settings;
 pub mod share;
+pub mod studio;
 pub mod watches;
 
 use std::path::Path;
@@ -80,6 +81,19 @@ impl Store {
             std::fs::create_dir_all(parent)?;
         }
         Self::init(Connection::open(path)?)
+    }
+
+    /// Open a USB database with a consistent USB-local backup before schema upgrades.
+    pub fn open_portable(path: &Path, backups: &Path) -> Result<Self, StoreError> {
+        let conn = Connection::open(path)?;
+        let version = migrate::schema_version(&conn)?;
+        if version > 0 && version < MIGRATIONS.len() as u32 {
+            std::fs::create_dir_all(backups)?;
+            let backup = backups.join(format!("schema-{version}-{}.db", nexus_core::ids::JobId::new()));
+            // VACUUM INTO creates a consistent snapshot including live WAL contents.
+            conn.execute("VACUUM INTO ?1", [backup.to_string_lossy().as_ref()])?;
+        }
+        Self::init(conn)
     }
 
     /// A throwaway in-memory database (tests).

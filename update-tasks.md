@@ -32,7 +32,7 @@ Updated: 2026-11-02. `[x]` means the stated deliverable is complete; it does not
 
 ## Undone — unified models
 
-- [ ] **UP.030** Shared digest-based model registry for chat/images/speech/TTS; distinguish platform conversion variants without per-platform weight copies.
+- [x] **UP.030** Add transactional model/kind/variant/asset-role registry, digest-based physical storage with cross-model reuse, bounded verified/cancellable imports and root-relative paths. Add consistent USB-local DB backup before schema upgrade. (2026-11-02; source only, unbuilt/untested; UI/downloader/legacy migration wiring remains UP.031–033)
 - [ ] **UP.031** Catalog and Hugging Face URL downloads; validated revisions/digests, progress, resume, cancel and disk budgeting.
 - [ ] **UP.032** Import/select/unload/delete/reclassify UI, duplicate detection, supported companion assets and safe reference accounting.
 - [ ] **UP.033** Migrate existing models without destructive moves or avoidable copies; keep offline pack compatibility.

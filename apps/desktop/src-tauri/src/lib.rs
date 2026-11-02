@@ -149,7 +149,11 @@ fn apply_windows_backdrop(_app: &tauri::App) {}
 fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let paths = resolve_paths(app)?;
     paths.ensure_dirs()?;
-    let store = Arc::new(Store::open(&paths.db_file())?);
+    let store = Arc::new(if paths.portable_root.is_some() {
+        Store::open_portable(&paths.db_file(), &paths.data.join("backups"))?
+    } else {
+        Store::open(&paths.db_file())?
+    });
     let mut settings = store.load_settings()?;
     if paths.portable_root.is_some() {
         // Host-bound/background access is re-enabled explicitly in each portable session.
@@ -181,7 +185,9 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         None => AppState::build_permissions(&store, &home, &paths.data, audit.clone()),
     };
     let trasher: Arc<dyn nexus_fs::Trasher> = if paths.portable_root.is_some() {
-        Arc::new(nexus_fs::MoveToDirTrash::new(paths.trash.join(nexus_core::ids::ChangeSetId::new().to_string())))
+        Arc::new(nexus_fs::MoveToDirTrash::new(
+            paths.trash.join(nexus_core::ids::ChangeSetId::new().to_string()),
+        ))
     } else {
         Arc::new(nexus_fs::SystemTrash)
     };
@@ -310,14 +316,16 @@ pub fn run() {
         if let Some(available) = nexus_models::download::available_space(&root)
             && available < 64 * 1024 * 1024
         {
-            return Err("The USB drive needs at least 64 MiB free for application state; free space before launching".into());
+            return Err(
+                "The USB drive needs at least 64 MiB free for application state; free space before launching"
+                    .into(),
+            );
         }
         paths.worker_environment()?;
         let shell = paths.cache.join("shell");
         nexus_core::portable::ensure_directory(&root, shell.strip_prefix(&root)?)?;
-        context.config_mut().app.app_directories_override = Some(
-            tauri::utils::config::AppDirectoriesOverride::Root(shell),
-        );
+        context.config_mut().app.app_directories_override =
+            Some(tauri::utils::config::AppDirectoriesOverride::Root(shell));
         let webview = paths.cache.join("webview");
         nexus_core::portable::ensure_directory(&root, webview.strip_prefix(&root)?)?;
         for window in &mut context.config_mut().app.windows {

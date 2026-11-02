@@ -50,7 +50,9 @@ pub fn set(ctx: &AppCtx, caller: &Caller, key: &str, value: SettingValue) -> Res
         return Err(NexusError::ForbiddenRemote);
     }
     if ctx.paths.portable_root.is_some() && key == "app.launch_at_login" {
-        return Err(NexusError::InvalidInput("Start at login is unavailable for the USB distribution".into()));
+        return Err(NexusError::InvalidInput(
+            "Start at login is unavailable for the USB distribution".into(),
+        ));
     }
     let current = ctx.settings_snapshot();
     let next = ctx.store.set_setting(&current, key, value.into())?;

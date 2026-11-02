@@ -26,10 +26,13 @@ pub fn distribution_root(executable: &Path) -> std::io::Result<Option<PathBuf>> 
     let candidate = if exe_dir.file_name().is_some_and(|n| n == "windows-x64")
         || exe_dir.file_name().is_some_and(|n| n == "windows-arm64")
     {
-        exe_dir.parent().filter(|p| p.file_name().is_some_and(|n| n == "apps"))
+        exe_dir
+            .parent()
+            .filter(|p| p.file_name().is_some_and(|n| n == "apps"))
             .and_then(Path::parent)
     } else if exe_dir.file_name().is_some_and(|n| n == "MacOS") {
-        exe_dir.parent()
+        exe_dir
+            .parent()
             .filter(|p| p.file_name().is_some_and(|n| n == "Contents"))
             .and_then(Path::parent)
             .filter(|p| p.file_name().is_some_and(|n| n == "NanoNexus.app"))
@@ -48,12 +51,18 @@ pub fn distribution_root(executable: &Path) -> std::io::Result<Option<PathBuf>> 
     let marker_path = crate::portable::contained(root, Path::new(PORTABLE_MANIFEST))?;
     let file = std::fs::File::open(marker_path)?;
     if file.metadata()?.len() > 4096 {
-        return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "portable marker exceeds 4096 bytes"));
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "portable marker exceeds 4096 bytes",
+        ));
     }
-    let marker: PortableManifest = serde_json::from_reader(file)
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+    let marker: PortableManifest =
+        serde_json::from_reader(file).map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
     if marker.schema != 1 {
-        return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "unsupported portable schema"));
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "unsupported portable schema",
+        ));
     }
     root.canonicalize().map(Some)
 }
@@ -166,15 +175,24 @@ impl AppPaths {
         let mut env = std::collections::BTreeMap::new();
         if let Some(root) = &self.portable_root {
             for (name, suffix) in [
-                ("HOME", "home"), ("USERPROFILE", "home"),
-                ("TMPDIR", "temp"), ("TMP", "temp"), ("TEMP", "temp"),
-                ("XDG_CACHE_HOME", "workers"), ("XDG_CONFIG_HOME", "config"),
-                ("XDG_DATA_HOME", "home/data"), ("APPDATA", "config"),
-                ("LOCALAPPDATA", "workers"), ("HF_HOME", "workers/huggingface"),
+                ("HOME", "home"),
+                ("USERPROFILE", "home"),
+                ("TMPDIR", "temp"),
+                ("TMP", "temp"),
+                ("TEMP", "temp"),
+                ("XDG_CACHE_HOME", "workers"),
+                ("XDG_CONFIG_HOME", "config"),
+                ("XDG_DATA_HOME", "home/data"),
+                ("APPDATA", "config"),
+                ("LOCALAPPDATA", "workers"),
+                ("HF_HOME", "workers/huggingface"),
                 ("HUGGINGFACE_HUB_CACHE", "workers/huggingface/hub"),
-                ("TORCH_HOME", "workers/torch"), ("CUDA_CACHE_PATH", "workers/cuda"),
-                ("MESA_SHADER_CACHE_DIR", "workers/mesa"), ("ORT_CACHE_DIR", "workers/onnx"),
-                ("npm_config_cache", "workers/npm"), ("PIP_CACHE_DIR", "workers/pip"),
+                ("TORCH_HOME", "workers/torch"),
+                ("CUDA_CACHE_PATH", "workers/cuda"),
+                ("MESA_SHADER_CACHE_DIR", "workers/mesa"),
+                ("ORT_CACHE_DIR", "workers/onnx"),
+                ("npm_config_cache", "workers/npm"),
+                ("PIP_CACHE_DIR", "workers/pip"),
                 ("CLAUDE_CONFIG_DIR", "config/claude"),
             ] {
                 let path = self.cache.join(suffix);
