@@ -45,7 +45,8 @@ pub fn distribution_root(executable: &Path) -> std::io::Result<Option<PathBuf>> 
         return Ok(None);
     };
     // A recognized distribution layout must never silently become an installed app.
-    let file = std::fs::File::open(root.join(PORTABLE_MANIFEST))?;
+    let marker_path = crate::portable::contained(root, Path::new(PORTABLE_MANIFEST))?;
+    let file = std::fs::File::open(marker_path)?;
     if file.metadata()?.len() > 4096 {
         return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "portable marker exceeds 4096 bytes"));
     }
@@ -60,6 +61,8 @@ pub fn distribution_root(executable: &Path) -> std::io::Result<Option<PathBuf>> 
 /// All directories NanoNexus owns.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AppPaths {
+    /// Shared USB root, absent for legacy and installed layouts.
+    pub portable_root: Option<PathBuf>,
     pub data: PathBuf,
     pub models: PathBuf,
     pub journal: PathBuf,
@@ -73,6 +76,7 @@ impl AppPaths {
     /// Shared distribution paths. Models are external to both platform applications.
     pub fn distribution(root: &Path) -> Self {
         let mut paths = Self::from_roots(root.join("data"), root.join("logs").join(std::env::consts::OS));
+        paths.portable_root = Some(root.to_owned());
         paths.models = root.join("models");
         paths.cache = root.join("cache").join(std::env::consts::OS);
         paths
@@ -82,6 +86,7 @@ impl AppPaths {
     pub fn from_roots(data_dir: impl Into<PathBuf>, log_dir: impl Into<PathBuf>) -> Self {
         let data = data_dir.into();
         Self {
+            portable_root: None,
             models: data.join("models"),
             journal: data.join("journal"),
             reports: data.join("reports"),
@@ -115,7 +120,13 @@ impl AppPaths {
             &self.cache,
             &self.logs,
         ] {
-            std::fs::create_dir_all(dir)?;
+            if let Some(root) = &self.portable_root {
+                let relative = dir.strip_prefix(root).map_err(std::io::Error::other)?;
+                let checked = crate::portable::ensure_directory(root, relative)?;
+                crate::portable::require_writable(&checked)?;
+            } else {
+                std::fs::create_dir_all(dir)?;
+            }
         }
         Ok(())
     }

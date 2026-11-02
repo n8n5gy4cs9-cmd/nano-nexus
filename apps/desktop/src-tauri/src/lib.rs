@@ -145,7 +145,13 @@ fn apply_windows_backdrop(_app: &tauri::App) {}
 
 fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let paths = resolve_paths(app)?;
+    let portable_lock = paths.portable_root.as_deref()
+        .map(nexus_core::portable::DistributionLock::acquire)
+        .transpose()?;
     paths.ensure_dirs()?;
+    if let Some(lock) = portable_lock {
+        app.manage(lock);
+    }
     let store = Arc::new(Store::open(&paths.db_file())?);
     let settings = store.load_settings()?;
     let supervisor = Supervisor::with_files(
