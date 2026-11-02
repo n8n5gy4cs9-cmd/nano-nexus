@@ -93,7 +93,7 @@ are development artifacts, not runtime dependencies. No build or verification is
 
 ## Webview implementation constraint
 
-The local Tauri/Wry sources expose a Windows data_directory but WKWebView uses the OS-managed website store. The USB distribution selects a nonpersistent WKWebView store on macOS instead of claiming a USB-persistent browser profile. Core settings/history remain SQLite-backed; browser-only UI preferences (currently zoom and some view state) may reset between launches until moved to the USB settings store. This is a visible remaining persistence item, not a zero-host-write guarantee. Tauri app-directory overrides are configured before builder initialization; private workers receive explicit environment paths without changing process-global HOME.
+The local Tauri/Wry sources expose a Windows data_directory but WKWebView uses the OS-managed website store. The USB distribution selects a nonpersistent WKWebView store on macOS instead of claiming a USB-persistent browser profile. Core settings/history remain SQLite-backed. Desktop theme, accent, zoom and the default assistant now hydrate from SQLite and save through serialized settings calls (UP.022b; source only, unbuilt/untested). Browser storage is an initial cache, while editor tab paths and transient view state are deliberately not transferred across hosts. This is not a zero-host-write guarantee. Tauri app-directory overrides are configured before builder initialization; private workers receive explicit environment paths without changing process-global HOME.
 
 ## Conservative host-change behavior
 

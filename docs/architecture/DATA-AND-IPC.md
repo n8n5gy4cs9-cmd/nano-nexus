@@ -101,6 +101,8 @@ CREATE TABLE rename_items (
 |---|---|
 | `ui.theme` | `"system"` (`light`/`dark`/`system`) |
 | `ui.accent` | `"violet"` |
+| `ui.zoom` | `1.0` (finite scale, 0.5–3) |
+| `ui.default_assistant` | `"nexus"` (nonempty ID, at most 128 bytes) |
 | `ui.show_perf_stats` | `true` |
 | `runtime.ctx_size` | `8192` |
 | `runtime.gpu_layers` | `"all"` |
@@ -254,3 +256,9 @@ Citation links in answers use `https://nanonexus.local/passage/<chunk_id>`; the 
 ## Portable storage boundary (ADR-018)
 
 The USB distribution owns its SQLite/WAL, settings, attachment metadata, reports, journals, knowledge indexes, outputs, logs and caches beneath its validated root. Worker/webview profiles are platform-local under USB cache. Never silently fall back to OS app-data when the portable marker is invalid or storage fails. Internal model references are root-relative; host grants/library/watcher paths are host-bound and require reconfirmation after moving to another host. New diagnostics must distinguish recorded writes, configured destinations and unobservable OS behavior, redact secrets and bound log growth. Existing permission audits are permission decisions, not a complete filesystem-write ledger. Keep diagnostics desktop-only; thin commands/services and Transport facade still apply. Schema changes require generated bindings, never hand edits. Do not use the host keychain for portable tokens without a separately approved design; default to memory-only secrets.
+
+### Desktop UI preference persistence (UP.022b)
+
+Desktop startup loads theme, accent, zoom and the new-chat assistant from SQLite settings through the Transport facade. Browser storage is only an initial display cache; it is not authoritative. Changes during loading win over the initial read, and preference writes are serialized with visible failure notifications. Failed saves retain the current session choice and can be retried by changing the preference again. LAN clients keep their own browser choices and never write desktop settings. Generated bindings require regeneration in an approved build workflow; frontend reads new keys through unknown-value narrowing meanwhile.
+
+Editor tab sessions contain host paths and are deliberately not migrated into cross-host UI settings. They remain browser-session conveniences and existing permission checks apply when opened. Sidebar, inspector, palette and transient dialogs remain session state. No editor contents or credentials are included in UI preferences.

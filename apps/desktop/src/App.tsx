@@ -3,6 +3,7 @@ import { useState } from "react";
 import { RouterProvider } from "react-router-dom";
 
 import { TooltipProvider } from "@/components/ui";
+import { UiPreferences } from "./components/UiPreferences";
 import { Toaster } from "@/components/ui/toaster";
 
 import { IS_WEB } from "./lib/target";
@@ -22,6 +23,7 @@ export function App() {
         ) : (
           <RouterProvider router={router} />
         )}
+        <UiPreferences />
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>

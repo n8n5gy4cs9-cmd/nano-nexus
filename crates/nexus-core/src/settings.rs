@@ -35,6 +35,12 @@ pub struct Settings {
     pub ui_theme: Theme,
     #[serde(rename = "ui.accent")]
     pub ui_accent: String,
+    /// UI scale shared with the portable SQLite settings store.
+    #[serde(rename = "ui.zoom")]
+    pub ui_zoom: f64,
+    /// Assistant selected for new conversations; no host filesystem paths.
+    #[serde(rename = "ui.default_assistant")]
+    pub ui_default_assistant: String,
     #[serde(rename = "ui.show_perf_stats")]
     pub ui_show_perf_stats: bool,
     /// Comma-separated ids of UI plugins the user turned off (see `apps/desktop/src/plugins`).
@@ -166,6 +172,8 @@ impl Default for Settings {
             tools_disabled: BTreeMap::new(),
             ui_theme: Theme::System,
             ui_accent: "violet".into(),
+            ui_zoom: 1.0,
+            ui_default_assistant: "nexus".into(),
             ui_show_perf_stats: true,
             plugins_disabled: String::new(),
             runtime_ctx_size: 8192,
@@ -291,6 +299,16 @@ impl Settings {
         }
         let next: Settings = serde_json::from_value(Value::Object(map))
             .map_err(|e| NexusError::InvalidInput(format!("invalid setting value: {e}")))?;
+        if !next.ui_zoom.is_finite() || !(0.5..=3.0).contains(&next.ui_zoom) {
+            return Err(NexusError::InvalidInput(
+                "UI zoom must be between 0.5 and 3".into(),
+            ));
+        }
+        if next.ui_default_assistant.is_empty() || next.ui_default_assistant.len() > 128 {
+            return Err(NexusError::InvalidInput(
+                "Invalid default assistant ID".into(),
+            ));
+        }
         *self = next;
         Ok(())
     }

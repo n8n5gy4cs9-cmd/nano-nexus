@@ -48,6 +48,8 @@ export function SettingsPage() {
   const settings = useQuery({ queryKey: SETTINGS_KEY, queryFn: api.settings.get, retry: false });
   const setTheme = useUi((s) => s.setTheme);
   const setAccent = useUi((s) => s.setAccent);
+  const theme = useUi((s) => s.theme);
+  const accent = useUi((s) => s.accent);
   const zoom = useUi((s) => s.zoom);
   const setZoom = useUi((s) => s.setZoom);
 
@@ -77,7 +79,7 @@ export function SettingsPage() {
       <Section title="Appearance">
         <SelectRow
           label="Theme"
-          value={str(s, "ui.theme", "system")}
+          value={theme}
           options={[
             { value: "system", label: "Match system" },
             { value: "light", label: "Light" },
@@ -85,16 +87,14 @@ export function SettingsPage() {
           ]}
           onChange={(v) => {
             if (isThemePreference(v)) setTheme(v);
-            set("ui.theme", v);
           }}
         />
         <SelectRow
           label="Accent color"
-          value={str(s, "ui.accent", "violet")}
+          value={accent}
           options={ACCENTS.map((a) => ({ value: a, label: a.charAt(0).toUpperCase() + a.slice(1) }))}
           onChange={(v) => {
             if (isAccent(v)) setAccent(v);
-            set("ui.accent", v);
           }}
         />
         <SelectRow

@@ -111,7 +111,7 @@ Use Terra for one task at a time with explicit files/contracts and completion cr
 
 ## Undone — focused UI [TERRA: whole category]
 
-- [ ] **UP.022b** [TERRA] Persist browser-only UI preferences such as zoom in USB-backed settings so nonpersistent Mac browser storage does not reset them.
+- [x] **UP.022b** [TERRA] Persist browser-only UI preferences such as zoom in USB-backed settings so nonpersistent Mac browser storage does not reset them. (2026-11-02; theme/accent/zoom/default assistant hydrate from SQLite, serialized saves and visible errors; editor host-path sessions intentionally excluded; source only, unbuilt/untested; bindings regeneration pending)
 - [ ] **UP.071** [TERRA] App storage/write-activity view with outside-root destinations and subsystem filters; never claim to observe all OS writes.
 
 ## Undone — remaining portable integrity work [LEAD]
