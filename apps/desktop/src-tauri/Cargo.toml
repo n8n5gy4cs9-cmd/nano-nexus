@@ -26,6 +26,8 @@ nexus-fs = { path = "../../../crates/nexus-fs" }
 nexus-knowledge = { path = "../../../crates/nexus-knowledge" }
 nexus-models = { path = "../../../crates/nexus-models" }
 nexus-llm = { path = "../../../crates/nexus-llm" }
+nexus-studio = { path = "../../../crates/nexus-studio" }
+base64.workspace = true
 nexus-store = { path = "../../../crates/nexus-store" }
 nexus-share = { path = "../../../crates/nexus-share" }
 nexus-observe = { path = "../../../crates/nexus-observe" }

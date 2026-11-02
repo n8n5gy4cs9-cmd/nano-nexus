@@ -17,6 +17,19 @@ use crate::error::StudioError;
 use crate::proc::{LineSink, Spawn, Worker};
 use crate::progress::{TtsProgress, parse_tts_progress};
 
+/// The reference worker script, compiled in so the DIST needs no separate copy.
+pub const WORKER_SOURCE: &str = include_str!("../workers/tts-kokoro-worker.mjs");
+
+/// Write the worker script into `dir` (USB cache) if it is missing or differs, and return its path.
+pub fn ensure_worker_script(dir: &std::path::Path) -> Result<PathBuf, StudioError> {
+    std::fs::create_dir_all(dir)?;
+    let path = dir.join("tts-kokoro-worker.mjs");
+    if std::fs::read_to_string(&path).ok().as_deref() != Some(WORKER_SOURCE) {
+        std::fs::write(&path, WORKER_SOURCE)?;
+    }
+    Ok(path)
+}
+
 /// Longest text one clip may hold (the reference limit).
 pub const MAX_CHARS: usize = 5000;
 

@@ -14,6 +14,7 @@ pub mod editor;
 pub mod fs;
 pub mod jobs;
 pub mod knowledge;
+pub mod media;
 pub mod models;
 pub mod notifications;
 pub mod observe;

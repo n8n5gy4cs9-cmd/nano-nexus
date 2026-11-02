@@ -264,6 +264,7 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 async fn shutdown_all(ctx: &Ctx) {
     ctx.chats.cancel_all();
     service::studio::cancel_all();
+    service::media::shutdown().await;
     service::share::stop(ctx).await;
     ctx.supervisor.shutdown().await;
     ctx.audit.flush().await;

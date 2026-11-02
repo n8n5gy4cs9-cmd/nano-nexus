@@ -5,7 +5,7 @@ use specta_typescript::Typescript;
 use tauri_specta::{Builder, collect_commands, collect_events};
 
 use crate::commands::{
-    analyzer, app, assistants, attachments, chat, conversations, editor, fs, jobs, knowledge, models,
+    analyzer, app, assistants, attachments, chat, conversations, editor, fs, jobs, knowledge, media, models,
     notifications, observe, permissions, rename, runtime, settings, share, studio, watches,
 };
 
@@ -13,6 +13,18 @@ use crate::commands::{
 pub fn builder() -> Builder<tauri::Wry> {
     Builder::<tauri::Wry>::new()
         .commands(collect_commands![
+            media::media_status,
+            media::media_cancel,
+            media::image_start,
+            media::image_stop,
+            media::image_generate,
+            media::speech_transcribe,
+            media::speech_pick_audio,
+            media::tts_voices,
+            media::tts_speak,
+            media::outputs_list,
+            media::outputs_read,
+            media::outputs_delete,
             studio::studio_adopt_legacy,
             studio::studio_pack_import,
             studio::studio_select,

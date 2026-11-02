@@ -3154,6 +3154,7 @@ name = "nano-nexus"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "base64 0.22.1",
  "dunce",
  "futures-util",
  "nexus-agent",
@@ -3166,6 +3167,7 @@ dependencies = [
  "nexus-observe",
  "nexus-share",
  "nexus-store",
+ "nexus-studio",
  "serde",
  "serde_json",
  "sha2",
