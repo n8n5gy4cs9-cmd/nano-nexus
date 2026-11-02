@@ -8,6 +8,7 @@ pub mod fit;
 pub mod gguf;
 pub mod hardware;
 pub mod hf;
+pub mod media;
 pub mod pack;
 pub mod web;
 
