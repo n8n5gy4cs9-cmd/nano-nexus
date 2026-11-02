@@ -15,7 +15,7 @@ Updated: 2026-11-02. `[x]` means the stated deliverable is complete; it does not
 
 ## Undone — architecture and inventory
 
-- [ ] **UP.010** Audit all reference UI/server/setup behavior; create exhaustive feature-to-task mapping, license inventory and supported model/backend matrix.
+- [x] **UP.010** Source capability/dispatch inventory, feature-to-task map, license obligations and model/backend matrix in docs/portable/REFERENCE-INVENTORY.md. (2026-11-02; runtime behavior and artifact licenses remain unverified delivery gates)
 - [ ] **UP.011** Inventory all NanoNexus working features and preserve their service/API contracts.
 - [x] **UP.012a** Record ADR-018 and packaging conflict Q-12 under owner-authorized USB direction. (2026-11-02)
 - [ ] **UP.012b** Reconcile bundling/model/IPC contracts with ADR-018.
