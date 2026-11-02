@@ -2,7 +2,40 @@
 
 Updated 2026-11-02. Repository: `/Volumes/macdisk/Projects/RUST/nano-nexus`, branch `main`.
 
-## Latest continuation — 2026-11-02
+## Latest integrity batch — 2026-11-02
+
+Owner request: “Do next big collection of tasks that are wise to do now.” Continued source-only portable integrity and build preparation; no tests, checks, smoke runs, builds, generators, dependency downloads or containers were run. Only read-only inspection, source edits, direct source formatting and Git commits/pushes were performed. Unrelated local edits remain untouched.
+
+| Task | Result | Commits |
+|---|---|---|
+| UP.034 (partial) | Common Studio/legacy shared-store mutation lease, retained blocking-task ownership, coordinated cancellation cleanup, missing-asset repair destination, shutdown admission/drain, unique Trash entries and source-volume OS Trash for cross-device user-document operations | d05ee9c, 2e77f81 |
+| UP.023b | DIST-relative knowledge/report/rename-cache references, current-root-only normalization, per-file current-grant checks for external knowledge including cached chat passages, recoverable copied-library/report removal, Journal backup-reference review | 3c24ecc, 7f9f568, ac0b888 |
+| UP.055 | Task-owned build scratch helper with sampled budget/free-space watchdog, process-group handling and guarded cleanup; explicit coverage/Colima limits | 6db286b |
+
+All commits are pushed to main. UP.023b and UP.055 are ticked at source-deliverable level only; UP.034 remains partial. The new build helper itself was not executed. There is still no assembled DIST and no runtime portability evidence.
+
+### Current source map
+
+- `service/portable_store.rs`: conservative single-writer lease shared across USB Studio mutations and legacy download/cleanup/deletion. Busy legacy downloads fail visibly and can be resumed; distinct model IDs are intentionally serialized to protect digest aliases. Studio request guards still cancel on drop; cloned leases keep detached blocking work owned until it ends.
+- `service/{studio,models,media}.rs`, `lib.rs`: missing-asset repair resolution, shutdown admission stop/cancel/bounded drain and cleanup error propagation. The downloader checks cancellation before final publication and exposes fallible partial cleanup. Never interpret a shutdown timeout as a durability guarantee.
+- `nexus-fs::MoveToDirTrash`: per-operation UUID folder prevents cross-launch overwrite. Only cross-device rename failure falls back to the OS Trash on the source volume for explicitly approved external user-file operations. Other errors propagate. No permanent unlink/copy-directory fallback was added.
+- `service/knowledge_paths.rs`: internal `dist:` library references restricted to the correct knowledge/resource subtree. External references remain absolute and need live grants; each returned cached passage and each indexed/opened file is checked. Reindex an external library to request consent on a new launch.
+- `nexus-knowledge::index_library_at`: explicit resolved root plus per-file authorization hook. Plain `index_library` refuses stored relative references, avoiding cwd interpretation. Library removal moves copied data to recoverable app Trash. Duplicate copy names fail instead of overwriting.
+- `AppPaths::{storage_reference,resolve_storage_reference}` and `nexus-store::normalize_portable_file_references`: report/index-cache references with exact subsystem containment; verified existing absolute rows normalize transactionally at startup. Missing historical mount paths are retained for explicit recovery, never guessed. Rename caches remain platform-local and need rebuilding on another OS.
+- Journal review: `Replaced.orig` and `Trashed.copy` already use relative `files/<n>.*` backup names; user document targets remain host-bound and Undo still checks permissions. No cross-host target rebinding or Undo success is claimed.
+- `scripts/portable-build-scratch.mjs`, `docs/portable/BUILD-WORKSPACES.md`: unique owned scratch, prepare/status/run/recover/clean, sampled limits with explicit overshoot, no automatic Colima actions. A marker with unknown child spawn state refuses automatic recovery. Legacy build scripts still need output-path/verification-step adaptation before they can be used for approved DIST delivery.
+
+### Remaining priorities
+
+1. UP.034: review native worker process-tree ownership, especially Windows; interruption/drive-removal recovery and remaining asynchronous admission/shutdown boundaries. Current source does not prove any of these on exFAT or devices.
+2. UP.050–054/036: assembly/update tooling, immutable portable-dist feature enforcement, fixed WebView2/private engines, manifest/digest/license gates and data-compatible rollback. No target-side bootstrap downloads or source builds.
+3. UP.070/071: agreed bounded write-audit backend then UI, distinguishing recorded operations from configured destinations.
+4. UP.085: actual coding lifecycle and truthful receipts through permissions/Journal; optional cloud/runtime work is still separate.
+5. UP.062–065: concrete approved build plan and artifacts. No approval has been granted by “continue” or this batch. Testing remains separately forbidden.
+
+UP.023b stored-reference formats require the updated executable. Existing source schema migrations were not edited. Do not restore only an older app against newer data; UP.054 needs a compatible stopped-data backup/rollback policy.
+
+## Previous continuation — 2026-11-02
 
 The checklist has advanced beyond the original 12-task batch below. Media source work was already committed before this continuation (see UP.040–048 and git history); it remains unbuilt/untested. This continuation added:
 
@@ -90,7 +123,7 @@ These checkmarks mean the stated source/doc deliverables exist. They are **unbui
 - Mac WKWebView uses nonpersistent browser storage because arbitrary persistent profile paths are unsupported by this integration. Core app data is USB SQLite, but desktop appearance and default-assistant preferences now have UP.022b SQLite synchronization (source only); editor host-path sessions intentionally remain browser-local.
 - Root protection intentionally denies agents access to the application distribution itself. Coding workspaces should be explicitly granted outside DIST (for example a sibling Projects folder on the same USB), not granted through the protected application root.
 - Root/OS lock, probes and space floor are source implementations, not proven exFAT/device-removal behavior. Remaining hardening is UP.034/036: transfer coordination across old/new APIs, cancellation/shutdown races, cross-volume Trash routing, portable-required marker for moved/translocated app bundles, and packaging enforcement of the new portable-required feature (the Windows preflight dialog is now source-implemented).
-- Model paths have relative registry backing and startup projection rebinding. Other persisted internal paths, especially copied knowledge libraries, still need mount-independent rebinding (UP.023b). Host folder grants and external Activity sources require consent each launch; portable LAN Share never autostarts.
+- Model paths have relative registry backing and startup projection rebinding. Identified internal knowledge/report/rename-cache paths now have UP.023b relative references; missing historical mount paths remain explicit recovery cases. Host folder grants and external Activity sources require consent each launch; portable LAN Share never autostarts.
 - Logical model removal retains physical assets, explicitly stated in UI. Reference-counted reclaim is UP.035. Pre-existing duplicate source files are not automatically deleted. External model-folder references are refused in USB mode rather than silently becoming nonportable.
 - Write logging/view is **not implemented**: current diagnostics show configured paths, not observed writes. UP.070/071 must distinguish those and disclose OS/driver gaps.
 - Optional official Claude Code runtime/provider/terminal integration is not implemented. Wrapper MIT licenses do not establish redistribution rights for official runtimes. Do not copy SDK direct-write or bypassPermissions behavior into NanoNexus; preserve Journal proposals/approval or isolate proposed edits in a scratch workspace.
@@ -98,7 +131,7 @@ These checkmarks mean the stated source/doc deliverables exist. They are **unbui
 
 ## Recommended continuation
 
-For a lead session: start with source review of UP.034/036 and registry/legacy integration before expanding engines. Then prioritize UP.085 with the coding-reference audit: inspect the real router/tool/turn/service/UI chain and improve visible failures/receipts without weakening permissions or inventing runtime evidence. Apply the relevant skills when editing prompts or diagnosing a concrete failure; owner restrictions still override testing workflows.
+For a lead session: use the latest batch above; finish remaining UP.034 platform lifecycle review and UP.036 packaging enforcement before expanding engines. Then prioritize UP.085 with the coding-reference audit: inspect the real router/tool/turn/service/UI chain and improve visible failures/receipts without weakening permissions or inventing runtime evidence. Apply the relevant skills when editing prompts or diagnosing a concrete failure; owner restrictions still override testing workflows.
 
 For a Terra session: whole **User documentation** (UP.060/061) and **Focused UI** (UP.022b/071) categories are marked `[TERRA]`. The write-view task depends on UP.070's agreed service schema; do not invent backend coverage. UP.060/061 and UP.022b are now source/documentation complete; UP.071 still needs the UP.070 audit schema. `[TERRA+REVIEW]` is a bounded implementation recommendation, not sole ownership of safety decisions. See the checklist's ownership table and official-source links; no categorical model-success guarantee is asserted.
 
