@@ -49,6 +49,12 @@ impl ServerProcess {
                 cmd.env(key, v);
             }
         }
+        for (key, value) in &cfg.environment {
+            cmd.env(key, value);
+        }
+        if let Some(home) = cfg.environment.get("HOME") {
+            cmd.current_dir(home);
+        }
         cmd.env("LLAMA_API_KEY", token.expose_secret());
         platform_setup(&mut cmd);
 

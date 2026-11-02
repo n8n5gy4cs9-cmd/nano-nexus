@@ -9,6 +9,8 @@ use nexus_core::settings::Settings;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RuntimeConfig {
     pub server_bin: PathBuf,
+    /// Explicit private cache/home/temp paths, applied after the minimal inherited environment.
+    pub environment: std::collections::BTreeMap<String, PathBuf>,
     pub model_path: PathBuf,
     /// Id reported to the UI (setting `models.active_model_id`).
     pub model_id: String,
@@ -31,6 +33,7 @@ impl RuntimeConfig {
     pub fn new(server_bin: impl Into<PathBuf>, model_path: impl Into<PathBuf>) -> Self {
         Self {
             server_bin: server_bin.into(),
+            environment: Default::default(),
             model_path: model_path.into(),
             model_id: "builtin".into(),
             ctx_size: 8192,

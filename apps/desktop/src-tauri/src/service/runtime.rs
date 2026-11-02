@@ -62,6 +62,13 @@ pub fn build_config_for(ctx: &AppCtx, prefer: Option<&str>) -> Option<RuntimeCon
         binary = dev;
     }
     let mut cfg = RuntimeConfig::from_settings(&settings, binary, model.path);
+    cfg.environment = match ctx.paths.worker_environment() {
+        Ok(environment) => environment,
+        Err(error) => {
+            tracing::error!(%error, "USB worker storage unavailable; refusing host-cache fallback");
+            return None;
+        }
+    };
     cfg.model_id = model.id;
     Some(cfg)
 }

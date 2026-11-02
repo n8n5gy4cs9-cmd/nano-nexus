@@ -90,3 +90,7 @@ old version for rollback and publish update only after staging succeeds. No link
 weights from disposable staging. Database upgrades need backup and compatibility policy;
 rollback of executables alone is unsafe after incompatible DB migration. Build scratch/cache
 are development artifacts, not runtime dependencies. No build or verification is implied here.
+
+## Webview implementation constraint
+
+The local Tauri/Wry sources expose a Windows data_directory but WKWebView uses the OS-managed website store. The USB distribution selects a nonpersistent WKWebView store on macOS instead of claiming a USB-persistent browser profile. Core settings/history remain SQLite-backed; browser-only UI preferences (currently zoom and some view state) may reset between launches until moved to the USB settings store. This is a visible remaining persistence item, not a zero-host-write guarantee. Tauri app-directory overrides are configured before builder initialization; private workers receive explicit environment paths without changing process-global HOME.

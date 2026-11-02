@@ -22,6 +22,9 @@ use crate::state::{AppState, Ctx};
 
 /// Resolve the data and log folders: portable mode (`portable.flag` next to the exe) or the OS defaults.
 fn resolve_paths(app: &tauri::App) -> Result<AppPaths, Box<dyn std::error::Error>> {
+    if let Some(paths) = app.try_state::<AppPaths>() {
+        return Ok((*paths).clone());
+    }
     let executable = std::env::current_exe()?;
     if let Some(root) = nexus_core::paths::distribution_root(&executable)? {
         return Ok(AppPaths::distribution(&root));
@@ -145,13 +148,7 @@ fn apply_windows_backdrop(_app: &tauri::App) {}
 
 fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let paths = resolve_paths(app)?;
-    let portable_lock = paths.portable_root.as_deref()
-        .map(nexus_core::portable::DistributionLock::acquire)
-        .transpose()?;
     paths.ensure_dirs()?;
-    if let Some(lock) = portable_lock {
-        app.manage(lock);
-    }
     let store = Arc::new(Store::open(&paths.db_file())?);
     let settings = store.load_settings()?;
     let supervisor = Supervisor::with_files(
@@ -176,7 +173,7 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let protected_root = paths.portable_root.as_deref().unwrap_or(&paths.data);
     let perms = AppState::build_permissions(&store, &home, protected_root, audit.clone());
     let trasher: Arc<dyn nexus_fs::Trasher> = if paths.portable_root.is_some() {
-        Arc::new(nexus_fs::MoveToDirTrash::new(paths.trash.join(uuid::Uuid::now_v7().to_string())))
+        Arc::new(nexus_fs::MoveToDirTrash::new(paths.trash.join(nexus_core::ids::ChangeSetId::new().to_string())))
     } else {
         Arc::new(nexus_fs::SystemTrash)
     };
@@ -291,6 +288,41 @@ fn exit_on_signals(app: &tauri::AppHandle) {
 
 /// Build and run the Tauri application.
 pub fn run() {
+    // Resolve portable storage before any webview or plugin is initialized.
+    let mut context = tauri::generate_context!();
+    let portable = (|| -> Result<_, Box<dyn std::error::Error>> {
+        let executable = std::env::current_exe()?;
+        let Some(root) = nexus_core::paths::distribution_root(&executable)? else {
+            return Ok(None);
+        };
+        let lock = nexus_core::portable::DistributionLock::acquire(&root)?;
+        let paths = AppPaths::distribution(&root);
+        paths.ensure_dirs()?;
+        paths.worker_environment()?;
+        let shell = paths.cache.join("shell");
+        nexus_core::portable::ensure_directory(&root, shell.strip_prefix(&root)?)?;
+        context.config_mut().app.app_directories_override = Some(
+            tauri::utils::config::AppDirectoriesOverride::Root(shell),
+        );
+        let webview = paths.cache.join("webview");
+        nexus_core::portable::ensure_directory(&root, webview.strip_prefix(&root)?)?;
+        for window in &mut context.config_mut().app.windows {
+            window.data_directory = Some(webview.clone());
+            // WKWebView does not support arbitrary persistent profile directories.
+            // Keep its browser store ephemeral; application data lives in USB SQLite.
+            if cfg!(target_os = "macos") {
+                window.incognito = true;
+            }
+        }
+        Ok(Some((paths, lock)))
+    })();
+    let portable = match portable {
+        Ok(portable) => portable,
+        Err(error) => {
+            eprintln!("Cannot open portable storage: {error}");
+            std::process::exit(1);
+        }
+    };
     let specta = bindings::builder();
     // Debug builds regenerate the TypeScript bindings on every launch.
     #[cfg(debug_assertions)]
@@ -309,11 +341,15 @@ pub fn run() {
         ))
         .invoke_handler(specta.invoke_handler())
         .setup(move |app| {
+            if let Some((paths, lock)) = portable {
+                app.manage(paths);
+                app.manage(lock);
+            }
             specta.mount_events(app);
             apply_windows_backdrop(app);
             setup(app)
         })
-        .build(tauri::generate_context!());
+        .build(context);
     let app = match built {
         Ok(app) => app,
         Err(e) => {

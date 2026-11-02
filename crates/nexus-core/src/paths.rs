@@ -161,6 +161,30 @@ impl AppPaths {
         }
     }
 
+    /// Explicit private worker environment; never mutate process-global HOME.
+    pub fn worker_environment(&self) -> std::io::Result<std::collections::BTreeMap<String, PathBuf>> {
+        let mut env = std::collections::BTreeMap::new();
+        if let Some(root) = &self.portable_root {
+            for (name, suffix) in [
+                ("HOME", "home"), ("USERPROFILE", "home"),
+                ("TMPDIR", "temp"), ("TMP", "temp"), ("TEMP", "temp"),
+                ("XDG_CACHE_HOME", "workers"), ("XDG_CONFIG_HOME", "config"),
+                ("XDG_DATA_HOME", "home/data"), ("APPDATA", "config"),
+                ("LOCALAPPDATA", "workers"), ("HF_HOME", "workers/huggingface"),
+                ("HUGGINGFACE_HUB_CACHE", "workers/huggingface/hub"),
+                ("TORCH_HOME", "workers/torch"), ("CUDA_CACHE_PATH", "workers/cuda"),
+                ("MESA_SHADER_CACHE_DIR", "workers/mesa"), ("ORT_CACHE_DIR", "workers/onnx"),
+                ("npm_config_cache", "workers/npm"), ("PIP_CACHE_DIR", "workers/pip"),
+                ("CLAUDE_CONFIG_DIR", "config/claude"),
+            ] {
+                let path = self.cache.join(suffix);
+                let relative = path.strip_prefix(root).map_err(std::io::Error::other)?;
+                env.insert(name.into(), crate::portable::ensure_directory(root, relative)?);
+            }
+        }
+        Ok(env)
+    }
+
     /// Path of the SQLite database.
     pub fn db_file(&self) -> PathBuf {
         self.data.join("nexus.db")
