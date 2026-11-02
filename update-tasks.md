@@ -2,6 +2,27 @@
 
 Updated: 2026-11-02. `[x]` means the stated deliverable is complete; it does not imply runtime verification. Update this file immediately whenever a task completes. No testing; ask before builds.
 
+## Model ownership guidance (2026-11-02)
+
+These are project-specific task-fit recommendations, not proof that any model can finish a category without mistakes. `[TERRA]` means GPT-6.1 Terra can own the bounded category using the existing contracts. `[TERRA+REVIEW]` means Terra can implement a scoped slice, with lead review of architecture/security/platform implications. `[LEAD]` means keep a reasoning-focused lead on the cross-cutting work; it is not a claim that Terra is incapable. `[BUILD APPROVAL]` never grants permission to build. No label authorizes testing.
+
+Official guidance describes Terra as suitable for scoped code fixes and concise writing. Our category assignments below are an inference from task scope, not an OpenAI guarantee. Sources checked 2026-11-02: [model-selection guidance](https://learn.chatgpt.com/docs/model-selection), [GPT-6.1 Terra](https://developers.openai.com/api/docs/models/gpt-6.1-terra).
+
+| Whole category | Recommended ownership | Boundary |
+|---|---|---|
+| User documentation | **TERRA — whole category** | UP.060/061: use source-backed behavior; label pending platforms honestly |
+| Focused UI | **TERRA — whole category** | UP.022b/071: implement against agreed services/schema; do not invent backend guarantees |
+| Planning inventories | **TERRA — whole inventory work** | Source mapping and tracker maintenance; ADR/security decisions remain lead-owned |
+| USB storage and migrations | **LEAD** | Containment, permissions, device changes, DB safety and failure recovery |
+| Unified model integrity/lifecycle | **LEAD or TERRA+REVIEW for bounded fixes** | Digests, resumability, deduplication, shared references and destructive cleanup |
+| Reference workspace engines | **LEAD; TERRA+REVIEW for UI slices** | Native engine lifecycle, memory, cancellation and untrusted assets cross layers |
+| Packaging/update delivery | **LEAD + BUILD APPROVAL** | Toolchains, WebView2, CPU instructions, signing, exFAT and rollback |
+| Write audit / older Windows PCs | **LEAD backend; TERRA UI below** | Cannot claim all OS writes are observable or all old CPUs are supported |
+| Coding-agent runtimes/providers | **LEAD** | Actual tool execution, protocol adaptation, shell isolation, approvals and truthful receipts |
+
+Use Terra for one task at a time with explicit files/contracts and completion criteria. Higher reasoning can help a scoped code change, but labels do not substitute for validation. Because testing is currently forbidden, all source-only completion reports must remain explicitly unverified.
+
+
 ## Done — planning
 
 - [x] **UP.001** Inspect local reference README, frontend/server capability surface, existing path resolution and bundling contract. (2026-11-02; source inspection only)
@@ -27,7 +48,6 @@ Updated: 2026-11-02. `[x]` means the stated deliverable is complete; it does not
 - [x] **UP.020b** Add contained directory/marker resolution, escaping-link rejection, per-owned-directory writable probes and an OS lifetime lock. Startup never implicitly migrates legacy/host sources; explicit migration remains UP.033. (2026-11-02; source only, unbuilt/untested)
 - [x] **UP.021** Route existing DB/settings/logs/knowledge/journal/report data through shared AppPaths, add USB outputs/trash, validate DB sidecars, protect entire distribution from agent writes and disable portable autostart; credentials remain memory/environment-only. (2026-11-02; source only, unbuilt/untested; new media writers tracked separately)
 - [x] **UP.022** Set Tauri app paths/webview profile before initialization, use nonpersistent WKWebView on Mac, route worker home/temp/HF/Torch/ONNX/shader/package caches explicitly before spawn. (2026-11-02; source only, unbuilt/untested)
-- [ ] **UP.022b** Persist browser-only UI preferences such as zoom in USB-backed settings so nonpersistent Mac browser storage does not reset them.
 - [x] **UP.023** Add startup space floor and diagnostics; reuse OS lock/writable checks and existing DB/job/download interruption errors, reconfirm grants/external sources each launch and disable portable LAN autostart. Paths resolve from current executable, never saved mount location. (2026-11-02; source only, unbuilt/untested; asset-path migration remains UP.030/033)
 
 ## Undone — unified models
@@ -39,33 +59,35 @@ Updated: 2026-11-02. `[x]` means the stated deliverable is complete; it does not
 
 ## Undone — reference features and retained features
 
-- [ ] **UP.040** Map and retain chat/history/streaming/settings capabilities from both applications.
-- [ ] **UP.041** Image engine lifecycle, generation parameters, progress/cancel and model compatibility validation.
-- [ ] **UP.042** Image gallery, metadata, export and journal-governed deletion.
-- [ ] **UP.043** Whisper file/microphone transcription, progress/cancel, transcript storage/export and permission UI.
-- [ ] **UP.044** Kokoro voice/model selection, speech generation/playback, saved audio and progress/cancel.
-- [ ] **UP.045** Hardware detection, recommendations, backend selection/download and resource-aware engine switching; CPU fallback and unsupported states.
-- [ ] **UP.046** Telemetry/performance display and reference settings/themes through NanoNexus design tokens.
-- [ ] **UP.047** Opt-in web search with current outbound-network and credential boundaries.
-- [ ] **UP.048** Retain assistants/Duo, file proposals/journal, analyzer, knowledge, authenticated LAN Share, Activity and offline help; document any incompatible reference behavior explicitly.
+- [ ] **UP.040** [TERRA+REVIEW] Map and retain chat/history/streaming/settings capabilities from both applications.
+- [ ] **UP.041** [LEAD] Image engine lifecycle, generation parameters, progress/cancel and model compatibility validation.
+- [ ] **UP.042** [TERRA+REVIEW] Image gallery, metadata, export and journal-governed deletion.
+- [ ] **UP.043** [LEAD] Whisper file/microphone transcription, progress/cancel, transcript storage/export and permission UI.
+- [ ] **UP.044** [LEAD] Kokoro voice/model selection, speech generation/playback, saved audio and progress/cancel.
+- [ ] **UP.045** [LEAD] Hardware detection, recommendations, backend selection/download and resource-aware engine switching; CPU fallback and unsupported states.
+- [ ] **UP.046** [TERRA+REVIEW] Telemetry/performance display and reference settings/themes through NanoNexus design tokens.
+- [ ] **UP.047** [LEAD] Opt-in web search with current outbound-network and credential boundaries.
+- [ ] **UP.048** [TERRA+REVIEW] Retain assistants/Duo, file proposals/journal, analyzer, knowledge, authenticated LAN Share, Activity and offline help; document any incompatible reference behavior explicitly.
 
 ## Undone — packaging and updates
 
-- [ ] **UP.050** Implement non-destructive DIST assembly with one shared model store and platform launchers.
-- [ ] **UP.051** Package prebuilt macOS Rust app/engines and private workers; handle exFAT launch/signing constraints.
-- [ ] **UP.052** Package prebuilt Windows Rust app/engines, private fixed WebView2 and private workers; no target installers or package managers.
-- [ ] **UP.053** Pin runtime artifacts/digests, collect licenses and disable target-side source builds/implicit downloads.
-- [ ] **UP.054** Implement versioned staged updates, running-process guard, rollback and data preservation; never clear DIST.
-- [ ] **UP.055** Bound build scratch space and optional Colima resources; cleanup only task-owned resources after approved builds.
+- [ ] **UP.050** [LEAD] Implement non-destructive DIST assembly with one shared model store and platform launchers.
+- [ ] **UP.051** [LEAD] Package prebuilt macOS Rust app/engines and private workers; handle exFAT launch/signing constraints.
+- [ ] **UP.052** [LEAD] Package prebuilt Windows Rust app/engines, private fixed WebView2 and private workers; no target installers or package managers.
+- [ ] **UP.053** [LEAD] Pin runtime artifacts/digests, collect licenses and disable target-side source builds/implicit downloads.
+- [ ] **UP.054** [LEAD] Implement versioned staged updates, running-process guard, rollback and data preservation; never clear DIST.
+- [ ] **UP.055** [TERRA+REVIEW] Bound build scratch space and optional Colima resources; cleanup only task-owned resources after approved builds.
 
-## Undone — guide and delivery gates
+## Undone — user documentation [TERRA: whole category]
 
-- [ ] **UP.060** Update `guide.html`: back up before formatting, choose exFAT, copy the entire DIST folder, launch each OS, download to USB, work offline, update safely and eject safely. Formatting erases data; never format automatically.
-- [ ] **UP.061** Document OS/CPU minimums, hardware drivers, unsupported acceleration, USB speed/capacity and OS-managed trace limits.
-- [ ] **UP.062** Present concrete build commands, target matrix, download sizes, disk estimates and cleanup plan; ask for build approval.
-- [ ] **UP.063** Build Mac artifacts only after approval; mark them untested under current instruction.
-- [ ] **UP.064** Build Windows artifacts only after approval; mark them untested under current instruction.
-- [ ] **UP.065** Deliver ready-made DIST folder with manifests/licenses/guide; report any unverified portability claims and missing platform artifacts.
+- [ ] **UP.060** [TERRA] Update `guide.html`: back up before formatting, choose exFAT, copy the entire DIST folder, launch each OS, download to USB, work offline, update safely and eject safely. Formatting erases data; never format automatically.
+- [ ] **UP.061** [TERRA] Document OS/CPU minimums, hardware drivers, unsupported acceleration, USB speed/capacity and OS-managed trace limits.
+## Undone — build approval and delivery [LEAD + BUILD APPROVAL]
+
+- [ ] **UP.062** [LEAD] Present concrete build commands, target matrix, download sizes, disk estimates and cleanup plan; ask for build approval.
+- [ ] **UP.063** [LEAD] Build Mac artifacts only after approval; mark them untested under current instruction.
+- [ ] **UP.064** [LEAD] Build Windows artifacts only after approval; mark them untested under current instruction.
+- [ ] **UP.065** [LEAD] Deliver ready-made DIST folder with manifests/licenses/guide; report any unverified portability claims and missing platform artifacts.
 
 ## Deferred by owner instruction
 
@@ -73,17 +95,28 @@ Updated: 2026-11-02. `[x]` means the stated deliverable is complete; it does not
 
 ## Undone — write visibility and older Windows PCs
 
-- [ ] **UP.070** USB-local bounded write audit: recorded operations versus configured destinations, byte counts where known, errors, redaction, rotation and explicit coverage gaps.
-- [ ] **UP.071** App storage/write-activity view with outside-root destinations and subsystem filters; never claim to observe all OS writes.
-- [ ] **UP.072** Package Windows CPU-only baseline independently of CUDA/Vulkan; add conservative non-AVX2 variant and CPU-instruction selection before engine startup.
-- [ ] **UP.073** RAM-aware model recommendations and conservative context/thread defaults; explain older-PC image/speech limitations and unsupported OS/CPU cases.
+- [ ] **UP.070** [LEAD] USB-local bounded write audit: recorded operations versus configured destinations, byte counts where known, errors, redaction, rotation and explicit coverage gaps.
+- [ ] **UP.072** [LEAD] Package Windows CPU-only baseline independently of CUDA/Vulkan; add conservative non-AVX2 variant and CPU-instruction selection before engine startup.
+- [ ] **UP.073** [TERRA+REVIEW] RAM-aware model recommendations and conservative context/thread defaults; explain older-PC image/speech limitations and unsupported OS/CPU cases.
 
 ## Coding references — added during active batch
 
 - [x] **UP.079** Source-audit ClaudeCode-Portable and code-stick; record feature map, useful patterns, license obligations and Journal conflicts in docs/portable/CODING-REFERENCES.md. (2026-11-02; no runtime claims)
-- [ ] **UP.080** Provider/model profiles with local default, explicit network consent, tool capability flags and memory-only secrets.
-- [ ] **UP.081** Optional private official coding runtime integration with license gate and proposal-only isolation; never enable direct-write bypass.
-- [ ] **UP.082** Streaming protocol adapters with tool-argument validation, bounded results, cancellation and explicit compatibility errors.
-- [ ] **UP.083** Per-engine session resume/terminal integration without conflating IDs or replaying writes; show engine/provider identity.
-- [ ] **UP.084** Project/projectless coding sessions, USB-local attachments and reconfirmed project grants across hosts.
-- [ ] **UP.085** Complete coding turn lifecycle: real read/search/list results, validated proposals, approval/Journal apply, visible tool failures, timeouts/cancel and honest completion receipts.
+- [ ] **UP.080** [LEAD] Provider/model profiles with local default, explicit network consent, tool capability flags and memory-only secrets.
+- [ ] **UP.081** [LEAD] Optional private official coding runtime integration with license gate and proposal-only isolation; never enable direct-write bypass.
+- [ ] **UP.082** [LEAD] Streaming protocol adapters with tool-argument validation, bounded results, cancellation and explicit compatibility errors.
+- [ ] **UP.083** [LEAD] Per-engine session resume/terminal integration without conflating IDs or replaying writes; show engine/provider identity.
+- [ ] **UP.084** [TERRA+REVIEW] Project/projectless coding sessions, USB-local attachments and reconfirmed project grants across hosts.
+- [ ] **UP.085** [LEAD] Complete coding turn lifecycle: real read/search/list results, validated proposals, approval/Journal apply, visible tool failures, timeouts/cancel and honest completion receipts.
+
+## Undone — focused UI [TERRA: whole category]
+
+- [ ] **UP.022b** [TERRA] Persist browser-only UI preferences such as zoom in USB-backed settings so nonpersistent Mac browser storage does not reset them.
+- [ ] **UP.071** [TERRA] App storage/write-activity view with outside-root destinations and subsystem filters; never claim to observe all OS writes.
+
+## Undone — remaining portable integrity work [LEAD]
+
+- [ ] **UP.023b** [LEAD] Store/rebind copied knowledge-library and other internal persistent paths relative to DIST; keep external paths host-bound and consent-based.
+- [ ] **UP.034** [LEAD] Harden transfer coordination/recovery across legacy and Studio APIs, cross-volume Trash routing, shared-asset repair and engine shutdown; review actual error propagation before release. Source-only implementation has not proved these paths.
+- [ ] **UP.035** [LEAD] Add explicit reference-counted orphan-asset reclaim with preview and recoverable removal. Current Remove entry retains physical bytes and says so.
+- [ ] **UP.036** [LEAD] Ensure moved/translocated portable app bundles cannot fall back to installed-mode storage; add a packaged portable-required marker and actionable early startup errors on Windows.
