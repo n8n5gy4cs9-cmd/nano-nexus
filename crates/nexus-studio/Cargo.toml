@@ -1,0 +1,29 @@
+[package]
+name = "nexus-studio"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+nexus-core = { path = "../nexus-core" }
+nexus-llm = { path = "../nexus-llm" }
+nexus-models = { path = "../nexus-models" }
+base64.workspace = true
+getrandom.workspace = true
+regex.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+specta.workspace = true
+thiserror.workspace = true
+time.workspace = true
+tokio = { workspace = true, features = ["net"] }
+tokio-util.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

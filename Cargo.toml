@@ -69,6 +69,7 @@ jsonschema = { version = "0.33", default-features = false } # validate assistant
 include_dir = "0.7" # embed assistants/*.toml in the binary (ASSISTANTS §1)
 async-trait = "0.1" # object-safe async Tool trait (ASSISTANTS §5)
 sha2 = "0.10" # streaming SHA-256 of downloaded model files (MODEL-MANAGER §4)
+base64 = "0.22" # decode images returned by the stable-diffusion.cpp server (nexus-studio)
 regex = "1" # catalog `file_pattern` matching against a repo's file list
 wiremock = "0.6" # fake Hugging Face server in tests (dev)
 ignore = "0.4" # parallel, gitignore-aware directory walker (folder scans)

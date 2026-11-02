@@ -3457,6 +3457,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-studio"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "getrandom 0.4.3",
+ "nexus-core",
+ "nexus-llm",
+ "nexus-models",
+ "regex",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "specta",
+ "tempfile",
+ "thiserror 2.0.21",
+ "time",
+ "tokio",
+ "tokio-util",
+ "tracing",
+]
+
+[[package]]
 name = "nix"
 version = "0.30.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
