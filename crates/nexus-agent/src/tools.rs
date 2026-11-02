@@ -233,6 +233,11 @@ pub struct WebPage {
 #[async_trait]
 pub trait WebSource: Send + Sync {
     async fn search(&self, query: &str, max_results: usize) -> Result<Vec<WebHit>, String>;
+    /// Search limited to `within` (`day`, `week`, `month` or `year`, already validated). Sources that
+    /// cannot filter by date ignore it.
+    async fn search_within(&self, query: &str, max_results: usize, _within: &str) -> Result<Vec<WebHit>, String> {
+        self.search(query, max_results).await
+    }
     async fn fetch(&self, url: &str, max_chars: usize) -> Result<WebPage, String>;
 }
 
@@ -1567,7 +1572,7 @@ impl Tool for SearchWeb {
         "search_web"
     }
     fn description(&self) -> &'static str {
-        "Search the web for current information. Returns titles, links and snippets."
+        "Search the web for current information. Returns titles, links and snippets. Optional `time`: day, week, month or year."
     }
     fn signature(&self) -> &'static str {
         "search_web(query)"
@@ -1577,8 +1582,13 @@ impl Tool for SearchWeb {
     }
     async fn run(&self, args: ToolArgs, cx: &ToolCx) -> Result<ToolOutput, ToolError> {
         let query = arg_str(&args, "query")?;
+        let within = match args.get("time").and_then(Value::as_str).map(|t| t.trim().to_ascii_lowercase()) {
+            None => "any".to_owned(),
+            Some(t) if ["", "any", "day", "week", "month", "year"].contains(&t.as_str()) => t,
+            Some(_) => return Err(ToolError::Invalid("`time` must be day, week, month or year.".into())),
+        };
         let hits = web(cx)?
-            .search(query, 6)
+            .search_within(query, 6, &within)
             .await
             .map_err(|e| ToolError::Invalid(format!("Web search failed: {e}")))?;
         if hits.is_empty() {
@@ -1600,7 +1610,10 @@ impl Tool for SearchWeb {
         }
         let (body, _) = truncate_to_tokens(&text, cx.budget_tokens);
         Ok(ToolOutput {
-            llm_text: format!("<web_results query=\"{query}\">\n{body}</web_results>"),
+            llm_text: format!(
+                "<web_results query=\"{}\">\n{body}</web_results>",
+                query.replace('"', "'")
+            ),
             ui: Some(serde_json::json!({
                 "query": query,
                 "results": hits.iter().map(|h| serde_json::json!({"title": h.title, "url": h.url})).collect::<Vec<_>>()
@@ -2534,5 +2547,22 @@ mod tests {
             .await
             .unwrap();
         assert!(page.llm_text.contains("Page text"));
+    }
+
+    #[tokio::test]
+    async fn search_web_accepts_known_time_windows_and_rejects_others() {
+        let mut c = cx(engine());
+        c.web = Some(Arc::new(FakeWeb));
+        SearchWeb
+            .run(args(&[("query", "rust"), ("time", "Week")]), &c)
+            .await
+            .unwrap();
+        let err = SearchWeb
+            .run(args(&[("query", "rust"), ("time", "decade")]), &c)
+            .await
+            .unwrap_err();
+        assert!(matches!(err, ToolError::Invalid(_)));
+        let out = SearchWeb.run(args(&[("query", "say \"hi\"")]), &c).await.unwrap();
+        assert!(out.llm_text.starts_with("<web_results query=\"say 'hi'\">"));
     }
 }

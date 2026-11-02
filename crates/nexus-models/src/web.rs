@@ -32,6 +32,45 @@ pub struct Page {
     pub text: String,
 }
 
+/// How far back a search may look.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum TimeFilter {
+    #[default]
+    Any,
+    Day,
+    Week,
+    Month,
+    Year,
+}
+
+impl TimeFilter {
+    /// Parses `day`/`week`/`month`/`year`/`any` (case-insensitive); anything else is `None`.
+    pub fn parse(s: &str) -> Option<Self> {
+        match s.trim().to_ascii_lowercase().as_str() {
+            "" | "any" => Some(Self::Any),
+            "day" => Some(Self::Day),
+            "week" => Some(Self::Week),
+            "month" => Some(Self::Month),
+            "year" => Some(Self::Year),
+            _ => None,
+        }
+    }
+
+    /// DuckDuckGo's `df` value, if the filter narrows the search.
+    fn df(self) -> Option<&'static str> {
+        match self {
+            Self::Any => None,
+            Self::Day => Some("d"),
+            Self::Week => Some("w"),
+            Self::Month => Some("m"),
+            Self::Year => Some("y"),
+        }
+    }
+}
+
+/// Longest search query sent off the computer, in characters.
+pub const MAX_QUERY_CHARS: usize = 300;
+
 /// Why a web call failed (messages are shown to the model, so they say what to do).
 #[derive(Debug, thiserror::Error)]
 pub enum WebError {
@@ -39,6 +78,8 @@ pub enum WebError {
     Blocked,
     #[error("The address is not valid.")]
     BadUrl,
+    #[error("The search words are empty.")]
+    EmptyQuery,
     #[error("The site did not answer in time.")]
     Timeout,
     #[error("The page is not text (it is {0}).")]
@@ -89,8 +130,29 @@ impl WebClient {
 
     /// Search with DuckDuckGo's HTML endpoint (no account or key).
     pub async fn search(&self, query: &str, max_results: usize) -> Result<Vec<SearchHit>, WebError> {
+        self.search_within(query, max_results, TimeFilter::Any).await
+    }
+
+    /// Like [`WebClient::search`], limited to a time window. The query is trimmed and capped at
+    /// [`MAX_QUERY_CHARS`] so a long prompt is never sent off the computer whole.
+    pub async fn search_within(
+        &self,
+        query: &str,
+        max_results: usize,
+        within: TimeFilter,
+    ) -> Result<Vec<SearchHit>, WebError> {
+        let query: String = query.trim().chars().take(MAX_QUERY_CHARS).collect();
+        if query.is_empty() {
+            return Err(WebError::EmptyQuery);
+        }
         let mut url = Url::parse("https://html.duckduckgo.com/html/").map_err(|_| WebError::BadUrl)?;
-        url.query_pairs_mut().append_pair("q", query);
+        {
+            let mut pairs = url.query_pairs_mut();
+            pairs.append_pair("q", &query);
+            if let Some(df) = within.df() {
+                pairs.append_pair("df", df);
+            }
+        }
         let (_, body) = self.get(url, "text/html").await?;
         Ok(parse_search(&body, max_results))
     }
@@ -389,5 +451,20 @@ mod tests {
         assert_eq!(title, "Hi & bye");
         assert_eq!(text, "Head\nOne two\nThree");
         assert!(!text.contains("alert") && !text.contains("menu"));
+    }
+
+    #[test]
+    fn time_filters_parse_and_map() {
+        assert_eq!(TimeFilter::parse("Week"), Some(TimeFilter::Week));
+        assert_eq!(TimeFilter::parse(""), Some(TimeFilter::Any));
+        assert_eq!(TimeFilter::parse("decade"), None);
+        assert_eq!(TimeFilter::Any.df(), None);
+        assert_eq!(TimeFilter::Year.df(), Some("y"));
+    }
+
+    #[tokio::test]
+    async fn blank_queries_are_not_sent() {
+        let e = WebClient::new().search("   ", 5).await.unwrap_err();
+        assert!(matches!(e, WebError::EmptyQuery));
     }
 }

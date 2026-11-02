@@ -132,7 +132,16 @@ struct ChatWeb(nexus_models::web::WebClient);
 #[async_trait::async_trait]
 impl nexus_agent::tools::WebSource for ChatWeb {
     async fn search(&self, query: &str, max: usize) -> Result<Vec<nexus_agent::tools::WebHit>, String> {
-        let hits = self.0.search(query, max).await.map_err(|e| e.to_string())?;
+        self.search_within(query, max, "any").await
+    }
+    async fn search_within(
+        &self,
+        query: &str,
+        max: usize,
+        within: &str,
+    ) -> Result<Vec<nexus_agent::tools::WebHit>, String> {
+        let within = nexus_models::web::TimeFilter::parse(within).unwrap_or_default();
+        let hits = self.0.search_within(query, max, within).await.map_err(|e| e.to_string())?;
         Ok(hits
             .into_iter()
             .map(|h| nexus_agent::tools::WebHit {
