@@ -38,6 +38,18 @@ pub async fn report(ctx: &AppCtx) -> String {
     let _ = writeln!(out, "- Data folder: {}", ctx.paths.data.display());
     let _ = writeln!(out, "- Log folder: {}", ctx.paths.logs.display());
 
+    if let Some(root) = &ctx.paths.portable_root {
+        let _ = writeln!(out, "- Portable folder: {}", root.display());
+        let _ = writeln!(out, "- Shared models: {}", ctx.paths.models.display());
+        let _ = writeln!(out, "- Cache/temp: {}", ctx.paths.cache.display());
+        let _ = writeln!(out, "- Outputs: {}", ctx.paths.outputs.display());
+        match nexus_models::download::available_space(root) {
+            Some(bytes) => { let _ = writeln!(out, "- USB free space: {} MiB", bytes / (1024 * 1024)); }
+            None => out.push_str("- USB free space: unavailable (not assumed to be zero)\n"),
+        }
+        out.push_str("- Folder grants and external Activity sources require consent each launch; LAN sharing does not autostart.\n");
+        out.push_str("- Storage destinations are configuration, not a complete observed-write ledger. OS/driver writes are outside coverage.\n");
+    }
     let mut hints: Vec<&str> = Vec::new();
 
     out.push_str("\n## Model runtime\n");

@@ -311,7 +311,7 @@ pub async fn init(ctx: Ctx) {
         let ctx = ctx.clone();
         tokio::spawn(async move { bridge_pushes(ctx).await });
     }
-    if settings.share_autostart
+    if ctx.paths.portable_root.is_none() && settings.share_autostart
         && let Err(e) = start(&ctx).await
     {
         tracing::warn!("LAN share did not autostart: {e}");

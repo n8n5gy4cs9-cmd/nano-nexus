@@ -155,6 +155,26 @@ impl AppState {
         app_data: &std::path::Path,
         audit: Arc<dyn AuditSink>,
     ) -> Arc<PermissionEngine> {
+        Self::build_permissions_for_session(store, home, app_data, audit, true)
+    }
+
+    /// Portable runs reconfirm folder access each launch rather than trusting another host's paths.
+    pub fn build_portable_permissions(
+        store: &Store,
+        home: &std::path::Path,
+        root: &std::path::Path,
+        audit: Arc<dyn AuditSink>,
+    ) -> Arc<PermissionEngine> {
+        Self::build_permissions_for_session(store, home, root, audit, false)
+    }
+
+    fn build_permissions_for_session(
+        store: &Store,
+        home: &std::path::Path,
+        app_data: &std::path::Path,
+        audit: Arc<dyn AuditSink>,
+        restore_grants: bool,
+    ) -> Arc<PermissionEngine> {
         let mut rules = builtin_rules(home, app_data);
         match store.list_user_deny() {
             Ok(user) => rules.extend(
@@ -164,9 +184,11 @@ impl AppState {
             Err(e) => tracing::warn!("could not load protected locations: {e}"),
         }
         let engine = Arc::new(PermissionEngine::new(DenyList::new(rules), audit));
-        match store.list_grants() {
-            Ok(grants) => engine.load_grants(grants),
-            Err(e) => tracing::warn!("could not load folder grants: {e}"),
+        if restore_grants {
+            match store.list_grants() {
+                Ok(grants) => engine.load_grants(grants),
+                Err(e) => tracing::warn!("could not load folder grants: {e}"),
+            }
         }
         engine
     }

@@ -150,7 +150,13 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let paths = resolve_paths(app)?;
     paths.ensure_dirs()?;
     let store = Arc::new(Store::open(&paths.db_file())?);
-    let settings = store.load_settings()?;
+    let mut settings = store.load_settings()?;
+    if paths.portable_root.is_some() {
+        // Host-bound/background access is re-enabled explicitly in each portable session.
+        settings.share_autostart = false;
+        settings.observe_claude_code = false;
+        settings.observe_codex = false;
+    }
     let supervisor = Supervisor::with_files(
         Some(paths.logs.join("llama-server.log")),
         Some(paths.server_json()),
@@ -170,8 +176,10 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let home = app.path().home_dir()?;
     // The writer task needs the async runtime, like the scheduler.
     let audit = tauri::async_runtime::block_on(async { audit::AuditWriter::start(store.clone()) });
-    let protected_root = paths.portable_root.as_deref().unwrap_or(&paths.data);
-    let perms = AppState::build_permissions(&store, &home, protected_root, audit.clone());
+    let perms = match paths.portable_root.as_deref() {
+        Some(root) => AppState::build_portable_permissions(&store, &home, root, audit.clone()),
+        None => AppState::build_permissions(&store, &home, &paths.data, audit.clone()),
+    };
     let trasher: Arc<dyn nexus_fs::Trasher> = if paths.portable_root.is_some() {
         Arc::new(nexus_fs::MoveToDirTrash::new(paths.trash.join(nexus_core::ids::ChangeSetId::new().to_string())))
     } else {
@@ -298,6 +306,12 @@ pub fn run() {
         let lock = nexus_core::portable::DistributionLock::acquire(&root)?;
         let paths = AppPaths::distribution(&root);
         paths.ensure_dirs()?;
+        // Leave headroom for WAL, logs and recovery. Model downloads enforce their own larger budget.
+        if let Some(available) = nexus_models::download::available_space(&root)
+            && available < 64 * 1024 * 1024
+        {
+            return Err("The USB drive needs at least 64 MiB free for application state; free space before launching".into());
+        }
         paths.worker_environment()?;
         let shell = paths.cache.join("shell");
         nexus_core::portable::ensure_directory(&root, shell.strip_prefix(&root)?)?;

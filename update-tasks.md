@@ -28,7 +28,7 @@ Updated: 2026-11-02. `[x]` means the stated deliverable is complete; it does not
 - [x] **UP.021** Route existing DB/settings/logs/knowledge/journal/report data through shared AppPaths, add USB outputs/trash, validate DB sidecars, protect entire distribution from agent writes and disable portable autostart; credentials remain memory/environment-only. (2026-11-02; source only, unbuilt/untested; new media writers tracked separately)
 - [x] **UP.022** Set Tauri app paths/webview profile before initialization, use nonpersistent WKWebView on Mac, route worker home/temp/HF/Torch/ONNX/shader/package caches explicitly before spawn. (2026-11-02; source only, unbuilt/untested)
 - [ ] **UP.022b** Persist browser-only UI preferences such as zoom in USB-backed settings so nonpersistent Mac browser storage does not reset them.
-- [ ] **UP.023** Handle read-only/missing drive, low space, concurrent instances, changed mount paths, interruption and portable permission grants.
+- [x] **UP.023** Add startup space floor and diagnostics; reuse OS lock/writable checks and existing DB/job/download interruption errors, reconfirm grants/external sources each launch and disable portable LAN autostart. Paths resolve from current executable, never saved mount location. (2026-11-02; source only, unbuilt/untested; asset-path migration remains UP.030/033)
 
 ## Undone — unified models
 
