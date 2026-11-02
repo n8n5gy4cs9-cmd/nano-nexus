@@ -2,6 +2,30 @@
 
 Updated 2026-11-02. Repository: `/Volumes/macdisk/Projects/RUST/nano-nexus`, branch `main`.
 
+## Latest continuation — 2026-11-02
+
+The checklist has advanced beyond the original 12-task batch below. Media source work was already committed before this continuation (see UP.040–048 and git history); it remains unbuilt/untested. This continuation added:
+
+| Task | Deliverable | Commit |
+|---|---|---|
+| UP.060 | Guide: backup/erase warning, exFAT, whole-DIST copy, planned launchers, offline assets, safe updates and eject | 8d4ed42 |
+| UP.061 | Guide: target matrix, undecided OS/CPU minimums, RAM/USB/driver limits and configured-versus-observed write disclosure | 4f5be29 |
+| UP.022b | SQLite-backed desktop theme/accent/zoom/default assistant hydration, serialized saves and visible failures | 8414f60 |
+| UP.036 (partial) | Immutable `portable-dist` build feature rejects displaced/translocated apps; native Windows preflight error dialog | f9ebdef |
+
+All four commits are pushed to main. UP.036 stays unchecked until DIST assembly enforces the build feature. The Windows-only direct rfd dependency is pinned to the already locked 0.16.0 version; the lockfile dependency edge was edited without running Cargo. Dependency resolution, compilation and native dialog behavior are unverified.
+
+No tests, checks, builds, generators, runtime trials, downloads or containers were run. The normal verify skill was read but its execution requirements are overridden by the owner's no-testing/build-approval rule. Unrelated local edits listed at the end remain untouched.
+
+New source map: `components/UiPreferences.tsx` owns desktop-lifetime preference synchronization; `SettingsPage.tsx` reads appearance controls from the UI store; `nexus-core::settings` defines/validates `ui.zoom` and `ui.default_assistant`. Generated bindings remain untouched. Desktop startup prefers SQLite over browser cache; LAN clients retain browser preferences. Editor tab paths intentionally remain host-specific rather than migrating into USB settings.
+
+The guide now distinguishes the future shared DIST from legacy packages. It does not claim any launchers, safe updater, minimum OS or conservative CPU artifacts are delivered. Documentation completion does not close those delivery gates.
+
+Further read-only inspection confirms remaining integrity work:
+- UP.034: Studio `begin` excludes duplicate **model IDs**, but distinct IDs can resolve to the same digest destination and overlap the legacy download queue. The lower downloader reads/writes shared `.part`/metadata paths without a common destination lease. Coordinate digest/destination ownership and cancellation/discard together; locking only the network call leaves caller cleanup races.
+- UP.023b: copied libraries still persist absolute paths; `index_library` uses the stored path directly, and `document_source` canonicalizes it. Fix path representation/resolution across indexing, original-source access, deletion and bundled registration together. Do not guess old mount prefixes or re-enable external sources without permission.
+- UP.036: only artifacts built with `--features portable-dist` carry the immutable requirement. Existing legacy build scripts omit it intentionally. UP.050–052 must enforce the feature and supply the full fixed layout before a packaging completion claim.
+
 ## Start here
 
 1. Read `AGENTS.md`, `update-plan.md`, `update-tasks.md`, ADR-018 and `docs/portable/STORAGE.md`.
@@ -63,9 +87,9 @@ These checkmarks mean the stated source/doc deliverables exist. They are **unbui
 - No packaged launchers, private fixed WebView2, prebuilt image/speech/TTS workers, CPU baseline artifacts, safe update assembler, final licenses or DIST artifacts yet (UP.050–065/072).
 - Media “Select for workspace” saves configuration only. Image/Whisper/Kokoro engine execution is still UP.041–044. Current format checks do not guarantee backend compatibility or RAM fit. Native ckpt support is deferred visibly to the image-engine work; unsafe Python pickle loading is rejected.
 - Existing runtime binary lookup remains the legacy app/resource layout; new runtime-distribution assembly/selection must be integrated before claiming the proposed runtimes/ layout works.
-- Mac WKWebView uses nonpersistent browser storage because arbitrary persistent profile paths are unsupported by this integration. Core app data is USB SQLite, but browser-only preferences such as zoom still need UP.022b.
+- Mac WKWebView uses nonpersistent browser storage because arbitrary persistent profile paths are unsupported by this integration. Core app data is USB SQLite, but desktop appearance and default-assistant preferences now have UP.022b SQLite synchronization (source only); editor host-path sessions intentionally remain browser-local.
 - Root protection intentionally denies agents access to the application distribution itself. Coding workspaces should be explicitly granted outside DIST (for example a sibling Projects folder on the same USB), not granted through the protected application root.
-- Root/OS lock, probes and space floor are source implementations, not proven exFAT/device-removal behavior. Remaining hardening is UP.034/036: transfer coordination across old/new APIs, cancellation/shutdown races, cross-volume Trash routing, portable-required marker for moved/translocated app bundles, and visible Windows early-startup errors.
+- Root/OS lock, probes and space floor are source implementations, not proven exFAT/device-removal behavior. Remaining hardening is UP.034/036: transfer coordination across old/new APIs, cancellation/shutdown races, cross-volume Trash routing, portable-required marker for moved/translocated app bundles, and packaging enforcement of the new portable-required feature (the Windows preflight dialog is now source-implemented).
 - Model paths have relative registry backing and startup projection rebinding. Other persisted internal paths, especially copied knowledge libraries, still need mount-independent rebinding (UP.023b). Host folder grants and external Activity sources require consent each launch; portable LAN Share never autostarts.
 - Logical model removal retains physical assets, explicitly stated in UI. Reference-counted reclaim is UP.035. Pre-existing duplicate source files are not automatically deleted. External model-folder references are refused in USB mode rather than silently becoming nonportable.
 - Write logging/view is **not implemented**: current diagnostics show configured paths, not observed writes. UP.070/071 must distinguish those and disclose OS/driver gaps.
@@ -76,7 +100,7 @@ These checkmarks mean the stated source/doc deliverables exist. They are **unbui
 
 For a lead session: start with source review of UP.034/036 and registry/legacy integration before expanding engines. Then prioritize UP.085 with the coding-reference audit: inspect the real router/tool/turn/service/UI chain and improve visible failures/receipts without weakening permissions or inventing runtime evidence. Apply the relevant skills when editing prompts or diagnosing a concrete failure; owner restrictions still override testing workflows.
 
-For a Terra session: whole **User documentation** (UP.060/061) and **Focused UI** (UP.022b/071) categories are marked `[TERRA]`. The write-view task depends on UP.070's agreed service schema; do not invent backend coverage. Start with guide/limitations or USB-backed UI preference persistence if no audit schema exists. `[TERRA+REVIEW]` is a bounded implementation recommendation, not sole ownership of safety decisions. See the checklist's ownership table and official-source links; no categorical model-success guarantee is asserted.
+For a Terra session: whole **User documentation** (UP.060/061) and **Focused UI** (UP.022b/071) categories are marked `[TERRA]`. The write-view task depends on UP.070's agreed service schema; do not invent backend coverage. UP.060/061 and UP.022b are now source/documentation complete; UP.071 still needs the UP.070 audit schema. `[TERRA+REVIEW]` is a bounded implementation recommendation, not sole ownership of safety decisions. See the checklist's ownership table and official-source links; no categorical model-success guarantee is asserted.
 
 Do not begin a build merely to discover whether this source compiles. Prepare concrete commands, prerequisite/download/storage estimates and cleanup first, then ask. No Colima resources were created to clean up.
 
