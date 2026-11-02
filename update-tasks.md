@@ -19,7 +19,7 @@ Updated: 2026-11-02. `[x]` means the stated deliverable is complete; it does not
 - [x] **UP.011** Record existing feature/service preservation rules and known verification gaps in docs/portable/NANONEXUS-INVENTORY.md. (2026-11-02; later implementation remains subject to these contracts)
 - [x] **UP.012a** Record ADR-018 and packaging conflict Q-12 under owner-authorized USB direction. (2026-11-02)
 - [x] **UP.012b** Reconcile BUNDLING, MODEL-MANAGER, DATA-AND-IPC and OVERVIEW with ADR-018; legacy distributions remain supported. (2026-11-02)
-- [ ] **UP.013** Design versioned portable marker, relative-path registry, platform-specific state and migration/backups from existing installations.
+- [x] **UP.013** Define schema-1 marker, relative references, owned paths, host-bound grants, explicit backup/import and update lifecycle in docs/portable/STORAGE.md. (2026-11-02; contract, implementation tracked separately)
 
 ## Undone — USB storage
 
