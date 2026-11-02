@@ -20,6 +20,7 @@ pub mod notifications;
 pub mod observe;
 pub mod permissions;
 pub mod pipelines;
+pub(crate) mod portable_store;
 pub mod rename;
 pub mod runtime;
 pub mod settings;

@@ -45,7 +45,7 @@ fn transfers() -> &'static Mutex<HashMap<String, Transfer>> {
     static JOBS: OnceLock<Mutex<HashMap<String, Transfer>>> = OnceLock::new();
     JOBS.get_or_init(Default::default)
 }
-struct TransferGuard(String);
+struct TransferGuard(String, Arc<super::portable_store::Lease>);
 impl Drop for TransferGuard {
     fn drop(&mut self) {
         if let Ok(mut jobs) = transfers().lock() {
@@ -59,6 +59,7 @@ fn begin(id: &str, model_id: &str) -> Result<(TransferGuard, CancellationToken),
     if id.is_empty() || id.len() > 256 {
         return Err(invalid("invalid transfer id"));
     }
+    let lease = super::portable_store::acquire()?;
     let mut jobs = transfers()
         .lock()
         .map_err(|_| invalid("transfer lock poisoned"))?;
@@ -76,7 +77,7 @@ fn begin(id: &str, model_id: &str) -> Result<(TransferGuard, CancellationToken),
             discard: false,
         },
     );
-    Ok((TransferGuard(id.into()), token))
+    Ok((TransferGuard(id.into(), lease), token))
 }
 fn root(ctx: &AppCtx, caller: &Caller) -> Result<PathBuf, NexusError> {
     if !caller.is_desktop() {
@@ -228,11 +229,13 @@ pub async fn import(
     validate_input(&input)?;
     idle_model(ctx, &input.id)?;
     let (_guard, cancel) = begin(job_id, &input.id)?;
+    let lease = _guard.1.clone();
     let source = PathBuf::from(path);
     // Native picker/drag-drop is user intent; still enforce built-in and user deny rules.
     let source = super::models::reference_read(ctx, &source).await?;
     let ctx = ctx.clone();
     tokio::task::spawn_blocking(move || {
+        let _lease = lease;
         studio::validate_format(&source,input.kind,&input.role)?;
         let total=std::fs::metadata(&source)?.len();
         let asset=studio::import_asset(&ctx.store,&root,&source,&cancel,|bytes| progress(DownloadProgress { bytes,total,bytes_per_sec:0.0,eta_secs:None,phase:nexus_models::download::Phase::Verifying }))?;
@@ -292,7 +295,7 @@ pub async fn download(
         return Err(invalid("unsupported model asset extension"));
     }
     let dest = if let Some(asset) = ctx.store.studio_asset(&sha)? {
-        studio::validate_asset(&root, &asset)?
+        studio::asset_destination(&root, &asset)?
     } else {
         nexus_core::portable::ensure_directory(&root, Path::new(&format!("models/blobs/{sha}")))?
             .join(format!("asset.{extension}"))
@@ -326,8 +329,10 @@ pub async fn download(
             });
         }
     }
+    let lease = _guard.1.clone();
     let ctx = ctx.clone();
     tokio::task::spawn_blocking(move || {
+        let _lease = lease;
         studio::validate_format(&dest,input.kind,&input.role)?;
         let actual=nexus_models::bundled::hash_file(&dest,&cancel,|_|{}).map_err(|e|invalid(&e.to_string()))?;
         if actual!=sha { return Err(invalid("stored asset failed integrity verification")); }
@@ -429,6 +434,7 @@ pub async fn select(ctx: &Ctx, caller: &Caller, id: &str) -> Result<(), NexusErr
 /// Stop the chat engine or clear a media selection. Never claim an unimplemented media engine ran.
 pub async fn unload(ctx: &Ctx, caller: &Caller, kind: ModelKind) -> Result<(), NexusError> {
     root(ctx, caller)?;
+    let _lease = super::portable_store::acquire()?;
     if kind == ModelKind::Chat {
         ctx.supervisor.shutdown().await;
         super::settings::set(
@@ -523,8 +529,10 @@ pub async fn adopt_legacy(
         return Err(invalid("unload chat before adopting existing models"));
     }
     let (_guard, cancel) = begin(job_id, "legacy-adoption")?;
+    let lease = _guard.1.clone();
     let ctx = ctx.clone();
     tokio::task::spawn_blocking(move|| {
+        let _lease = lease;
         let mut result=MigrationResult::default();
         let models_root=ctx.paths.models.canonicalize()?;
         for row in ctx.store.list_models()? {
@@ -581,8 +589,10 @@ pub async fn import_pack(
         sources.push((id, model, source));
     }
     let (_guard, cancel) = begin(job_id, "pack-import")?;
+    let lease = _guard.1.clone();
     let ctx = ctx.clone();
     tokio::task::spawn_blocking(move|| {
+        let _lease = lease;
         let mut result=MigrationResult::default();
         for (id,entry,source) in sources {
             if cancel.is_cancelled() {return Err(NexusError::Cancelled);}

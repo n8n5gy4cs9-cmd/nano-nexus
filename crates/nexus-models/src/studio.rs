@@ -37,6 +37,16 @@ pub fn register(store: &Store, root: &Path, model: &StudioModel) -> Result<(), N
 
 /// Resolve a registered asset, enforcing portable containment and the recorded size.
 pub fn validate_asset(root: &Path, asset: &StudioAsset) -> Result<PathBuf, NexusError> {
+    let path = asset_destination(root, asset)?;
+    let meta = std::fs::metadata(&path)?;
+    if !meta.is_file() || meta.len() != asset.bytes {
+        return Err(invalid("shared asset is missing or has changed size"));
+    }
+    Ok(path)
+}
+
+/// Validate a registry reference without requiring its bytes to exist, for explicit repair.
+pub fn asset_destination(root: &Path, asset: &StudioAsset) -> Result<PathBuf, NexusError> {
     if !valid_digest(&asset.sha256)
         || asset.bytes == 0
         || asset.bytes > i64::MAX as u64
@@ -49,12 +59,7 @@ pub fn validate_asset(root: &Path, asset: &StudioAsset) -> Result<PathBuf, Nexus
     {
         return Err(invalid("invalid shared asset reference"));
     }
-    let path = portable::contained(root, Path::new(&asset.path))?;
-    let meta = std::fs::metadata(&path)?;
-    if !meta.is_file() || meta.len() != asset.bytes {
-        return Err(invalid("shared asset is missing or has changed size"));
-    }
-    Ok(path)
+    portable::contained(root, Path::new(&asset.path)).map_err(Into::into)
 }
 
 /// Import one file once. Duplicate content reuses its existing bytes, regardless of model kind.

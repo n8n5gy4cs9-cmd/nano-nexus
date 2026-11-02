@@ -27,6 +27,7 @@ use serde::{Deserialize, Serialize};
 use specta::Type;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use tokio_util::sync::CancellationToken;
 
@@ -56,6 +57,7 @@ impl OutputKind {
 // ---- shared state ------------------------------------------------------------------------------------
 
 struct Shared {
+    closing: AtomicBool,
     image: ImageEngine,
     jobs: Mutex<HashMap<String, CancellationToken>>,
     busy: Mutex<Option<&'static str>>,
@@ -64,6 +66,7 @@ struct Shared {
 fn shared() -> &'static Shared {
     static S: OnceLock<Shared> = OnceLock::new();
     S.get_or_init(|| Shared {
+        closing: AtomicBool::new(false),
         image: ImageEngine::new(),
         jobs: Mutex::default(),
         busy: Mutex::default(),
@@ -91,6 +94,9 @@ fn begin(id: &str, what: &'static str) -> Result<(JobGuard, CancellationToken), 
         return Err(invalid("invalid job id"));
     }
     let mut busy = shared().busy.lock().map_err(|_| invalid("job lock poisoned"))?;
+    if shared().closing.load(Ordering::SeqCst) {
+        return Err(NexusError::Busy("NanoNexus is shutting down".into()));
+    }
     if let Some(running) = *busy {
         return Err(NexusError::Busy(format!(
             "{running} is running. Wait for it to finish or cancel it first."
@@ -122,12 +128,27 @@ pub fn cancel(caller: &Caller, id: &str) -> Result<bool, NexusError> {
 
 /// App exit: cancel jobs and stop the image server.
 pub async fn shutdown() {
+    if let Ok(_busy) = shared().busy.lock() {
+        shared().closing.store(true, Ordering::SeqCst);
+    }
     if let Ok(j) = shared().jobs.lock() {
         for t in j.values() {
             t.cancel();
         }
     }
     shared().image.stop().await;
+    let drained = tokio::time::timeout(std::time::Duration::from_secs(15), async {
+        loop {
+            if shared().jobs.lock().is_ok_and(|jobs| jobs.is_empty()) {
+                return;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        }
+    })
+    .await;
+    if drained.is_err() {
+        tracing::error!("media shutdown timed out; output recovery may be needed");
+    }
 }
 
 // ---- DIST layout -------------------------------------------------------------------------------------

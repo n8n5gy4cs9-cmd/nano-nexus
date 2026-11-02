@@ -347,6 +347,9 @@ impl Downloader {
             discard_part(&spec.dest);
             return Err(DownloadError::NotGguf(e.to_string()));
         }
+        if cancel.is_cancelled() {
+            return Err(DownloadError::Cancelled);
+        }
         progress(emitter.frame(done, Phase::Finalizing, true));
         std::fs::OpenOptions::new().write(true).open(&part)?.sync_all()?;
         std::fs::rename(&part, &spec.dest)?;

@@ -32,30 +32,40 @@ impl Trasher for SystemTrash {
     }
 }
 
-/// Moves paths into a folder instead of the system Trash. For tests and environments without a Trash.
+/// Moves paths into application Trash. Cross-volume paths use their system Trash instead.
+/// Unique per-operation folders prevent later launches from overwriting recoverable files.
 pub struct MoveToDirTrash {
     dir: PathBuf,
-    counter: std::sync::atomic::AtomicUsize,
 }
 
 impl MoveToDirTrash {
     pub fn new(dir: impl Into<PathBuf>) -> Self {
-        Self {
-            dir: dir.into(),
-            counter: std::sync::atomic::AtomicUsize::new(0),
-        }
+        Self { dir: dir.into() }
     }
 }
 
 impl Trasher for MoveToDirTrash {
     fn trash(&self, path: &Path) -> Result<(), String> {
         std::fs::create_dir_all(&self.dir).map_err(|e| e.to_string())?;
-        let n = self.counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         let name = path
             .file_name()
             .map(|n| n.to_string_lossy().into_owned())
             .unwrap_or_default();
-        std::fs::rename(path, self.dir.join(format!("{n}-{name}"))).map_err(|e| e.to_string())
+        let entry = self.dir.join(nexus_core::ids::JobId::new().to_string());
+        std::fs::create_dir(&entry).map_err(|e| e.to_string())?;
+        match std::fs::rename(path, entry.join(name)) {
+            Ok(()) => Ok(()),
+            Err(error) => {
+                let _ = std::fs::remove_dir(&entry); // empty reservation only
+                if is_cross_device(&error) {
+                    // Never stream an external directory into USB Trash or permanently unlink it.
+                    // The OS manages recovery on the source volume; failure leaves it untouched.
+                    SystemTrash.trash(path)
+                } else {
+                    Err(error.to_string())
+                }
+            }
+        }
     }
 }
 

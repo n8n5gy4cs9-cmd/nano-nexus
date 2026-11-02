@@ -262,11 +262,16 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 /// Stop everything this app started: running answers, the LAN share server, `llama-server` (its whole
 /// process group), and the audit queue. Safe to call more than once.
 async fn shutdown_all(ctx: &Ctx) {
+    service::portable_store::close();
     ctx.chats.cancel_all();
+    service::models::shutdown(ctx);
     service::studio::cancel_all();
     service::media::shutdown().await;
     service::share::stop(ctx).await;
     ctx.supervisor.shutdown().await;
+    if !service::portable_store::drain().await {
+        tracing::error!("shared model shutdown timed out; interrupted work may require recovery");
+    }
     ctx.audit.flush().await;
 }
 

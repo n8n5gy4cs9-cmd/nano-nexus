@@ -486,6 +486,9 @@ async fn start(ctx: &Ctx, repo: &str, revision: &str, pick: Pick<'_>) -> Result<
 
 /// Start the next queued download if none is running.
 pub fn pump(ctx: &Ctx) {
+    if super::portable_store::closing() {
+        return;
+    }
     let Ok(mut guard) = ctx.downloads.running.lock() else {
         return;
     };
@@ -581,6 +584,14 @@ async fn run_download(
     intent: Arc<AtomicU8>,
     job: Option<nexus_core::ids::JobId>,
 ) {
+    let lease = if ctx.paths.portable_root.is_some() {
+        match super::portable_store::acquire() {
+            Ok(lease) => Some(lease),
+            Err(error) => return finish_failed(ctx, &row, &DownloadError::Network(error.to_string())),
+        }
+    } else {
+        None
+    };
     let mut row = row;
     match download_destination(ctx, &row) {
         Ok(path) => row.dest = path.display().to_string(),
@@ -648,7 +659,9 @@ async fn run_download(
         let token = cancel.clone();
         let expected = spec.expected_sha256.clone();
         let bytes = spec.expected_bytes;
+        let verify_lease = lease.clone();
         tokio::task::spawn_blocking(move || {
+            let _lease = verify_lease;
             let actual = bundled::hash_file(&path, &token, |_| {})
                 .map_err(|e| download::DownloadError::Network(e.to_string()))?;
             if actual != expected {
@@ -677,11 +690,14 @@ async fn run_download(
             let _ = ctx.store.set_download_progress(&row.id, done.bytes);
             let install_ctx = ctx.clone();
             let install_row = row.clone();
-            let installed =
-                tokio::task::spawn_blocking(move || install(&install_ctx, &install_row, &done.sha256))
-                    .await
-                    .map_err(|e| NexusError::Internal(e.to_string()))
-                    .and_then(|result| result);
+            let install_lease = lease.clone();
+            let installed = tokio::task::spawn_blocking(move || {
+                let _lease = install_lease;
+                install(&install_ctx, &install_row, &done.sha256)
+            })
+            .await
+            .map_err(|e| NexusError::Internal(e.to_string()))
+            .and_then(|result| result);
             match installed {
                 Ok(name) => {
                     let _ = ctx.store.set_download_status(&row.id, "done", None);
@@ -801,6 +817,16 @@ fn desktop_only(caller: &Caller) -> Result<(), NexusError> {
     }
 }
 
+/// Pause the active legacy transfer on exit; keep resumable bytes on the USB.
+pub fn shutdown(ctx: &AppCtx) {
+    if let Ok(guard) = ctx.downloads.running.lock()
+        && let Some(running) = guard.as_ref()
+    {
+        running.intent.store(INTENT_PAUSE, Ordering::SeqCst);
+        running.cancel.cancel();
+    }
+}
+
 fn signal_running(ctx: &AppCtx, id: &str, intent: u8) -> bool {
     let guard = ctx.downloads.running.lock().ok();
     match guard.as_deref().and_then(Option::as_ref) {
@@ -855,6 +881,12 @@ pub fn cancel(ctx: &AppCtx, caller: &Caller, id: &str) -> Result<(), NexusError>
         .store
         .get_download(id)?
         .ok_or_else(|| NexusError::NotFound("download".into()))?;
+    // A paused/queued row may alias the digest currently owned by Studio or another row.
+    let _lease = if ctx.paths.portable_root.is_some() {
+        Some(super::portable_store::acquire()?)
+    } else {
+        None
+    };
     download::discard_part(&download_destination(ctx, &d)?);
     ctx.store.set_download_status(id, "cancelled", None)?;
     emit_download(ctx, id);
@@ -901,6 +933,11 @@ pub async fn activate(ctx: &Ctx, caller: &Caller, id: &str) -> Result<ActivateRe
 /// Delete a downloaded or copied model, or unlink a referenced one. The bundle is protected.
 pub fn delete(ctx: &AppCtx, caller: &Caller, id: &str) -> Result<(), NexusError> {
     desktop_only(caller)?;
+    let _lease = if ctx.paths.portable_root.is_some() {
+        Some(super::portable_store::acquire()?)
+    } else {
+        None
+    };
     let row = ctx
         .store
         .get_model(id)?
