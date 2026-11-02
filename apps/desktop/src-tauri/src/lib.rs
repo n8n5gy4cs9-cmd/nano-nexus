@@ -173,11 +173,14 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let home = app.path().home_dir()?;
     // The writer task needs the async runtime, like the scheduler.
     let audit = tauri::async_runtime::block_on(async { audit::AuditWriter::start(store.clone()) });
-    let perms = AppState::build_permissions(&store, &home, &paths.data, audit.clone());
-    let journal = Arc::new(nexus_fs::Journal::new(
-        paths.journal.clone(),
-        Arc::new(nexus_fs::SystemTrash),
-    ));
+    let protected_root = paths.portable_root.as_deref().unwrap_or(&paths.data);
+    let perms = AppState::build_permissions(&store, &home, protected_root, audit.clone());
+    let trasher: Arc<dyn nexus_fs::Trasher> = if paths.portable_root.is_some() {
+        Arc::new(nexus_fs::MoveToDirTrash::new(paths.trash.join(uuid::Uuid::now_v7().to_string())))
+    } else {
+        Arc::new(nexus_fs::SystemTrash)
+    };
+    let journal = Arc::new(nexus_fs::Journal::new(paths.journal.clone(), trasher));
     let recovered = journal.recover_interrupted();
     if !recovered.is_empty() {
         tracing::warn!(

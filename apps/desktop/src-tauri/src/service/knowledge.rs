@@ -183,7 +183,7 @@ pub async fn add(
         )
         .map_err(kb);
     }
-    let dest = knowledge_root(ctx).join(uuid_dir());
+    let dest = ctx.paths.owned_path(&knowledge_root(ctx).join(uuid_dir()))?;
     let copy_dest = dest.clone();
     let copied = tokio::task::spawn_blocking(move || copy_into(&copy_dest, &sources))
         .await

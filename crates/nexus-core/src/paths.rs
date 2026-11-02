@@ -70,6 +70,10 @@ pub struct AppPaths {
     pub runtime: PathBuf,
     pub cache: PathBuf,
     pub logs: PathBuf,
+    /// Persistent generated media and transcripts.
+    pub outputs: PathBuf,
+    /// Application-owned recoverable deletions.
+    pub trash: PathBuf,
 }
 
 impl AppPaths {
@@ -79,6 +83,8 @@ impl AppPaths {
         paths.portable_root = Some(root.to_owned());
         paths.models = root.join("models");
         paths.cache = root.join("cache").join(std::env::consts::OS);
+        paths.runtime = paths.data.join("runtime").join(std::env::consts::OS);
+        paths.outputs = root.join("outputs");
         paths
     }
 
@@ -93,6 +99,8 @@ impl AppPaths {
             runtime: data.join("runtime"),
             cache: data.join("cache"),
             logs: log_dir.into(),
+            outputs: data.join("outputs"),
+            trash: data.join("trash"),
             data,
         }
     }
@@ -119,6 +127,8 @@ impl AppPaths {
             &self.runtime,
             &self.cache,
             &self.logs,
+            &self.outputs,
+            &self.trash,
         ] {
             if let Some(root) = &self.portable_root {
                 let relative = dir.strip_prefix(root).map_err(std::io::Error::other)?;
@@ -128,7 +138,27 @@ impl AppPaths {
                 std::fs::create_dir_all(dir)?;
             }
         }
+        if let Some(root) = &self.portable_root {
+            // SQLite opens sidecars itself; validate all existing destinations before opening it.
+            for name in ["nexus.db", "nexus.db-wal", "nexus.db-shm", "nexus.db-journal"] {
+                crate::portable::contained(root, &Path::new("data").join(name))?;
+            }
+            for name in ["knowledge", "attachments", "backups"] {
+                crate::portable::ensure_directory(root, &Path::new("data").join(name))?;
+            }
+        }
         Ok(())
+    }
+
+    /// Revalidate a destination before an application-owned write.
+    pub fn owned_path(&self, path: &Path) -> std::io::Result<PathBuf> {
+        match &self.portable_root {
+            Some(root) => {
+                let relative = path.strip_prefix(root).map_err(std::io::Error::other)?;
+                crate::portable::contained(root, relative)
+            }
+            None => Ok(path.to_owned()),
+        }
     }
 
     /// Path of the SQLite database.

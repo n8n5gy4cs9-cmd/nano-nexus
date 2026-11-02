@@ -25,7 +25,7 @@ Updated: 2026-11-02. `[x]` means the stated deliverable is complete; it does not
 
 - [x] **UP.020a** Implement fixed-layout root/marker resolution and shared AppPaths for Mac/Windows; recognized layouts fail on missing/invalid markers. (2026-11-02; source only, unbuilt/untested)
 - [x] **UP.020b** Add contained directory/marker resolution, escaping-link rejection, per-owned-directory writable probes and an OS lifetime lock. Startup never implicitly migrates legacy/host sources; explicit migration remains UP.033. (2026-11-02; source only, unbuilt/untested)
-- [ ] **UP.021** Route DB/WAL, settings, logs, knowledge, journals, reports, outputs and credentials to USB-owned storage.
+- [x] **UP.021** Route existing DB/settings/logs/knowledge/journal/report data through shared AppPaths, add USB outputs/trash, validate DB sidecars, protect entire distribution from agent writes and disable portable autostart; credentials remain memory/environment-only. (2026-11-02; source only, unbuilt/untested; new media writers tracked separately)
 - [ ] **UP.022** Route webview profiles, child-process home/temp/cache and engine caches to USB before initialization.
 - [ ] **UP.023** Handle read-only/missing drive, low space, concurrent instances, changed mount paths, interruption and portable permission grants.
 

@@ -83,6 +83,12 @@ pub fn update_share(app: &AppHandle, status: &ShareStatus) {
 
 /// Turn "start at login" on or off (a no-op when it already matches).
 pub fn apply_autostart(app: &AppHandle, enabled: bool) {
+    if app.try_state::<crate::state::Ctx>()
+        .is_some_and(|ctx| ctx.paths.portable_root.is_some())
+    {
+        // Do not register or unregister host login entries from a removable installation.
+        return;
+    }
     let launcher = app.autolaunch();
     match launcher.is_enabled() {
         Ok(now) if now == enabled => {}
