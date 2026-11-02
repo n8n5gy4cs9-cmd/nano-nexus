@@ -22,9 +22,11 @@ use crate::state::{AppState, Ctx};
 
 /// Resolve the data and log folders: portable mode (`portable.flag` next to the exe) or the OS defaults.
 fn resolve_paths(app: &tauri::App) -> Result<AppPaths, Box<dyn std::error::Error>> {
-    let exe_dir = std::env::current_exe()
-        .ok()
-        .and_then(|p| p.parent().map(|d| d.to_owned()));
+    let executable = std::env::current_exe()?;
+    if let Some(root) = nexus_core::paths::distribution_root(&executable)? {
+        return Ok(AppPaths::distribution(&root));
+    }
+    let exe_dir = executable.parent().map(|d| d.to_owned());
     if let Some(dir) = exe_dir.filter(|d| AppPaths::is_portable(d)) {
         return Ok(AppPaths::portable(&dir));
     }

@@ -340,3 +340,29 @@ need) · a separate Electron/Node app (second codebase).
 
 **Consequences.** Log formats are not a stable API: parsers are tolerant (unknown lines are skipped,
 never fatal), have fixtures, and a "format drift" counter shows in the UI when many lines fail to parse.
+
+## ADR-018: Shared USB distribution and visible storage boundaries
+**Status:** Accepted by owner direction · 2026-11-02; implementation in progress
+
+**Context.** The owner requested full Portable Local Studio parity while retaining NanoNexus,
+with prebuilt Mac/Windows applications and all application-controlled large files on USB.
+Small OS-managed traces are acceptable; visible write reporting is requested. Windows must
+work without NVIDIA, including older PCs. No tests are authorized; builds require approval.
+
+**Decision.** Use the versioned DIST layout in `update-plan.md`, one shared model store,
+platform-specific prebuilt executables/private dependencies, USB-local state/cache/temp/logs,
+and non-destructive updates. Resolve the root from the executable layout and validate the
+marker before using it; invalid portable markers fail rather than fall back to host storage.
+Keep legacy portable.flag handling for older distributions until explicit migration is ready.
+Ship an independent CPU backend for Windows; plan a conservative instruction-set variant.
+Record observable application writes with bounded USB-local storage and honest coverage gaps.
+
+**Supersedes.** ADR-009/015 per-platform embedded model storage and ADR-014 installer-first
+packaging for the new USB distribution only. Existing installed distributions remain supported.
+ADR-001 remains in force: Rust/Tauri core, private workers only where needed for parity.
+Permission, journal, loopback authentication and LAN pairing contracts remain unchanged.
+
+**Consequences.** Model weights are not duplicated per platform or update. GPU drivers and OS
+frameworks are host prerequisites; the app installs neither. No universal zero-host-write or
+all-old-PC guarantee is made. The complete capability inventory and minimum supported systems
+must be documented before delivery. Current source changes remain unbuilt and untested.

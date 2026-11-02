@@ -6,6 +6,57 @@ use std::path::{Path, PathBuf};
 /// File name that, placed next to the executable, switches the app to portable mode.
 pub const PORTABLE_FLAG: &str = "portable.flag";
 
+/// Versioned marker at the root of a shared USB distribution.
+pub const PORTABLE_MANIFEST: &str = "portable.json";
+
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct PortableManifest {
+    schema: u32,
+}
+
+/// Resolve the shared USB root from the exact platform installation layout.
+///
+/// Only fixed-depth layouts are recognized; arbitrary ancestor markers are never used.
+/// A present but invalid marker is an error, preventing fallback to host storage.
+pub fn distribution_root(executable: &Path) -> std::io::Result<Option<PathBuf>> {
+    let Some(exe_dir) = executable.parent() else {
+        return Ok(None);
+    };
+    let candidate = if exe_dir.file_name().is_some_and(|n| n == "windows-x64")
+        || exe_dir.file_name().is_some_and(|n| n == "windows-arm64")
+    {
+        exe_dir.parent().filter(|p| p.file_name().is_some_and(|n| n == "apps"))
+            .and_then(Path::parent)
+    } else if exe_dir.file_name().is_some_and(|n| n == "MacOS") {
+        exe_dir.parent()
+            .filter(|p| p.file_name().is_some_and(|n| n == "Contents"))
+            .and_then(Path::parent)
+            .filter(|p| p.file_name().is_some_and(|n| n == "NanoNexus.app"))
+            .and_then(Path::parent)
+            .filter(|p| p.file_name().is_some_and(|n| n == "macos-arm64"))
+            .and_then(Path::parent)
+            .filter(|p| p.file_name().is_some_and(|n| n == "apps"))
+            .and_then(Path::parent)
+    } else {
+        None
+    };
+    let Some(root) = candidate else {
+        return Ok(None);
+    };
+    // A recognized distribution layout must never silently become an installed app.
+    let file = std::fs::File::open(root.join(PORTABLE_MANIFEST))?;
+    if file.metadata()?.len() > 4096 {
+        return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "portable marker exceeds 4096 bytes"));
+    }
+    let marker: PortableManifest = serde_json::from_reader(file)
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+    if marker.schema != 1 {
+        return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "unsupported portable schema"));
+    }
+    root.canonicalize().map(Some)
+}
+
 /// All directories NanoNexus owns.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AppPaths {
@@ -19,6 +70,14 @@ pub struct AppPaths {
 }
 
 impl AppPaths {
+    /// Shared distribution paths. Models are external to both platform applications.
+    pub fn distribution(root: &Path) -> Self {
+        let mut paths = Self::from_roots(root.join("data"), root.join("logs").join(std::env::consts::OS));
+        paths.models = root.join("models");
+        paths.cache = root.join("cache").join(std::env::consts::OS);
+        paths
+    }
+
     /// Derive every directory from the data root and the log root.
     pub fn from_roots(data_dir: impl Into<PathBuf>, log_dir: impl Into<PathBuf>) -> Self {
         let data = data_dir.into();

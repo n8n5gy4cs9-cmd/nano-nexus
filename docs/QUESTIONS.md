@@ -123,3 +123,12 @@ a union of flat action objects whose arguments are required per action.
 Decision: (b), under the owner's explicit repair request; retain Rust validation and one retry
 as well. The pinned llama.cpp converter supports schema unions. No nested args, new dependencies,
 permission changes, or direct LLM writes are introduced. The M06 follow-up specifies the repair.
+
+## Q-12: USB distribution conflicts with embedded-model packaging (2026-11-02, UP.012)
+Context: ADR-009/014/015 and BUNDLING specify platform-contained models and installer-oriented
+Windows delivery. The owner now requests a shared USB folder, preserved models and no large
+host files, plus full Portable Local Studio parity and older-PC Windows CPU operation.
+Options: A) preserve installer-first packaging; B) add a shared-root portable distribution.
+Decision: B, explicitly authorized by the owner's conversion request and scope confirmation;
+ADR-018 supersedes conflicting packaging choices only for the new distribution. OS-managed
+small traces are acceptable. Testing is prohibited and builds require prior approval.
