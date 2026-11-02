@@ -145,7 +145,7 @@ export function ImportPackDialog({ onClose }: { onClose: () => void }) {
       <DialogContent aria-describedby="pack-import-desc" className="w-[min(560px,calc(100vw-32px))]">
         <DialogTitle>Import a model pack</DialogTitle>
         <DialogDescription id="pack-import-desc">
-          Choose the pack folder (it contains pack.json). Every file is checked before it is added, so a damaged copy is never used.
+          Choose the pack folder (it contains pack.json). Every file is checked before it is added. USB distributions always import into the shared USB store and reuse identical content; the copy option below applies to computer installations.
         </DialogDescription>
         {report ? (
           <div className="flex flex-col gap-1.5" aria-live="polite">

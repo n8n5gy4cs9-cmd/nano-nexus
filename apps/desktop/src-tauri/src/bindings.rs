@@ -13,6 +13,8 @@ use crate::commands::{
 pub fn builder() -> Builder<tauri::Wry> {
     Builder::<tauri::Wry>::new()
         .commands(collect_commands![
+            studio::studio_adopt_legacy,
+            studio::studio_pack_import,
             studio::studio_select,
             studio::studio_unload,
             studio::studio_remove,

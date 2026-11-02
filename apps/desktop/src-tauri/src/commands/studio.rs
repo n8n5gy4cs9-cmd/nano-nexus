@@ -3,7 +3,7 @@ use super::CmdResult;
 use crate::{
     service::{
         self, Caller,
-        studio::{ModelInput, ModelView},
+        studio::{MigrationResult, ModelInput, ModelView},
     },
     state::AppState,
 };
@@ -121,4 +121,43 @@ pub async fn studio_remove(ctx: Ctx<'_>, id: String) -> CmdResult<()> {
 #[specta::specta]
 pub async fn studio_reclassify(ctx: Ctx<'_>, id: String, kind: ModelKind) -> CmdResult<()> {
     service::studio::reclassify(&ctx, &Caller::Desktop, &id, kind).map_err(IpcError::from)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn studio_adopt_legacy(
+    ctx: Ctx<'_>,
+    job_id: String,
+    on_event: Channel<DownloadProgress>,
+) -> CmdResult<MigrationResult> {
+    service::studio::adopt_legacy(
+        &ctx,
+        &Caller::Desktop,
+        &job_id,
+        Arc::new(move |p| {
+            let _ = on_event.send(p);
+        }),
+    )
+    .await
+    .map_err(IpcError::from)
+}
+#[tauri::command]
+#[specta::specta]
+pub async fn studio_pack_import(
+    ctx: Ctx<'_>,
+    job_id: String,
+    path: String,
+    on_event: Channel<DownloadProgress>,
+) -> CmdResult<MigrationResult> {
+    service::studio::import_pack(
+        &ctx,
+        &Caller::Desktop,
+        &job_id,
+        &path,
+        Arc::new(move |p| {
+            let _ = on_event.send(p);
+        }),
+    )
+    .await
+    .map_err(IpcError::from)
 }

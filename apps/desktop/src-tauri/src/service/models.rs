@@ -446,7 +446,20 @@ async fn start(ctx: &Ctx, repo: &str, revision: &str, pick: Pick<'_>) -> Result<
         }
         ctx.store.delete_download(&id)?;
     }
-    let dest = ctx.paths.models.join(repo.replace('/', "__")).join(&file);
+    let sha256 = sha256.to_ascii_lowercase();
+    let dest = if let Some(root) = &ctx.paths.portable_root {
+        if !nexus_models::studio::valid_digest(&sha256) {
+            return Err(NexusError::InvalidInput("invalid model checksum".into()));
+        }
+        if let Some(asset) = ctx.store.studio_asset(&sha256)? {
+            nexus_models::studio::validate_asset(root, &asset)?
+        } else {
+            nexus_core::portable::ensure_directory(root, Path::new(&format!("models/blobs/{sha256}")))?
+                .join("asset.gguf")
+        }
+    } else {
+        ctx.paths.models.join(repo.replace('/', "__")).join(&file)
+    };
     let now = now_ms();
     let row = DownloadRow {
         id: id.clone(),
@@ -541,6 +554,26 @@ fn end_download_job(ctx: &AppCtx, job: &nexus_core::ids::JobId, download_id: &st
     }
 }
 
+fn download_destination(ctx: &AppCtx, row: &DownloadRow) -> Result<PathBuf, NexusError> {
+    let Some(root) = &ctx.paths.portable_root else {
+        return Ok(PathBuf::from(&row.dest));
+    };
+    let sha = row.sha256.to_ascii_lowercase();
+    if !nexus_models::studio::valid_digest(&sha) {
+        return Err(NexusError::InvalidInput("invalid stored download digest".into()));
+    }
+    let destination = match ctx.store.studio_asset(&sha)? {
+        Some(asset) => nexus_core::portable::contained(root, Path::new(&asset.path))?,
+        None => nexus_core::portable::contained(root, Path::new(&format!("models/blobs/{sha}/asset.gguf")))?,
+    };
+    for suffix in ["", ".part", ".part.json"] {
+        let mut path = destination.as_os_str().to_owned();
+        path.push(suffix);
+        ctx.paths.owned_path(&PathBuf::from(path))?;
+    }
+    Ok(destination)
+}
+
 async fn run_download(
     ctx: &Ctx,
     row: DownloadRow,
@@ -548,6 +581,11 @@ async fn run_download(
     intent: Arc<AtomicU8>,
     job: Option<nexus_core::ids::JobId>,
 ) {
+    let mut row = row;
+    match download_destination(ctx, &row) {
+        Ok(path) => row.dest = path.display().to_string(),
+        Err(error) => return finish_failed(ctx, &row, &download::DownloadError::Network(error.to_string())),
+    }
     let spec = DownloadSpec {
         url: ctx.hf.resolve_url(&row.repo, &row.revision, &row.file),
         token: ctx.hf.token().map(str::to_owned),
@@ -604,14 +642,47 @@ async fn run_download(
         Ok(d) => d,
         Err(e) => return finish_failed(ctx, &row, &e),
     };
-    let result = downloader.download(&spec, &progress, &cancel).await;
+    let result = if ctx.paths.portable_root.is_some() && spec.dest.is_file() {
+        // Shared content already exists: verify it instead of downloading another physical copy.
+        let path = spec.dest.clone();
+        let token = cancel.clone();
+        let expected = spec.expected_sha256.clone();
+        let bytes = spec.expected_bytes;
+        tokio::task::spawn_blocking(move || {
+            let actual = bundled::hash_file(&path, &token, |_| {})
+                .map_err(|e| download::DownloadError::Network(e.to_string()))?;
+            if actual != expected {
+                return Err(download::DownloadError::ChecksumMismatch);
+            }
+            let got = std::fs::metadata(&path)?.len();
+            if got != bytes {
+                return Err(download::DownloadError::SizeMismatch { got, expected: bytes });
+            }
+            Ok(download::Downloaded {
+                path,
+                bytes,
+                sha256: actual,
+            })
+        })
+        .await
+        .unwrap_or_else(|e| Err(download::DownloadError::Network(e.to_string())))
+    } else {
+        downloader.download(&spec, &progress, &cancel).await
+    };
     if let Ok(mut l) = ctx.downloads.live.lock() {
         l.remove(&row.id);
     }
     match result {
         Ok(done) => {
             let _ = ctx.store.set_download_progress(&row.id, done.bytes);
-            match install(ctx, &row, &done.sha256) {
+            let install_ctx = ctx.clone();
+            let install_row = row.clone();
+            let installed =
+                tokio::task::spawn_blocking(move || install(&install_ctx, &install_row, &done.sha256))
+                    .await
+                    .map_err(|e| NexusError::Internal(e.to_string()))
+                    .and_then(|result| result);
+            match installed {
                 Ok(name) => {
                     let _ = ctx.store.set_download_status(&row.id, "done", None);
                     notify(
@@ -706,6 +777,17 @@ fn install(ctx: &AppCtx, row: &DownloadRow, sha256: &str) -> Result<String, Nexu
         extra,
         added_at: now_ms(),
     })?;
+    if let Some(root) = &ctx.paths.portable_root {
+        let asset =
+            nexus_models::studio::import_asset(&ctx.store, root, path, &CancellationToken::new(), |_| {})?;
+        let model=nexus_store::studio::StudioModel {
+            id:nexus_models::studio::legacy_id(&row.id),name:name.clone(),kind:nexus_store::studio::ModelKind::Chat,variant:"universal".into(),
+            metadata:serde_json::json!({"legacy_id":row.id,"repo":row.repo,"revision":row.revision,"license":catalog.map(|c|c.license.clone())}).to_string(),
+            assets:vec![nexus_store::studio::AssetRole{role:"weights".into(),asset}],
+        };
+        nexus_models::studio::register(&ctx.store, root, &model)?;
+        super::studio::project_chat(ctx, root, &model)?;
+    }
     Ok(name)
 }
 
@@ -773,7 +855,7 @@ pub fn cancel(ctx: &AppCtx, caller: &Caller, id: &str) -> Result<(), NexusError>
         .store
         .get_download(id)?
         .ok_or_else(|| NexusError::NotFound("download".into()))?;
-    download::discard_part(Path::new(&d.dest));
+    download::discard_part(&download_destination(ctx, &d)?);
     ctx.store.set_download_status(id, "cancelled", None)?;
     emit_download(ctx, id);
     Ok(())
@@ -887,6 +969,35 @@ pub async fn import_local(
     copy: bool,
 ) -> Result<InstalledModel, NexusError> {
     desktop_only(caller)?;
+    if ctx.paths.portable_root.is_some() {
+        let source = Path::new(path);
+        let id = nexus_models::studio::legacy_id(path);
+        let name = source
+            .file_stem()
+            .map(|s| s.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "Imported model".into());
+        let input = super::studio::ModelInput {
+            id: id.clone(),
+            name,
+            kind: nexus_store::studio::ModelKind::Chat,
+            role: "weights".into(),
+            variant: "universal".into(),
+        };
+        // Portable imports always copy into/adopt the shared store, never retain host-only references.
+        super::studio::import(
+            ctx,
+            caller,
+            &nexus_core::ids::JobId::new().to_string(),
+            path,
+            input,
+            Arc::new(|_| {}),
+        )
+        .await?;
+        return list_installed(ctx)?
+            .into_iter()
+            .find(|m| m.id == format!("studio-{id}"))
+            .ok_or_else(|| NexusError::NotFound("imported shared model".into()));
+    }
     let src = if copy {
         PathBuf::from(path)
     } else {
@@ -966,6 +1077,9 @@ fn models_err(e: bundled::ModelsError) -> NexusError {
 
 /// Stop a running pack export or import.
 pub fn cancel_pack(job_id: &str) -> bool {
+    if super::studio::cancel(&Caller::Desktop, job_id, true).unwrap_or(false) {
+        return true;
+    }
     match pack_jobs().lock().ok().and_then(|m| m.get(job_id).cloned()) {
         Some(t) => {
             t.cancel();
@@ -1046,6 +1160,42 @@ pub async fn import_pack(
     progress: Arc<dyn Fn(PackProgress) + Send + Sync>,
 ) -> Result<PackImport, NexusError> {
     desktop_only(caller)?;
+    if ctx.paths.portable_root.is_some() {
+        let result = super::studio::import_pack(
+            ctx,
+            caller,
+            job_id,
+            path,
+            Arc::new(move |p| {
+                progress(PackProgress {
+                    phase: match p.phase {
+                        download::Phase::Finalizing => "copying",
+                        _ => "verifying",
+                    }
+                    .into(),
+                    model_id: "Shared USB asset".into(),
+                    model_index: 0,
+                    model_total: 0,
+                    bytes_done: p.bytes,
+                    bytes_total: p.total,
+                })
+            }),
+        )
+        .await?;
+        return Ok(PackImport {
+            imported: result.imported,
+            already_installed: result.skipped,
+            failed: result
+                .failed
+                .into_iter()
+                .map(|reason| pack::PackFailure {
+                    id: "pack model".into(),
+                    reason,
+                })
+                .collect(),
+        });
+    }
+
     let dir = if copy {
         PathBuf::from(path)
     } else {
@@ -1122,6 +1272,16 @@ pub async fn import_pack(
 
 /// Register the bundle, scan extra folders, and pause downloads that were running at shutdown.
 pub fn init(ctx: &AppCtx) {
+    if ctx.paths.portable_root.is_some() {
+        if let Err(error) = super::studio::restore(ctx) {
+            tracing::warn!(%error,"could not restore shared models");
+        }
+        if let Err(error) = ctx.store.pause_interrupted_downloads() {
+            tracing::warn!(%error,"could not pause interrupted downloads");
+        }
+        // Never automatically register host folders or per-app embedded weights in USB mode.
+        return;
+    }
     match bundled::register_bundled(&ctx.store, &ctx.resource_dir.join("models")) {
         Ok(r) => {
             if !r.missing.is_empty() {
@@ -1172,6 +1332,12 @@ pub fn init(ctx: &AppCtx) {
 
 /// Re-read the user's extra model folders. Returns how many models they hold.
 pub fn rescan(ctx: &AppCtx) -> Result<usize, NexusError> {
+    if ctx.paths.portable_root.is_some() {
+        return Err(NexusError::InvalidInput(
+            "USB mode imports files/packs into shared storage; external folder references are unavailable"
+                .into(),
+        ));
+    }
     let mut dirs =
         crate::runtime_paths::extra_model_dirs(&ctx.exe_dir, &ctx.settings_snapshot().models_extra_dirs);
     // An offline kit's `models-extra` with a `pack.json` is registered as bundled models (see `init`).

@@ -47,6 +47,23 @@ export function StudioModels() {
     onSuccess: (model) => { if (model) setStatus(`Added ${model.name}. Identical assets share one stored file.`); refresh(); },
     onError: (error) => { setStatus(toIpcException(error).message); refresh(); },
   });
+  const migration = useMutation({
+    mutationFn: async (mode: "adopt" | "pack") => {
+      const path = mode === "pack" ? await api.models.pickFolder() : null;
+      if (mode === "pack" && !path) return null;
+      const id = crypto.randomUUID();
+      job.current = id;
+      setProgress(null);
+      setStatus("Verifying model sources; existing files will be retained…");
+      try { return mode === "adopt" ? await api.studio.adoptLegacy(id, setProgress) : await api.studio.importPack(id, path ?? "", setProgress); }
+      finally { job.current = null; }
+    },
+    onSuccess: (result) => {
+      if (result) setStatus(`${result.imported.length} adopted/imported, ${result.skipped.length} already registered, ${result.failed.length} failed.${result.failed.length ? ` ${result.failed.slice(0, 10).join("; ")}${result.failed.length > 10 ? "; additional failures omitted" : ""}` : ""}`);
+      refresh();
+    },
+    onError: (error) => { setStatus(toIpcException(error).message); refresh(); },
+  });
   const action = useMutation({
     mutationFn: async (run: () => Promise<unknown>) => run(),
     onSuccess: () => { setRemove(null); refresh(); },
@@ -59,7 +76,8 @@ export function StudioModels() {
       setStatus(cancelled ? (discard ? "Cancelling; partial download will be removed." : "Pausing; download bytes stay on USB. Retry the same URL to resume.") : "The transfer has already finished.");
     } catch (error) { setStatus(toIpcException(error).message); }
   };
-  const busy = transfer.isPending || action.isPending;
+  const transferring = transfer.isPending || migration.isPending;
+  const busy = transferring || action.isPending;
   const patch = (key: "id" | "name" | "role" | "variant", value: string) => setInput((old) => ({ ...old, [key]: value }));
 
   if (models.isPending) return <Skeleton className="h-48" />;
@@ -82,10 +100,15 @@ export function StudioModels() {
       <div className="flex flex-wrap gap-2">
         <Button disabled={busy || !url.trim()} onClick={() => transfer.mutate("download")}>Download / resume</Button>
         <Button variant="secondary" disabled={busy} onClick={() => transfer.mutate("import")}>Import file to USB</Button>
-        {transfer.isPending ? <><Button variant="secondary" onClick={() => void stop(false)}>Pause</Button><Button variant="ghost" onClick={() => void stop(true)}>Cancel transfer</Button></> : null}
+        {transferring ? <><Button variant="secondary" onClick={() => void stop(false)}>Pause</Button><Button variant="ghost" onClick={() => void stop(true)}>Cancel transfer</Button></> : null}
       </div>
-      {transfer.isPending ? <Progress label="Model transfer" value={progress && progress.total > 0 ? progress.bytes / progress.total : undefined} /> : null}
-      <p role="status" aria-live="polite" className="text-small text-muted">{status}{transfer.isPending && progress ? ` · ${progress.phase}: ${size(progress.bytes)} / ${size(progress.total)}` : ""}</p>
+      {transferring ? <Progress label="Model transfer" value={progress && progress.total > 0 ? progress.bytes / progress.total : undefined} /> : null}
+      <p role="status" aria-live="polite" className="text-small text-muted">{status}{transferring && progress ? ` · ${progress.phase}: ${size(progress.bytes)} / ${size(progress.total)}` : ""}</p>
+      <div className="flex flex-wrap gap-2">
+        <Button variant="secondary" disabled={busy} onClick={() => migration.mutate("adopt")}>Adopt existing USB models</Button>
+        <Button variant="secondary" disabled={busy} onClick={() => migration.mutate("pack")}>Import offline model pack</Button>
+      </div>
+      <p className="text-small text-muted">Unload chat before adoption. Adoption verifies registered files already inside this USB model folder without copying them. Pack import verifies and copies only missing content into shared storage. Source files remain unchanged.</p>
       <p className="text-small text-muted">Chat uses the existing runtime. Image, speech and voice selections are saved for their workspace engines, whose integration is still pending. Format validation does not guarantee a model fits this computer.</p>
     </section>
     {(models.data ?? []).length === 0 ? <p className="p-4 text-muted">No shared Studio models yet. Download weights or import a local model to start.</p> : (models.data ?? []).map((view) => <section key={view.model.id} className="flex flex-col gap-2 rounded-panel border border-border bg-surface-1 p-4">

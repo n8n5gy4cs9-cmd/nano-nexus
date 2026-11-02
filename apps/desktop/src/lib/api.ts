@@ -63,7 +63,7 @@ import type { PairingView, SharePolicy, ShareDevice, ShareStatus } from "@/featu
 import type { KbIndexResult, KbLibrary, KbDocumentSource, KbLibraryDetail, KbPassage, KbProgress } from "@/features/library/types";
 
 import { getTransport } from "./transport";
-import type { ModelKind, StudioModel, StudioModelView, StudioModelInput, StudioProgress } from "@/features/models/studio-types";
+import type { ModelKind, StudioModel, StudioModelView, StudioModelInput, StudioProgress, StudioMigrationResult } from "@/features/models/studio-types";
 import type { ReportDelta, WatchSchedule, WatchView } from "@/features/analyzer/watches";
 import type { JobSummary } from "@/features/jobs/types";
 import type { Checker, Found, RenameItem, RenamePlan, RenamePlanOptions, RenameProgress, RenameSession, RenameVerifyResult, Usage } from "@/features/rename/types";
@@ -74,6 +74,10 @@ export type SettingValue = null | boolean | number | string | string[] | Record<
 
 export const api = {
   studio: {
+    adoptLegacy: (jobId: string, onProgress: (p: StudioProgress) => void) =>
+      getTransport().stream<StudioProgress, StudioMigrationResult>("studio_adopt_legacy", { jobId }, onProgress),
+    importPack: (jobId: string, path: string, onProgress: (p: StudioProgress) => void) =>
+      getTransport().stream<StudioProgress, StudioMigrationResult>("studio_pack_import", { jobId, path }, onProgress),
     list: () => getTransport().call<StudioModelView[]>("studio_models"),
     pickAsset: () => getTransport().call<string | null>("studio_pick_asset"),
     download: (jobId: string, url: string, input: StudioModelInput, onProgress: (p: StudioProgress) => void) =>

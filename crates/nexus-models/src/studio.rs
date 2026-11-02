@@ -85,16 +85,45 @@ pub fn import_asset(
             invalid(&e.to_string())
         }
     })?;
-    if let Some(existing) = store.studio_asset(&sha)? {
-        let path = validate_asset(root, &existing)?;
-        let actual = crate::bundled::hash_file(&path, cancel, |_| {}).map_err(|e| invalid(&e.to_string()))?;
-        if actual != sha {
-            return Err(invalid(
-                "existing shared asset failed integrity verification; repair it before importing",
-            ));
+    let existing = store.studio_asset(&sha)?;
+    if let Some(existing) = &existing {
+        if existing.bytes != meta.len() || !existing.path.starts_with("models/") {
+            return Err(invalid("stored asset metadata conflicts with imported bytes"));
         }
-        progress(existing.bytes);
-        return Ok(existing);
+        let path = portable::contained(root, Path::new(&existing.path))?;
+        if path.exists() {
+            let path = validate_asset(root, existing)?;
+            let actual =
+                crate::bundled::hash_file(&path, cancel, |_| {}).map_err(|e| invalid(&e.to_string()))?;
+            if actual != sha {
+                return Err(invalid(
+                    "existing shared asset failed integrity verification; move the damaged file aside before retrying",
+                ));
+            }
+            progress(existing.bytes);
+            return Ok(existing.clone());
+        }
+        // A missing registered file can be repaired at its original relative destination.
+    }
+    let models_root = portable::contained(root, Path::new("models"))?;
+    if existing.is_none() && source.starts_with(&models_root) {
+        // Already on the stick: adopt a verified reference without moving or copying bytes.
+        let relative = source
+            .strip_prefix(root)
+            .map_err(|e| invalid(&e.to_string()))?
+            .components()
+            .map(|c| c.as_os_str().to_string_lossy())
+            .collect::<Vec<_>>()
+            .join("/");
+        let asset = StudioAsset {
+            sha256: sha,
+            path: relative,
+            bytes: meta.len(),
+        };
+        validate_asset(root, &asset)?;
+        store.studio_publish_asset(&asset)?;
+        progress(asset.bytes);
+        return Ok(asset);
     }
     let extension = source
         .extension()
@@ -104,7 +133,9 @@ pub fn import_asset(
     if !identifier(&extension) || extension.len() > 16 {
         return Err(invalid("unsupported asset filename extension"));
     }
-    let relative = format!("models/blobs/{sha}/asset.{extension}");
+    let relative = existing
+        .map(|asset| asset.path)
+        .unwrap_or_else(|| format!("models/blobs/{sha}/asset.{extension}"));
     let destination = portable::contained(root, Path::new(&relative))?;
     let parent = destination
         .parent()
@@ -291,4 +322,21 @@ pub fn validate_format(
         _ => return Err(invalid("file format does not match the selected model category")),
     }
     Ok(())
+}
+
+/// Stable, mount-independent model identity for explicit legacy adoption.
+pub fn legacy_id(id: &str) -> String {
+    format!("legacy-{:x}", Sha256::digest(id.as_bytes()))
+}
+
+/// Resolve a legacy pack path with strict cross-platform traversal and link containment checks.
+pub fn pack_asset(pack: &Path, relative: &str) -> Result<PathBuf, NexusError> {
+    if relative.contains('\\')
+        || relative
+            .split('/')
+            .any(|part| part.is_empty() || part == "." || part == "..")
+    {
+        return Err(invalid("invalid model pack asset path"));
+    }
+    portable::contained(pack, &Path::new("models").join(relative)).map_err(NexusError::from)
 }

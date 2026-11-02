@@ -56,7 +56,7 @@ impl Drop for TransferGuard {
     }
 }
 fn begin(id: &str, model_id: &str) -> Result<(TransferGuard, CancellationToken), NexusError> {
-    if id.is_empty() || id.len() > 128 {
+    if id.is_empty() || id.len() > 256 {
         return Err(invalid("invalid transfer id"));
     }
     let mut jobs = transfers()
@@ -183,24 +183,34 @@ pub fn project_chat(ctx: &AppCtx, root: &Path, model: &StudioModel) -> Result<()
     };
     let path = studio::validate_asset(root, &weights.asset)?;
     let meta = nexus_models::gguf::parse_file(&path).map_err(|e| invalid(&e.to_string()))?;
+    let old = ctx.store.get_model(&projected_id(model))?;
+    let mut extra = old
+        .as_ref()
+        .and_then(|m| m.extra.as_deref())
+        .and_then(|s| serde_json::from_str::<serde_json::Value>(s).ok())
+        .filter(|v| v.is_object())
+        .unwrap_or_else(|| serde_json::json!({}));
+    extra["storage"] = serde_json::json!("studio");
+    extra["studio_id"] = serde_json::json!(model.id);
     ctx.store.upsert_model(&ModelRow {
-        id: format!("studio-{}", model.id),
-        source: "import".into(),
+        id: projected_id(model),
+        source: old
+            .as_ref()
+            .map(|m| m.source.clone())
+            .unwrap_or_else(|| "import".into()),
         name: model.name.clone(),
-        repo: None,
-        revision: None,
+        repo: old.as_ref().and_then(|m| m.repo.clone()),
+        revision: old.as_ref().and_then(|m| m.revision.clone()),
         file: path.file_name().map(|s| s.to_string_lossy().into_owned()),
         path: path.display().to_string(),
         sha256: Some(weights.asset.sha256.clone()),
         bytes: weights.asset.bytes,
         quant: meta.quant.clone(),
-        catalog_id: None,
+        catalog_id: old.as_ref().and_then(|m| m.catalog_id.clone()),
         gguf_meta: serde_json::to_string(&meta).ok(),
         license: meta.license.clone(),
-        extra: Some(
-            serde_json::json!({"storage":"studio","studio_id":model.id,"capabilities":["chat"]}).to_string(),
-        ),
-        added_at: 0,
+        extra: Some(extra.to_string()),
+        added_at: old.as_ref().map(|m| m.added_at).unwrap_or(0),
     })?;
     Ok(())
 }
@@ -379,7 +389,12 @@ fn idle_model(ctx: &AppCtx, id: &str) -> Result<(), NexusError> {
                 "wait for the chat engine to finish loading".into(),
             ));
         }
-        nexus_core::events::RuntimeState::Ready { model_id, .. } if model_id == format!("studio-{id}") => {
+        nexus_core::events::RuntimeState::Ready { model_id, .. }
+            if model_id
+                == get_model(ctx, id)
+                    .map(|m| projected_id(&m))
+                    .unwrap_or_else(|_| format!("studio-{id}")) =>
+        {
             return Err(NexusError::Conflict("unload this model first".into()));
         }
         _ => {}
@@ -405,7 +420,7 @@ pub async fn select(ctx: &Ctx, caller: &Caller, id: &str) -> Result<(), NexusErr
     }
     if model.kind == ModelKind::Chat {
         project_chat(ctx, &root, &model)?;
-        super::models::activate(ctx, caller, &format!("studio-{id}")).await?;
+        super::models::activate(ctx, caller, &projected_id(&model)).await?;
     }
     ctx.store.studio_select(model.kind, Some(id))?;
     Ok(())
@@ -432,9 +447,9 @@ pub fn remove(ctx: &AppCtx, caller: &Caller, id: &str) -> Result<(), NexusError>
     root(ctx, caller)?;
     idle_model(ctx, id)?;
     let (_guard, _cancel) = begin(&format!("remove-{id}"), id)?;
-    get_model(ctx, id)?;
+    let model = get_model(ctx, id)?;
     ctx.store.studio_remove(id)?;
-    ctx.store.delete_model(&format!("studio-{id}"))?;
+    ctx.store.delete_model(&projected_id(&model))?;
     Ok(())
 }
 
@@ -450,7 +465,7 @@ pub fn reclassify(ctx: &AppCtx, caller: &Caller, id: &str, kind: ModelKind) -> R
     }
     model.kind = kind;
     studio::register(&ctx.store, &root, &model)?;
-    ctx.store.delete_model(&format!("studio-{id}"))?;
+    ctx.store.delete_model(&projected_id(&get_model(ctx, id)?))?;
     project_chat(ctx, &root, &model)?;
     Ok(())
 }
@@ -462,4 +477,131 @@ pub fn cancel_all() {
             transfer.cancel.cancel();
         }
     }
+}
+
+fn projected_id(model: &StudioModel) -> String {
+    serde_json::from_str::<serde_json::Value>(&model.metadata)
+        .ok()
+        .and_then(|v| v.get("legacy_id").and_then(|s| s.as_str()).map(str::to_owned))
+        .unwrap_or_else(|| format!("studio-{}", model.id))
+}
+
+/// Restore ephemeral absolute chat projections from mount-independent registry references.
+pub fn restore(ctx: &AppCtx) -> Result<(), NexusError> {
+    let Some(root) = &ctx.paths.portable_root else {
+        return Ok(());
+    };
+    for model in ctx.store.studio_models()? {
+        if let Err(error) = project_chat(ctx, root, &model) {
+            tracing::warn!(model_id=%model.id,%error,"shared model unavailable; retained for repair");
+        }
+    }
+    Ok(())
+}
+
+/// Summary of explicit legacy adoption or offline-pack import. Sources are never removed.
+#[derive(Clone, Debug, Serialize, Type, Default)]
+pub struct MigrationResult {
+    pub imported: Vec<String>,
+    pub skipped: Vec<String>,
+    pub failed: Vec<String>,
+}
+
+/// Adopt only already-registered files canonically within this stick's models directory.
+/// No host profile scan, mount-prefix guessing or implicit external imports.
+pub async fn adopt_legacy(
+    ctx: &Ctx,
+    caller: &Caller,
+    job_id: &str,
+    progress: Arc<dyn Fn(DownloadProgress) + Send + Sync>,
+) -> Result<MigrationResult, NexusError> {
+    let root = root(ctx, caller)?;
+    if !matches!(
+        ctx.supervisor.state(),
+        nexus_core::events::RuntimeState::Stopped | nexus_core::events::RuntimeState::Failed { .. }
+    ) {
+        return Err(invalid("unload chat before adopting existing models"));
+    }
+    let (_guard, cancel) = begin(job_id, "legacy-adoption")?;
+    let ctx = ctx.clone();
+    tokio::task::spawn_blocking(move|| {
+        let mut result=MigrationResult::default();
+        let models_root=ctx.paths.models.canonicalize()?;
+        for row in ctx.store.list_models()? {
+            if cancel.is_cancelled() {return Err(NexusError::Cancelled);}
+            if row.extra.as_deref().and_then(|s|serde_json::from_str::<serde_json::Value>(s).ok()).is_some_and(|v|v.get("storage").and_then(|v|v.as_str())==Some("studio")) {result.skipped.push(row.id);continue;}
+            let id=row.id.clone();
+            let adopted=(||->Result<(),NexusError>{
+                let source=Path::new(&row.path).canonicalize()?;
+                if !source.starts_with(&models_root) {return Err(invalid("outside shared USB models; use explicit file/pack import"));}
+                let source=ctx.paths.owned_path(&source)?;
+                studio::validate_format(&source,ModelKind::Chat,"weights")?;
+                let asset=studio::import_asset(&ctx.store,&root,&source,&cancel,|bytes|progress(DownloadProgress {bytes,total:row.bytes,bytes_per_sec:0.0,eta_secs:None,phase:nexus_models::download::Phase::Verifying}))?;
+                if row.sha256.as_ref().is_some_and(|sha|!sha.eq_ignore_ascii_case(&asset.sha256)) {return Err(invalid("legacy checksum mismatch; source retained"));}
+                let model=StudioModel {id:studio::legacy_id(&row.id),name:row.name,kind:ModelKind::Chat,variant:"universal".into(),metadata:serde_json::json!({"legacy_id":row.id,"license":row.license,"source":"legacy-adoption"}).to_string(),assets:vec![AssetRole {role:"weights".into(),asset}]};
+                studio::register(&ctx.store,&root,&model)?;
+                project_chat(&ctx,&root,&model)?;
+                Ok(())
+            })();
+            match adopted {Ok(())=>result.imported.push(id),Err(error)=>result.failed.push(format!("{id}: {error}"))}
+        }
+        Ok(result)
+    }).await.map_err(|e|NexusError::Internal(e.to_string()))?
+}
+
+/// Import a legacy schema-1 offline model pack directly into deduplicated USB assets.
+pub async fn import_pack(
+    ctx: &Ctx,
+    caller: &Caller,
+    job_id: &str,
+    path: &str,
+    progress: Arc<dyn Fn(DownloadProgress) + Send + Sync>,
+) -> Result<MigrationResult, NexusError> {
+    let root = root(ctx, caller)?;
+    let dir = super::models::reference_read(ctx, Path::new(path)).await?;
+    let manifest = dir.join("pack.json");
+    ctx.perms.check("user", &manifest, nexus_core::fs::Access::Read)?;
+    if std::fs::metadata(&manifest)?.len() > 4 * 1024 * 1024 {
+        return Err(invalid("model pack manifest is too large"));
+    }
+    let pack = nexus_models::pack::read_pack(&dir).map_err(|e| invalid(&e.to_string()))?;
+    if pack.models.len() > 1024 {
+        return Err(invalid("too many models in one pack"));
+    }
+    let mut sources = Vec::new();
+    let mut ids = std::collections::HashSet::new();
+    for model in pack.models {
+        if !ids.insert(model.id.clone()) {
+            return Err(invalid("duplicate model ID in pack"));
+        }
+        let source = studio::pack_asset(&dir, &model.path)?;
+        ctx.perms.check("user", &source, nexus_core::fs::Access::Read)?;
+        let id = studio::legacy_id(&format!("pack:{}", model.id));
+        idle_model(ctx, &id)?;
+        sources.push((id, model, source));
+    }
+    let (_guard, cancel) = begin(job_id, "pack-import")?;
+    let ctx = ctx.clone();
+    tokio::task::spawn_blocking(move|| {
+        let mut result=MigrationResult::default();
+        for (id,entry,source) in sources {
+            if cancel.is_cancelled() {return Err(NexusError::Cancelled);}
+            let imported=(||->Result<(),NexusError>{
+                studio::validate_format(&source,ModelKind::Chat,"weights")?;
+                if std::fs::metadata(&source)?.len()!=entry.bytes {return Err(invalid("pack model size mismatch"));}
+                let sha=nexus_models::bundled::hash_file(&source,&cancel,|bytes|progress(DownloadProgress {bytes,total:entry.bytes,bytes_per_sec:0.0,eta_secs:None,phase:nexus_models::download::Phase::Verifying})).map_err(|e|invalid(&e.to_string()))?;
+                if sha!=entry.sha256 {return Err(invalid("pack checksum mismatch"));}
+                if let Ok(existing)=get_model(&ctx,&id) {
+                    if existing.assets.iter().any(|a|a.asset.sha256==sha) {result.skipped.push(id.clone());return Ok(());}
+                    return Err(NexusError::Conflict("pack model ID already exists with different bytes".into()));
+                }
+                let asset=studio::import_asset(&ctx.store,&root,&source,&cancel,|bytes|progress(DownloadProgress {bytes,total:entry.bytes,bytes_per_sec:0.0,eta_secs:None,phase:nexus_models::download::Phase::Finalizing}))?;
+                let model=StudioModel {id:id.clone(),name:entry.name,kind:ModelKind::Chat,variant:"universal".into(),metadata:serde_json::json!({"source":"model-pack","pack_id":entry.id,"repo":entry.repo,"revision":entry.revision,"license":entry.license}).to_string(),assets:vec![AssetRole {role:"weights".into(),asset}]};
+                studio::register(&ctx.store,&root,&model)?;project_chat(&ctx,&root,&model)?;
+                result.imported.push(id.clone());Ok(())
+            })();
+            if let Err(error)=imported {result.failed.push(format!("{id}: {error}"));}
+        }
+        Ok(result)
+    }).await.map_err(|e|NexusError::Internal(e.to_string()))?
 }

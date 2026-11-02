@@ -249,7 +249,7 @@ export function ModelsPage() {
           <DialogContent aria-describedby="local-import-desc">
             <DialogTitle>Add a model file</DialogTitle>
             <DialogDescription id="local-import-desc">
-              Use the existing file without taking extra disk space. Allow Read access when asked, and keep the file in this location.
+              Allow Read access when asked. USB distributions always import into the shared USB model store and reuse identical content. For a computer installation, you can keep the file in place or choose a copy below.
             </DialogDescription>
             <label className="flex items-start gap-2 text-body">
               <input type="checkbox" checked={copyImport} onChange={(e) => setCopyImport(e.target.checked)} disabled={importFile.isPending} />

@@ -22,3 +22,5 @@ export interface StudioProgress {
   eta_secs: number | null;
   phase: "preparing" | "downloading" | "verifying" | "finalizing";
 }
+
+export interface StudioMigrationResult { imported: string[]; skipped: string[]; failed: string[] }
