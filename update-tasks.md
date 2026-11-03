@@ -84,7 +84,7 @@ Use Terra for one task at a time with explicit files/contracts and completion cr
 - [x] **UP.061** [TERRA] Document OS/CPU minimums, hardware drivers, unsupported acceleration, USB speed/capacity and OS-managed trace limits. (2026-11-02; guide compatibility matrix distinguishes targets from undecided/unverified minimums; documentation only)
 ## Undone — build approval and delivery [LEAD + BUILD APPROVAL]
 
-- [ ] **UP.062** [LEAD] Present concrete build commands, target matrix, download sizes, disk estimates and cleanup plan; ask for build approval.
+- [ ] **UP.062** [LEAD] Present concrete build commands, target matrix, download sizes, disk estimates and cleanup plan; ask for build approval. (PARTIAL 2026-11-03) docs/portable/BUILD-PLAN.md written with targets, estimates, write locations, steps and four open decisions. Waiting on owner answers and on UP.050 assembler; no approval granted.
 - [ ] **UP.063** [LEAD] Build Mac artifacts only after approval; mark them untested under current instruction.
 - [ ] **UP.064** [LEAD] Build Windows artifacts only after approval; mark them untested under current instruction.
 - [ ] **UP.065** [LEAD] Deliver ready-made DIST folder with manifests/licenses/guide; report any unverified portability claims and missing platform artifacts.
