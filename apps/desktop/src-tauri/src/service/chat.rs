@@ -661,14 +661,7 @@ fn start_turn(
             let llm = SchedulerRouter(Arc::new(ctx.scheduler.clone()));
             let routed = run_router(request, &llm, &builtin_tools(), &cx, &persisting, cancel.clone()).await;
             if routed.stopped == "incomplete" {
-                let reason = routed
-                    .runs
-                    .last()
-                    .map(|r| r.summary.as_str())
-                    .unwrap_or("The model stopped before choosing a file-changing tool.");
-                early_text = Some(format!(
-                    "No file change was proposed or applied. The assistant stopped before completing the requested change. Last step: {reason}."
-                ));
+                early_text = Some(nexus_agent::receipt::incomplete_change_receipt(&routed.runs));
             }
             if early_text.is_none() {
                 early_text = nexus_agent::receipt::tool_receipt(&input.user_text, &routed.runs);

@@ -2,6 +2,31 @@
 
 use crate::router::{ToolRun, file_change_requested, is_file_change, simple_consultation};
 
+/// Every failed step of a turn as one factual line each (tool, then the observed reason), oldest first.
+/// Used when a turn ends without the requested change, so the user sees all causes, not only the last.
+pub fn failed_steps(runs: &[ToolRun]) -> Vec<String> {
+    runs.iter()
+        .filter(|run| !run.ok)
+        .map(|run| format!("{}: {}", run.tool, run.summary.replace(['\r', '\n'], " ")))
+        .collect()
+}
+
+/// The receipt for a requested file change that was never proposed or applied.
+pub fn incomplete_change_receipt(runs: &[ToolRun]) -> String {
+    let failures = failed_steps(runs);
+    let mut text = String::from("No file change was proposed or applied.");
+    if failures.is_empty() {
+        text.push_str(" The assistant stopped before choosing a file-changing tool.");
+    } else {
+        text.push_str(" Steps that failed:");
+        for line in failures {
+            text.push_str("\n- ");
+            text.push_str(&line);
+        }
+    }
+    text
+}
+
 /// Return actual action receipts for simple requests; explanation and open-ended answers still
 /// use inference. Tool traces and change cards remain the authority for Apply and Undo.
 pub fn tool_receipt(request: &str, runs: &[ToolRun]) -> Option<String> {
@@ -108,6 +133,23 @@ mod tests {
         )
         .unwrap();
         assert!(failed.contains("not applied: denied") && !failed.contains("undo"));
+    }
+
+    #[test]
+    fn incomplete_receipt_lists_every_failed_step() {
+        let bad = |tool: &str, summary: &str| ToolRun {
+            tool: tool.into(),
+            args_json: "{}".into(),
+            ok: false,
+            summary: summary.into(),
+            llm_text: String::new(),
+        };
+        let text = incomplete_change_receipt(&[
+            bad("read_file", "Not found: a.rs"),
+            bad("router", "Tool planning failed"),
+        ]);
+        assert!(text.contains("read_file: Not found: a.rs") && text.contains("router: Tool planning failed"));
+        assert!(incomplete_change_receipt(&[]).contains("stopped before choosing"));
     }
 
     #[test]
