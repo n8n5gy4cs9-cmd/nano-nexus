@@ -54,6 +54,42 @@ pub fn server_binary(resource_dir: &Path, exe_dir: &Path) -> PathBuf {
     }
 }
 
+/// Chat-engine folders of the USB distribution to try, best first (`runtimes/<platform>/chat/<variant>`).
+///
+/// Apple Silicon has one Metal build with a CPU fallback. On x86-64 the optimized `cpu` build is used only
+/// when the CPU reports AVX2 and FMA; an older CPU gets only the conservative `cpu-baseline` build, because
+/// starting an AVX2 binary on it would crash instead of failing with a message.
+pub fn chat_variant_order(macos: bool, x86_64: bool, avx2_fma: bool) -> &'static [&'static str] {
+    if macos {
+        &["metal", "cpu"]
+    } else if x86_64 && !avx2_fma {
+        &["cpu-baseline"]
+    } else {
+        &["cpu", "cpu-baseline"]
+    }
+}
+
+/// The `llama-server` of the USB distribution for this computer's CPU, or `None` when the distribution
+/// ships no chat engine for it. Decided before the engine starts.
+pub fn portable_server_binary(root: &Path, cpu: &nexus_models::hardware::CpuInfo) -> Option<PathBuf> {
+    let arch = match std::env::consts::ARCH {
+        "aarch64" => "arm64",
+        "x86_64" => "x64",
+        other => other,
+    };
+    let base = root
+        .join("runtimes")
+        .join(format!("{}-{arch}", std::env::consts::OS))
+        .join("chat");
+    let exe = if cfg!(windows) { "llama-server.exe" } else { "llama-server" };
+    let order = chat_variant_order(
+        cfg!(target_os = "macos"),
+        cpu.arch == "x86_64",
+        cpu.avx2 && cpu.fma,
+    );
+    order.iter().map(|v| base.join(v).join(exe)).find(|p| p.is_file())
+}
+
 /// Debug builds only: the `llama-server` that `scripts/setup-runtime.sh` built under `<repo>/vendor/runtime`.
 /// `tauri dev` has no `externalBin` copy next to the executable, so without this the runtime never starts.
 pub fn vendor_server_binary(vendor_dir: &Path) -> Option<PathBuf> {
@@ -173,6 +209,13 @@ mod tests {
         );
         write(&res.join("models/small/s.gguf"), "GGUF");
         write(&res.join("models/big/b.gguf"), "GGUF");
+    }
+
+    #[test]
+    fn old_x86_cpus_never_get_the_avx2_build() {
+        assert_eq!(chat_variant_order(false, true, false), ["cpu-baseline"]);
+        assert_eq!(chat_variant_order(false, true, true), ["cpu", "cpu-baseline"]);
+        assert_eq!(chat_variant_order(true, false, false), ["metal", "cpu"]);
     }
 
     #[test]

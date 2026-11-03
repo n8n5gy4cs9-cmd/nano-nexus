@@ -55,6 +55,14 @@ pub fn build_config_for(ctx: &AppCtx, prefer: Option<&str>) -> Option<RuntimeCon
         });
     let model = registered.or_else(|| runtime_paths::resolve_model(&search))?;
     let mut binary = runtime_paths::server_binary(&ctx.resource_dir, &ctx.exe_dir);
+    if let Some(root) = ctx.paths.portable_root.as_deref() {
+        // USB distribution: pick the engine build this CPU can run before anything is started.
+        if let Some(found) =
+            runtime_paths::portable_server_binary(root, &nexus_models::hardware::detect_cpu())
+        {
+            binary = found;
+        }
+    }
     if !binary.is_file()
         && let Some(vendor) = &ctx.dev_vendor_dir
         && let Some(dev) = runtime_paths::vendor_server_binary(vendor)

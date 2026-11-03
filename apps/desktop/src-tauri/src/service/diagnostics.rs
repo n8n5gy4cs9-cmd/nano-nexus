@@ -81,6 +81,12 @@ pub async fn report(ctx: &AppCtx) -> String {
     }
     let binary = {
         let mut b = runtime_paths::server_binary(&ctx.resource_dir, &ctx.exe_dir);
+        if let Some(root) = ctx.paths.portable_root.as_deref()
+            && let Some(found) =
+                runtime_paths::portable_server_binary(root, &nexus_models::hardware::detect_cpu())
+        {
+            b = found;
+        }
         if cfg!(debug_assertions) && !b.is_file() {
             let vendor = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../vendor");
             if let Some(dev) = runtime_paths::vendor_server_binary(&vendor) {

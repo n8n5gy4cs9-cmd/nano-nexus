@@ -194,9 +194,13 @@ fn backend_dir(b: ImageBackend) -> &'static str {
 
 fn find_engine(root: &Path, kind: &str, variants: &[&str], bin: &str) -> Option<(PathBuf, String)> {
     let base = platform_dir(root).join(kind);
+    // An x86-64 CPU without AVX2/FMA must never be handed the optimized `cpu` build.
+    let cpu = hardware::detect_cpu();
+    let old_x86 = cpu.arch == "x86_64" && !(cpu.avx2 && cpu.fma);
     variants.iter().find_map(|v| {
+        let v = if old_x86 && *v == "cpu" { "cpu-baseline" } else { *v };
         let p = base.join(v).join(exe(bin));
-        p.is_file().then(|| (p, (*v).to_owned()))
+        p.is_file().then(|| (p, v.to_owned()))
     })
 }
 
