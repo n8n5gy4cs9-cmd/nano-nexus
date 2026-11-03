@@ -23,6 +23,7 @@ export interface MediaStatus {
   busy: string | null;
   recommended_backend: string | null;
   notes: string[];
+  media_limits: string[];
 }
 export interface ImageStartInput {
   backend: ImageBackend | null;

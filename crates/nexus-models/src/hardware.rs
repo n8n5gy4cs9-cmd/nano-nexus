@@ -89,6 +89,9 @@ pub struct Recommendation {
     pub ctx_size: u32,
     /// Plain-language reasons and limits, in the order to show them.
     pub notes: Vec<String>,
+    /// What images, transcription and voice can realistically do here, tiered by usable memory.
+    /// Guidance for the owner of an older PC; none of it is a measured benchmark.
+    pub media_limits: Vec<String>,
 }
 
 /// Parse `llama-server --list-devices` output (ported from the reference `parseLlamaDeviceList`), e.g.
@@ -253,6 +256,7 @@ pub fn recommend(os: Os, cpu: &CpuInfo, mem: &MemoryInfo, gpus: &[GpuInfo]) -> R
             threads,
             ctx_size: 2048,
             notes,
+            media_limits: Vec::new(),
         };
     }
     if mem.total_bytes < MIN_MEMORY_BYTES {
@@ -264,6 +268,7 @@ pub fn recommend(os: Os, cpu: &CpuInfo, mem: &MemoryInfo, gpus: &[GpuInfo]) -> R
             threads,
             ctx_size: 2048,
             notes,
+            media_limits: Vec::new(),
         };
     }
 
@@ -314,7 +319,38 @@ pub fn recommend(os: Os, cpu: &CpuInfo, mem: &MemoryInfo, gpus: &[GpuInfo]) -> R
         threads,
         ctx_size: ctx_for(budget),
         notes,
+        media_limits: media_limits(budget, cpu),
     }
+}
+
+/// Plain statements about the heavy workspaces for the memory left after the system's share.
+/// Thresholds are conservative rules of thumb, so the wording says "roughly" and never promises speed.
+pub fn media_limits(budget_bytes: u64, cpu: &CpuInfo) -> Vec<String> {
+    let gib = budget_bytes / GIB;
+    let slow_cpu = cpu.arch == "x86_64" && !(cpu.avx2 && cpu.fma);
+    let mut out = Vec::new();
+    out.push(match gib {
+        0..=3 => "Images: not recommended; image models need roughly 4 GB or more beyond the system's share.".into(),
+        4..=7 => "Images: only small models (SD 1.5 class, low resolution) are likely to fit. Larger models can fail to load or swap heavily.".into(),
+        _ => "Images: small and medium models should fit; close other large programs first.".into(),
+    });
+    if slow_cpu {
+        out.push("Images on a CPU without AVX2 can take many minutes each. Keep size and steps low.".into());
+    }
+    out.push(match gib {
+        0..=1 => "Transcription: use the smallest speech model only.".into(),
+        2..=5 => "Transcription: tiny or base speech models are the safe choice.".into(),
+        _ => {
+            "Transcription: small speech models should work; longer audio takes proportionally longer.".into()
+        }
+    });
+    out.push(if gib < 4 {
+        "Voice: not recommended; the voice engine needs several hundred MB beyond a running chat model."
+            .into()
+    } else {
+        "Voice: works best with the chat model unloaded; only one heavy job runs at a time.".into()
+    });
+    out
 }
 
 #[cfg(test)]
@@ -412,5 +448,20 @@ mod tests {
         let small = recommend(Os::Windows, &cpu, &mem(4, false), &[]);
         assert_eq!(small.ctx_size, 2048);
         assert!(small.notes.iter().any(|n| n.contains("2B")));
+    }
+
+    #[test]
+    fn media_limits_tighten_with_memory_and_flag_cpus_without_avx2() {
+        let low = media_limits(2 * GIB, &x86(false));
+        assert!(low.iter().any(|l| l.starts_with("Images: not recommended")));
+        assert!(low.iter().any(|l| l.contains("without AVX2")));
+        assert!(low.iter().any(|l| l.starts_with("Voice: not recommended")));
+        let high = media_limits(16 * GIB, &x86(true));
+        assert!(high.iter().any(|l| l.contains("small and medium")));
+        assert!(!high.iter().any(|l| l.contains("without AVX2")));
+        assert_eq!(
+            recommend(Os::Windows, &x86(true), &mem(2, false), &[]).media_limits,
+            Vec::<String>::new()
+        );
     }
 }

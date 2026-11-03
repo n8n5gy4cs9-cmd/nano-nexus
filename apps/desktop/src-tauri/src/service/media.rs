@@ -253,6 +253,8 @@ pub struct MediaStatus {
     pub busy: Option<String>,
     pub recommended_backend: Option<String>,
     pub notes: Vec<String>,
+    /// Realistic limits for images, transcription and voice on this computer's memory.
+    pub media_limits: Vec<String>,
     pub cpu: hardware::CpuInfo,
     pub total_memory_bytes: u64,
     /// Graphics devices reported by an installed chat engine. Empty = none reported or unknown.
@@ -298,7 +300,9 @@ pub async fn status(ctx: &Ctx, caller: &Caller) -> Result<MediaStatus, NexusErro
         |r| r.threads,
     );
     let ctx_size = rec.as_ref().map_or(2048, |r| r.ctx_size);
+    let media_limits = rec.as_ref().map(|r| r.media_limits.clone()).unwrap_or_default();
     Ok(MediaStatus {
+        media_limits,
         cpu,
         total_memory_bytes: memory.total_bytes,
         gpus,

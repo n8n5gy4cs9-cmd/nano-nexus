@@ -1251,6 +1251,8 @@ export type MediaStatus = {
 	busy: string | null,
 	recommended_backend: string | null,
 	notes: string[],
+	/**  Realistic limits for images, transcription and voice on this computer's memory. */
+	media_limits: string[],
 	cpu: CpuInfo,
 	total_memory_bytes: number,
 	/**  Graphics devices reported by an installed chat engine. Empty = none reported or unknown. */

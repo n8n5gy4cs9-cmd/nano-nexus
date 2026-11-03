@@ -312,6 +312,10 @@ function ThisComputer({ status }: { status: MediaStatus | undefined }) {
       <div><dt className="text-muted">Suggested defaults</dt><dd>{status.threads} threads · {status.ctx_size} context</dd></div>
     </dl>
     <ul className="list-disc pl-5 text-small text-muted">{status.notes.map((n) => <li key={n}>{n}</li>)}</ul>
+    {status.media_limits.length ? <>
+      <h3 className="mt-2 text-small font-medium">What to expect on this computer</h3>
+      <ul className="list-disc pl-5 text-small text-muted">{status.media_limits.map((n) => <li key={n}>{n}</li>)}</ul>
+    </> : null}
   </Panel>;
 }
 

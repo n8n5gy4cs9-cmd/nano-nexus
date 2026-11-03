@@ -97,7 +97,7 @@ Use Terra for one task at a time with explicit files/contracts and completion cr
 
 - [x] **UP.070** [LEAD] USB-local bounded write audit: recorded operations versus configured destinations, byte counts where known, errors, redaction, rotation and explicit coverage gaps. (2026-11-03; nexus-core write_audit with 500-entry ring, 1 MiB rotated JSONL, no self-audit, truncated errors; recorded: output creation, output Trash moves, model reclaim; configured worker/cache destinations classified; app_write_report desktop-only. Other writers (Studio publish, journal apply, DB) are not yet recorded and are listed as gaps; check.sh green)
 - [ ] **UP.072** [LEAD] Package Windows CPU-only baseline independently of CUDA/Vulkan; add conservative non-AVX2 variant and CPU-instruction selection before engine startup.
-- [ ] **UP.073** [TERRA+REVIEW] RAM-aware model recommendations and conservative context/thread defaults; explain older-PC image/speech limitations and unsupported OS/CPU cases.
+- [x] **UP.073** [TERRA+REVIEW] RAM-aware model recommendations and conservative context/thread defaults; explain older-PC image/speech limitations and unsupported OS/CPU cases. (2026-11-03; existing thread/context/model-size defaults kept; added tiered media_limits for images, transcription and voice plus no-AVX2 warning, shown on Studio → This computer; rules of thumb, not benchmarks; check.sh green)
 
 ## Coding references — added during active batch
 
