@@ -12,3 +12,4 @@ pub mod portable;
 pub mod settings;
 pub mod share;
 pub mod sink;
+pub mod write_audit;

@@ -42,6 +42,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             app::app_info,
             app::open_external,
             app::app_diagnostics,
+            app::app_write_report,
             attachments::attachments_read,
             attachments::attachments_pick,
             runtime::runtime_status,

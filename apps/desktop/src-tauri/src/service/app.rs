@@ -87,6 +87,42 @@ pub fn info(ctx: &AppCtx, caller: &Caller) -> AppInfo {
     }
 }
 
+/// Recorded app writes, configured worker destinations and the limits of both. Desktop only.
+pub fn write_report(
+    ctx: &AppCtx,
+    caller: &Caller,
+) -> Result<nexus_core::write_audit::WriteReport, nexus_core::error::NexusError> {
+    if !caller.is_desktop() {
+        return Err(nexus_core::error::NexusError::ForbiddenRemote);
+    }
+    let log = nexus_core::write_audit::global();
+    let mut entries = vec![
+        ("Database and settings".to_owned(), ctx.paths.data.clone()),
+        ("Models".to_owned(), ctx.paths.models.clone()),
+        ("Generated outputs".to_owned(), ctx.paths.outputs.clone()),
+        ("Recoverable Trash".to_owned(), ctx.paths.trash.clone()),
+        ("Logs".to_owned(), ctx.paths.logs.clone()),
+        ("Caches and temporary files".to_owned(), ctx.paths.cache.clone()),
+    ];
+    if let Ok(env) = ctx.paths.worker_environment() {
+        entries.extend(
+            env.into_iter()
+                .map(|(name, path)| (format!("Worker {name}"), path)),
+        );
+    }
+    let probe = nexus_core::write_audit::WriteLog::new(
+        ctx.paths.logs.join("write-audit.jsonl"),
+        ctx.paths.portable_root.clone(),
+    );
+    let classifier = log.unwrap_or(&probe);
+    Ok(nexus_core::write_audit::WriteReport {
+        recorded: log.map(|l| l.recent(200)).unwrap_or_default(),
+        configured: classifier.configured(entries),
+        gaps: nexus_core::write_audit::coverage_gaps(),
+        log_path: log.map(|l| l.file().to_string_lossy().into_owned()),
+    })
+}
+
 fn locations(ctx: &AppCtx) -> Vec<StorageLocation> {
     let mut out = Vec::new();
     let mut add = |label: &str, path: &std::path::Path, purpose: &str| {

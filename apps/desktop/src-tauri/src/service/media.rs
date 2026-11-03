@@ -725,7 +725,15 @@ pub fn delete_outputs(
     let trash = nexus_fs::MoveToDirTrash::new(ctx.paths.trash.join("outputs"));
     let mut moved = 0;
     for p in plan {
-        trash.trash(&p).map_err(NexusError::Internal)?;
+        let moved_result = trash.trash(&p);
+        nexus_core::write_audit::record(
+            "outputs",
+            "move-to-trash",
+            &p,
+            None,
+            moved_result.as_ref().map(|_| ()).map_err(String::as_str),
+        );
+        moved_result.map_err(NexusError::Internal)?;
         moved += 1;
     }
     Ok(moved)

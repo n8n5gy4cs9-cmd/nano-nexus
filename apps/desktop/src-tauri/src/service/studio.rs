@@ -575,11 +575,19 @@ pub fn reclaim_orphans(
             result.skipped.push(sha);
             continue;
         };
-        if asset.present
-            && let Err(error) = nexus_fs::Trasher::trash(&trash, path)
-        {
-            result.failed.push(format!("{}: {error}", asset.path));
-            continue;
+        if asset.present {
+            let moved = nexus_fs::Trasher::trash(&trash, path);
+            nexus_core::write_audit::record(
+                "models",
+                "move-to-trash",
+                path,
+                Some(asset.bytes),
+                moved.as_ref().map(|_| ()).map_err(String::as_str),
+            );
+            if let Err(error) = moved {
+                result.failed.push(format!("{}: {error}", asset.path));
+                continue;
+            }
         }
         match ctx.store.studio_forget_orphan(&asset.sha256) {
             Ok(_) => {

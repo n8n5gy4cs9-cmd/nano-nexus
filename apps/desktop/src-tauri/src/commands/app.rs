@@ -26,6 +26,15 @@ pub async fn open_external(app: tauri::AppHandle, url: String) -> CmdResult<()> 
         .map_err(|e| IpcError::from(nexus_core::error::NexusError::Internal(e.to_string())))
 }
 
+/// Recorded writes and configured destinations for the storage view.
+#[tauri::command]
+#[specta::specta]
+pub async fn app_write_report(
+    ctx: State<'_, Arc<AppState>>,
+) -> CmdResult<nexus_core::write_audit::WriteReport> {
+    service::app::write_report(&ctx, &service::Caller::Desktop).map_err(Into::into)
+}
+
 /// The `/nano-nexus` report: runtime, models, share, recent log lines, and quick help.
 #[tauri::command]
 #[specta::specta]

@@ -30,11 +30,15 @@ export const commands = {
 	studioImport: (jobId: string, path: string, input: ModelInput, onEvent: Channel<DownloadProgress>) => typedError<StudioModel, IpcError>(__TAURI_INVOKE("studio_import", { jobId, path, input, onEvent })),
 	studioTransferCancel: (jobId: string, discard: boolean) => typedError<boolean, IpcError>(__TAURI_INVOKE("studio_transfer_cancel", { jobId, discard })),
 	studioPickAsset: () => typedError<string | null, IpcError>(__TAURI_INVOKE("studio_pick_asset")),
+	studioOrphans: () => typedError<OrphanPreview, IpcError>(__TAURI_INVOKE("studio_orphans")),
+	studioReclaim: (sha256s: string[]) => typedError<ReclaimResult, IpcError>(__TAURI_INVOKE("studio_reclaim", { sha256s })),
 	appInfo: () => typedError<AppInfo, IpcError>(__TAURI_INVOKE("app_info")),
 	/**  Open a web link in the OS browser (https/http only). */
 	openExternal: (url: string) => typedError<null, IpcError>(__TAURI_INVOKE("open_external", { url })),
 	/**  The `/nano-nexus` report: runtime, models, share, recent log lines, and quick help. */
 	appDiagnostics: () => typedError<string, IpcError>(__TAURI_INVOKE("app_diagnostics")),
+	/**  Recorded writes and configured destinations for the storage view. */
+	appWriteReport: () => typedError<WriteReport, IpcError>(__TAURI_INVOKE("app_write_report")),
 	/**  Read files the user dropped onto the window (paths come from the OS drop event). */
 	attachmentsRead: (paths: string[]) => typedError<AttachmentInput[], IpcError>(__TAURI_INVOKE("attachments_read", { paths })),
 	/**  Open the native file picker and read the chosen files. Empty when the user cancels. */
@@ -642,6 +646,13 @@ export type CleanupPlan = {
 	changeset_id: string,
 	files: number,
 	bytes: number | null,
+};
+
+/**  A destination the app configured for writes it does not itemise (worker caches, temp). */
+export type ConfiguredDestination = {
+	subsystem: string,
+	path: string,
+	outside_root: boolean,
 };
 
 export type Conflict = {
@@ -1396,6 +1407,21 @@ export type ObserveView = {
 	codex_found: boolean,
 };
 
+/**  One stored file that no Studio model references. */
+export type OrphanAsset = {
+	sha256: string,
+	path: string,
+	bytes: number,
+	/**  False when the file is already gone and only the registry row remains. */
+	present: boolean,
+};
+
+/**  Reclaim candidates and the disk space they would free. */
+export type OrphanPreview = {
+	assets: OrphanAsset[],
+	total_bytes: number,
+};
+
 /**  One protected macOS folder and whether the OS lets us in. */
 export type OsFolderStatus = {
 	path: string,
@@ -1527,6 +1553,14 @@ export type ProjectView = {
 
 export type PromptSpec = {
 	system: string,
+};
+
+/**  Outcome of a reclaim request. Files move to the recoverable USB Trash, never unlinked. */
+export type ReclaimResult = {
+	reclaimed: string[],
+	bytes: number,
+	skipped: string[],
+	failed: string[],
 };
 
 /**  What kind of occurrence a reference is. */
@@ -2058,6 +2092,29 @@ export type WorkflowSpec_Serialize = {
 	pipeline?: string | null,
 	max_hops?: number | null,
 	always_route?: boolean | null,
+};
+
+/**  One recorded write operation. Repeats of the same operation are merged into `count`. */
+export type WriteEvent = {
+	ts_ms: number,
+	subsystem: string,
+	operation: string,
+	/**  Root-relative (slash separated) when inside the distribution, otherwise absolute. */
+	destination: string,
+	outside_root: boolean,
+	bytes: number | null,
+	ok: boolean,
+	/**  Short failure reason, truncated; never file contents. */
+	error: string | null,
+	count: number,
+};
+
+/**  Everything the storage view shows, with the limits stated alongside. */
+export type WriteReport = {
+	recorded: WriteEvent[],
+	configured: ConfiguredDestination[],
+	gaps: string[],
+	log_path: string | null,
 };
 
 /* Tauri Specta runtime */

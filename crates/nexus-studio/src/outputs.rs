@@ -97,6 +97,19 @@ pub fn save(
 
 /// Create a file that must not exist yet (two outputs in the same millisecond never overwrite).
 fn write_new(path: &Path, bytes: &[u8]) -> Result<(), StudioError> {
+    let result = write_new_inner(path, bytes);
+    let message = result.as_ref().err().map(ToString::to_string);
+    nexus_core::write_audit::record(
+        "outputs",
+        "create",
+        path,
+        Some(bytes.len() as u64),
+        message.as_deref().map_or(Ok(()), Err),
+    );
+    result
+}
+
+fn write_new_inner(path: &Path, bytes: &[u8]) -> Result<(), StudioError> {
     use std::io::Write as _;
     let mut f = std::fs::OpenOptions::new()
         .write(true)

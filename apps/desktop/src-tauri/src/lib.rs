@@ -149,6 +149,7 @@ fn apply_windows_backdrop(_app: &tauri::App) {}
 fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let paths = resolve_paths(app)?;
     paths.ensure_dirs()?;
+    nexus_core::write_audit::init(paths.logs.join("write-audit.jsonl"), paths.portable_root.clone());
     let store = Arc::new(if paths.portable_root.is_some() {
         Store::open_portable(&paths.db_file(), &paths.data.join("backups"))?
     } else {
