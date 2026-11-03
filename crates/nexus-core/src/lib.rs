@@ -3,6 +3,7 @@
 
 pub mod changes;
 pub mod chat;
+pub mod coding_session;
 pub mod error;
 pub mod events;
 pub mod fs;
