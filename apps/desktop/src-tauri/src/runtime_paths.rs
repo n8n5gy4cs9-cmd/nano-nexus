@@ -87,7 +87,14 @@ pub fn portable_server_binary(root: &Path, cpu: &nexus_models::hardware::CpuInfo
         cpu.arch == "x86_64",
         cpu.avx2 && cpu.fma,
     );
-    order.iter().map(|v| base.join(v).join(exe)).find(|p| p.is_file())
+    let found = order.iter().map(|v| base.join(v).join(exe)).find(|p| p.is_file());
+    // An engine folder that ships every CPU variant (ggml-cpu-sse42.dll and friends) picks the right one
+    // itself at start, so it is safe on an older CPU even without a separate `cpu-baseline` folder.
+    found.or_else(|| {
+        let all_variants = base.join("cpu").join("ggml-cpu-sse42.dll").is_file();
+        let p = base.join("cpu").join(exe);
+        (all_variants && p.is_file()).then_some(p)
+    })
 }
 
 /// Debug builds only: the `llama-server` that `scripts/setup-runtime.sh` built under `<repo>/vendor/runtime`.

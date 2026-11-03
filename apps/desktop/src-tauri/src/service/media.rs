@@ -200,7 +200,15 @@ fn find_engine(root: &Path, kind: &str, variants: &[&str], bin: &str) -> Option<
     variants.iter().find_map(|v| {
         let v = if old_x86 && *v == "cpu" { "cpu-baseline" } else { *v };
         let p = base.join(v).join(exe(bin));
-        p.is_file().then(|| (p, v.to_owned()))
+        if p.is_file() {
+            return Some((p, v.to_owned()));
+        }
+        // A `cpu` folder that carries all CPU variants (ggml-cpu-sse42.dll) is safe on older CPUs too.
+        if old_x86 && v == "cpu-baseline" && base.join("cpu").join("ggml-cpu-sse42.dll").is_file() {
+            let p = base.join("cpu").join(exe(bin));
+            return p.is_file().then(|| (p, "cpu".to_owned()));
+        }
+        None
     })
 }
 

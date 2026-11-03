@@ -47,3 +47,5 @@ dist-bundles/
 REFE/
 # Task-owned, budgeted portable build scratch (UP.055)
 /.portable-build/
+/NanoNexus-USB-DIST/
+/NanoNexus-USB-DIST*/

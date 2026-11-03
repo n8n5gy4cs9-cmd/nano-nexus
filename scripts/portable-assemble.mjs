@@ -176,8 +176,14 @@ function main() {
     const p = path.join(out, l.name);
     if (!fs.existsSync(p) || a.update) fs.writeFileSync(p, l.body, { mode: 0o755 });
   }
-  const guide = path.resolve(path.dirname(specPath), spec.guide ?? 'guide.html');
-  if (fs.existsSync(guide)) fs.copyFileSync(guide, path.join(out, 'guide.html'));
+  // Top-level documents: [{ "name": "quick-start-guide.html", "source": "path" }]; plain file names only.
+  for (const d of spec.docs ?? []) {
+    if (!/^[A-Za-z0-9._-]+$/.test(d.name) || d.name.startsWith('.')) throw new Error(`bad document name ${d.name}`);
+    const from = path.resolve(path.dirname(specPath), d.source);
+    const to = path.join(out, d.name);
+    fs.copyFileSync(from, to);
+    manifest.files[d.name] = sha256(to);
+  }
   fs.writeFileSync(path.join(out, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
   console.log(`assembled ${Object.keys(manifest.files).length} files into ${out}`);
   if (fs.existsSync(rollback)) console.log(`previous versions kept in ${rollback}`);

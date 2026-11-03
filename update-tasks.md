@@ -125,3 +125,7 @@ Use Terra for one task at a time with explicit files/contracts and completion cr
 
 - [x] **UP.090** [TERRA] Mark whole user-documentation and focused-UI categories as Terra-suitable; mark review/lead/platform boundaries and cite current official model guidance. (2026-11-02)
 - [x] **UP.091** [TERRA] Write update-handoff.md with the exact completed batch, source map, remaining limitations, protected dirty files, task-owner guidance and short next-session prompt. (2026-11-02)
+
+## Build result — 2026-11-03
+
+Owner answered the build decisions (Windows SDK allowed but only on the external drive; engines into vendor; no no-AVX2 build; assemble a complete DIST to copy by hand). Built in `.portable-build/dist1/` with HOME/cargo/rustup/temp redirected to the external drive. Result: `NanoNexus-USB-DIST/` (about 557 MB, 103 files, manifest.json with SHA-256). Mac app (portable-dist, ad-hoc signed) and Windows x64 exe (portable-dist, unsigned), chat engines for both, image engines (Mac Metal, Windows CPU + Vulkan), Windows speech engine, third-party licences, quick-start guide (md + html). **Never started on any machine.** Missing: Mac speech engine (source build was denied), voice/Kokoro, fixed WebView2, any model. UP.050–052/062–065 stay open until the artifacts are exercised; UP.053/054 not done.

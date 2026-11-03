@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NanoNexus on a USB stick: quick start</title>
+<style>
+:root{--bg:#fff;--fg:#1c1e21;--muted:#5b6370;--line:#d9dde3;--code:#f3f4f6;--accent:#2457d6}
+@media (prefers-color-scheme:dark){:root{--bg:#15171a;--fg:#e8eaed;--muted:#a0a6b0;--line:#2c3036;--code:#1f2227;--accent:#7aa2ff}}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,sans-serif}
+main{max-width:760px;margin:0 auto;padding:24px 16px 64px}
+h1{font-size:1.8rem}h2{margin-top:2rem;border-top:1px solid var(--line);padding-top:1rem}h3{margin-top:1.2rem}
+pre{background:var(--code);padding:12px;border-radius:8px;overflow-x:auto}code{background:var(--code);padding:1px 5px;border-radius:4px;font-size:.92em}pre code{padding:0;background:none}
+table{border-collapse:collapse;width:100%}th,td{border:1px solid var(--line);padding:6px 10px;text-align:left}
+a{color:var(--accent)}
+</style></head><body><main>
+<h1>NanoNexus on a USB stick: quick start</h1>
+<p>This guide puts the complete <strong>DIST</strong> folder on a USB stick so NanoNexus runs from it on a Mac (Apple Silicon) or a Windows PC (64-bit), with your models, chats and files staying on the stick.</p>
+<p><strong>Honest status:</strong> the apps were built but not tested on any machine. Steps marked <em>(untested)</em> have never been tried. Linux can prepare the stick but cannot run the app (no Linux build exists).</p>
+<h2>1. What you need</h2>
+<ul><li>A USB stick or SSD. 64 GB or more is comfortable; models are the big part (1 to 8 GB each). Faster is better: USB 3 or newer.</li><li>The <code>DIST</code> folder you were given (ask for it as a plain folder, not a zip, to avoid copying twice).</li><li>A Mac with Apple Silicon (M1 or newer, macOS 13 or newer) and/or a Windows 10 or 11 PC (64-bit). PCs from about 2017 onward are fine; the engines pick a CPU variant at start.</li><li>Windows needs Microsoft Edge WebView2. Windows 11 and up-to-date Windows 10 already have it.</li></ul>
+<h2>2. Back up, then format the stick as exFAT</h2>
+<p><strong>Formatting erases everything on the stick.</strong> Copy anything you want to keep somewhere else first. NanoNexus never formats a drive.</p>
+<p>exFAT is the format both macOS and Windows read and write.</p>
+<h3>On a Mac</h3>
+<ol><li>Plug in the stick. Open <strong>Disk Utility</strong>.</li><li>Choose <strong>View, Show All Devices</strong>. Select the stick itself (the top line), not the indented volume.</li><li>Click <strong>Erase</strong>. Name it <code>NANONEXUS</code>. Format: <strong>ExFAT</strong>. Scheme: <strong>Master Boot Record</strong> (best for Windows compatibility).</li><li>Click <strong>Erase</strong> and wait.</li></ol>
+<h3>On Windows</h3>
+<ol><li>Plug in the stick. Open <strong>This PC</strong>, right-click the stick, choose <strong>Format</strong>.</li><li>File system: <strong>exFAT</strong>. Allocation unit size: <strong>Default</strong>. Volume label: <code>NANONEXUS</code>.</li><li>Leave <strong>Quick Format</strong> on. Click <strong>Start</strong> and confirm that you accept the erase.</li></ol>
+<h3>On Linux</h3>
+<pre><code>lsblk                                   # find the stick, for example /dev/sdb. Check it twice.
+sudo umount /dev/sdb1
+sudo mkfs.exfat -n NANONEXUS /dev/sdb1  # needs the exfatprogs package</code></pre>
+<p>Replace <code>/dev/sdb1</code> with your stick. A wrong device name erases the wrong disk.</p>
+<h2>3. Copy the DIST to the stick</h2>
+<p>Copy the <strong>whole</strong> folder contents so that <code>portable.json</code> sits at the top of the stick (or inside one folder of your choice). Do not skip hidden files.</p>
+<ul><li>Mac: drag the contents of <code>DIST</code> onto the stick in Finder, or run <code>cp -R /path/to/DIST/. /Volumes/NANONEXUS/</code>.</li><li>Windows: copy the contents of <code>DIST</code> in Explorer and paste them into the stick.</li><li>Linux: <code>cp -r /path/to/DIST/. /media/$USER/NANONEXUS/</code>.</li></ul>
+<p>The folder should now look like this:</p>
+<pre><code>portable.json
+Start-Mac.command
+Start-Windows.cmd
+apps/macos-arm64/NanoNexus.app
+apps/windows-x64/NanoNexus.exe
+runtimes/...        engines
+models/             empty at first, your shared model store
+data/ outputs/ cache/ logs/
+licenses/
+manifest.json       SHA-256 of every shipped file
+quick-start-guide.html</code></pre>
+<p>Do not move <code>NanoNexus.app</code> or <code>NanoNexus.exe</code> out of <code>apps/</code>. They refuse to start outside the DIST on purpose, so they never write into your computer&#x27;s profile by mistake.</p>
+<h2>4. Start it</h2>
+<h3>Mac <em>(untested)</em></h3>
+<ol><li>Open the stick in Finder and double-click <strong>Start-Mac.command</strong>.</li><li>If macOS says the file or app cannot be opened because the developer cannot be verified: right-click it, choose <strong>Open</strong>, then <strong>Open</strong> again. The app is not notarized by Apple.</li><li>If double-click does nothing, open Terminal and run <code>sh /Volumes/NANONEXUS/Start-Mac.command</code>.</li></ol>
+<h3>Windows <em>(untested)</em></h3>
+<ol><li>Open the stick in Explorer and double-click <strong>Start-Windows.cmd</strong>.</li><li>If SmartScreen says &quot;Windows protected your PC&quot;, click <strong>More info</strong>, then <strong>Run anyway</strong>. The app is not code-signed.</li><li>If a window says WebView2 is missing, install the Microsoft Edge WebView2 Runtime once on that PC.</li></ol>
+<h3>Linux</h3>
+<p>There is no Linux app in this DIST. A Linux machine can prepare the stick (steps 2 and 3) and manage files on it.</p>
+<h2>5. First run: get a model</h2>
+<p>The stick ships without chat models so that it stays small and shared between Mac and Windows.</p>
+<ol><li>Connect to the internet for this step only.</li><li>Open <strong>Models</strong>. In the <strong>Catalog</strong> pick a small model first (about 2B parameters on 8 GB RAM or less), then press <strong>Download</strong>.</li><li>For images, speech and voice, use <strong>Models, USB Studio</strong>: pick a category, give a Hugging Face file link or import a file you already have.</li><li>Downloads land in <code>models/</code> on the stick. Each file is stored once and shared by the Mac and Windows apps.</li></ol>
+<p>After this you can disconnect. Chat, models, images and transcripts all work offline. Only model downloads and the optional web search need the internet.</p>
+<h2>6. Where your things are</h2>
+<table><thead><tr><th>What</th><th>Where on the stick</th></tr></thead><tbody><tr><td>Models</td><td><code>models/</code></td></tr><tr><td>Chats, settings, knowledge, change history</td><td><code>data/</code></td></tr><tr><td>Images, audio, transcripts</td><td><code>outputs/</code></td></tr><tr><td>Temporary and cache files</td><td><code>cache/&lt;platform&gt;/</code></td></tr><tr><td>Logs</td><td><code>logs/&lt;platform&gt;/</code></td></tr></tbody></table>
+<p>Settings, then Storage activity, shows which writes the app made and where, and which destinations it uses. It lists what it cannot see. The computer&#x27;s operating system can still keep small traces of its own, such as recent-file lists, which no app controls.</p>
+<h2>7. Working on your own files</h2>
+<p>NanoNexus only touches folders you grant. Grants are re-asked on every launch and on every new computer. Put your projects in a folder next to <code>DIST</code> on the stick (for example <code>Projects/</code>), not inside <code>DIST</code>.</p>
+<h2>8. Update safely</h2>
+<ol><li>Close NanoNexus on every computer. Eject nothing yet.</li><li>On a computer with Node 22 or newer, in the project folder, run:</li></ol>
+<pre><code>node scripts/portable-assemble.mjs --spec dist-spec.json --out /Volumes/NANONEXUS --update</code></pre>
+<ol><li>The old app and engine versions are kept in <code>.rollback/</code> on the stick. <code>models/</code>, <code>data/</code>, <code>outputs/</code>, <code>cache/</code> and <code>logs/</code> are never touched. Do not run an older app against data written by a newer one.</li></ol>
+<h2>9. Eject safely</h2>
+<p>Close NanoNexus first (quit it from its window, not just by closing the lid). Then eject: Finder eject button on Mac; <strong>Safely Remove Hardware</strong> on Windows; <code>umount</code> on Linux. Pulling the stick while the app runs can corrupt chats or half-finished downloads.</p>
+<h2>10. If something goes wrong</h2>
+<ul><li><strong>&quot;This app requires the complete USB DIST&quot;:</strong> the app was moved or the stick copy is incomplete. Copy the whole DIST again.</li><li><strong>&quot;Not enough free space&quot;:</strong> the app needs at least 64 MB free for its state, and much more for models. Free space on the stick.</li><li><strong>Stick is read-only:</strong> check the lock switch on the stick; on Mac do not mount it with &quot;Ignore ownership&quot; problems; on Windows run the format check.</li><li><strong>Slow replies on an old PC:</strong> use a smaller model. Settings, This computer, shows memory-based advice.</li><li><strong>Engine missing:</strong> Studio tabs say which engine is not in this DIST. See <code>licenses/</code> and <code>manifest.json</code> for what was shipped.</li></ul>
+<h2>11. What was and was not verified</h2>
+<p>Not tested: starting on any Mac or Windows PC, running from exFAT, Mac Gatekeeper behaviour, Windows SmartScreen behaviour, older CPUs, image, speech or voice runs, and updates. Voice (Kokoro) is not in this DIST. Speech on the Mac is not in this DIST unless <code>runtimes/macos-arm64/speech/</code> exists. Windows 10 PCs without WebView2 need it installed once.</p>
+</main></body></html>
