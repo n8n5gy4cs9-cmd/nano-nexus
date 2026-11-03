@@ -63,7 +63,7 @@ import type { PairingView, SharePolicy, ShareDevice, ShareStatus } from "@/featu
 import type { KbIndexResult, KbLibrary, KbDocumentSource, KbLibraryDetail, KbPassage, KbProgress } from "@/features/library/types";
 
 import { getTransport } from "./transport";
-import type { ModelKind, StudioModel, StudioModelView, StudioModelInput, StudioProgress, StudioMigrationResult } from "@/features/models/studio-types";
+import type { ModelKind, StudioModel, StudioModelView, StudioModelInput, StudioProgress, StudioMigrationResult, StudioOrphanPreview, StudioReclaimResult } from "@/features/models/studio-types";
 import type {
   ImageGenerateInput, ImageStartInput, MediaStatus, Telemetry, OutputKind, OutputRecord, SpeakRequest, TranscribeInput, TranscribeOutput, TtsProgress, VoiceInfo,
 } from "@/features/studio/types";
@@ -99,6 +99,8 @@ export const api = {
     importPack: (jobId: string, path: string, onProgress: (p: StudioProgress) => void) =>
       getTransport().stream<StudioProgress, StudioMigrationResult>("studio_pack_import", { jobId, path }, onProgress),
     list: () => getTransport().call<StudioModelView[]>("studio_models"),
+    orphans: () => getTransport().call<StudioOrphanPreview>("studio_orphans"),
+    reclaim: (sha256s: string[]) => getTransport().call<StudioReclaimResult>("studio_reclaim", { sha256s }),
     pickAsset: () => getTransport().call<string | null>("studio_pick_asset"),
     download: (jobId: string, url: string, input: StudioModelInput, onProgress: (p: StudioProgress) => void) =>
       getTransport().stream<StudioProgress, StudioModel>("studio_download", { jobId, url, input }, onProgress),

@@ -478,6 +478,122 @@ pub fn reclassify(ctx: &AppCtx, caller: &Caller, id: &str, kind: ModelKind) -> R
     Ok(())
 }
 
+/// One stored file that no Studio model references.
+#[derive(Clone, Debug, Serialize, Type)]
+pub struct OrphanAsset {
+    pub sha256: String,
+    pub path: String,
+    pub bytes: u64,
+    /// False when the file is already gone and only the registry row remains.
+    pub present: bool,
+}
+
+/// Reclaim candidates and the disk space they would free.
+#[derive(Clone, Debug, Serialize, Type)]
+pub struct OrphanPreview {
+    pub assets: Vec<OrphanAsset>,
+    pub total_bytes: u64,
+}
+
+/// Outcome of a reclaim request. Files move to the recoverable USB Trash, never unlinked.
+#[derive(Clone, Debug, Serialize, Type, Default)]
+pub struct ReclaimResult {
+    pub reclaimed: Vec<String>,
+    pub bytes: u64,
+    pub skipped: Vec<String>,
+    pub failed: Vec<String>,
+}
+
+/// Orphans still referenced by a legacy chat row are not candidates; that API owns their deletion.
+fn orphan_candidates(ctx: &AppCtx, root: &Path) -> Result<Vec<(OrphanAsset, PathBuf)>, NexusError> {
+    let legacy: Vec<PathBuf> = ctx
+        .store
+        .list_models()?
+        .into_iter()
+        .map(|m| PathBuf::from(m.path))
+        .collect();
+    let mut out = Vec::new();
+    for asset in ctx.store.studio_orphan_assets()? {
+        let Ok(path) = studio::asset_destination(root, &asset) else {
+            continue;
+        };
+        if legacy.iter().any(|p| p == &path) {
+            continue;
+        }
+        let present = std::fs::metadata(&path).is_ok_and(|m| m.is_file());
+        out.push((
+            OrphanAsset {
+                sha256: asset.sha256,
+                path: asset.path,
+                bytes: asset.bytes,
+                present,
+            },
+            path,
+        ));
+    }
+    Ok(out)
+}
+
+/// Preview what a reclaim would free. Read-only.
+pub fn orphan_preview(ctx: &AppCtx, caller: &Caller) -> Result<OrphanPreview, NexusError> {
+    let root = root(ctx, caller)?;
+    let assets: Vec<OrphanAsset> = orphan_candidates(ctx, &root)?
+        .into_iter()
+        .map(|(a, _)| a)
+        .collect();
+    let total_bytes = assets.iter().filter(|a| a.present).map(|a| a.bytes).sum();
+    Ok(OrphanPreview { assets, total_bytes })
+}
+
+/// Move the chosen orphan files to the application Trash and forget their rows.
+/// Candidates are recomputed under the shared-store lease, so a stale preview cannot
+/// reclaim an asset that gained a reference since.
+pub fn reclaim_orphans(
+    ctx: &AppCtx,
+    caller: &Caller,
+    sha256s: Vec<String>,
+) -> Result<ReclaimResult, NexusError> {
+    let root = root(ctx, caller)?;
+    if sha256s.is_empty() || sha256s.len() > 500 {
+        return Err(invalid("choose between 1 and 500 unused files"));
+    }
+    let _lease = super::portable_store::acquire()?;
+    if !transfers()
+        .lock()
+        .map_err(|_| invalid("transfer lock poisoned"))?
+        .is_empty()
+    {
+        return Err(NexusError::Conflict(
+            "wait for running model transfers to finish".into(),
+        ));
+    }
+    let candidates = orphan_candidates(ctx, &root)?;
+    let trash = nexus_fs::MoveToDirTrash::new(ctx.paths.trash.join("models"));
+    let mut result = ReclaimResult::default();
+    for sha in sha256s {
+        let Some((asset, path)) = candidates.iter().find(|(a, _)| a.sha256 == sha) else {
+            result.skipped.push(sha);
+            continue;
+        };
+        if asset.present
+            && let Err(error) = nexus_fs::Trasher::trash(&trash, path)
+        {
+            result.failed.push(format!("{}: {error}", asset.path));
+            continue;
+        }
+        match ctx.store.studio_forget_orphan(&asset.sha256) {
+            Ok(_) => {
+                if asset.present {
+                    result.bytes += asset.bytes;
+                }
+                result.reclaimed.push(asset.sha256.clone());
+            }
+            Err(error) => result.failed.push(format!("{}: {error}", asset.path)),
+        }
+    }
+    Ok(result)
+}
+
 /// Cancel owned transfers during shutdown, before releasing the portable distribution lock.
 pub fn cancel_all() {
     if let Ok(jobs) = transfers().lock() {

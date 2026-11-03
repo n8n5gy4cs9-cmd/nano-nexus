@@ -37,6 +37,8 @@ pub fn builder() -> Builder<tauri::Wry> {
             studio::studio_import,
             studio::studio_transfer_cancel,
             studio::studio_pick_asset,
+            studio::studio_orphans,
+            studio::studio_reclaim,
             app::app_info,
             app::open_external,
             app::app_diagnostics,

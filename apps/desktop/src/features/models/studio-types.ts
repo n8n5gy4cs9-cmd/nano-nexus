@@ -24,3 +24,6 @@ export interface StudioProgress {
 }
 
 export interface StudioMigrationResult { imported: string[]; skipped: string[]; failed: string[] }
+export interface StudioOrphan { sha256: string; path: string; bytes: number; present: boolean }
+export interface StudioOrphanPreview { assets: StudioOrphan[]; total_bytes: number }
+export interface StudioReclaimResult { reclaimed: string[]; bytes: number; skipped: string[]; failed: string[] }

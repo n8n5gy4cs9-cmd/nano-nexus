@@ -3,7 +3,7 @@ use super::CmdResult;
 use crate::{
     service::{
         self, Caller,
-        studio::{MigrationResult, ModelInput, ModelView},
+        studio::{MigrationResult, ModelInput, ModelView, OrphanPreview, ReclaimResult},
     },
     state::AppState,
 };
@@ -160,4 +160,15 @@ pub async fn studio_pack_import(
     )
     .await
     .map_err(IpcError::from)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn studio_orphans(ctx: Ctx<'_>) -> CmdResult<OrphanPreview> {
+    service::studio::orphan_preview(&ctx, &Caller::Desktop).map_err(IpcError::from)
+}
+#[tauri::command]
+#[specta::specta]
+pub async fn studio_reclaim(ctx: Ctx<'_>, sha256s: Vec<String>) -> CmdResult<ReclaimResult> {
+    service::studio::reclaim_orphans(&ctx, &Caller::Desktop, sha256s).map_err(IpcError::from)
 }

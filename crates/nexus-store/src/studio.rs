@@ -177,8 +177,91 @@ impl Store {
         })
     }
 
+    /// Assets no model references, largest first. These are the only reclaim candidates.
+    pub fn studio_orphan_assets(&self) -> Result<Vec<StudioAsset>, StoreError> {
+        self.with_conn(|c| {
+            let mut stmt = c.prepare(
+                "SELECT sha256,path,bytes FROM studio_assets
+                 WHERE sha256 NOT IN (SELECT sha256 FROM studio_model_assets)
+                 ORDER BY bytes DESC, sha256",
+            )?;
+            Ok(stmt
+                .query_map([], |r| {
+                    Ok(StudioAsset {
+                        sha256: r.get(0)?,
+                        path: r.get(1)?,
+                        bytes: r.get::<_, i64>(2)? as u64,
+                    })
+                })?
+                .collect::<Result<Vec<_>, _>>()?)
+        })
+    }
+
+    /// Forget one asset row, but only while no model references it. Returns whether a row was removed.
+    pub fn studio_forget_orphan(&self, sha: &str) -> Result<bool, StoreError> {
+        self.with_conn(|c| {
+            Ok(c.execute(
+                "DELETE FROM studio_assets WHERE sha256=?1
+                 AND sha256 NOT IN (SELECT sha256 FROM studio_model_assets)",
+                [sha],
+            )? > 0)
+        })
+    }
+
     /// Remove a logical model. Physical assets are retained for shared references and safe recovery.
     pub fn studio_remove(&self, id: &str) -> Result<bool, StoreError> {
         self.with_conn(|c| Ok(c.execute("DELETE FROM studio_models WHERE id=?1", [id])? > 0))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn asset(n: u8) -> StudioAsset {
+        StudioAsset {
+            sha256: format!("{n:02x}").repeat(32),
+            path: format!("models/{n}.gguf"),
+            bytes: u64::from(n) * 10,
+        }
+    }
+
+    fn model(id: &str, assets: &[StudioAsset]) -> StudioModel {
+        StudioModel {
+            id: id.into(),
+            name: id.into(),
+            kind: ModelKind::Chat,
+            variant: "universal".into(),
+            metadata: "{}".into(),
+            assets: assets
+                .iter()
+                .map(|a| AssetRole {
+                    role: a.path.clone(),
+                    asset: a.clone(),
+                })
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn orphans_exclude_shared_assets_and_forget_is_guarded() {
+        let store = Store::open_in_memory().expect("store");
+        let (shared, solo) = (asset(1), asset(2));
+        store
+            .studio_upsert(&model("a", &[shared.clone(), solo.clone()]))
+            .expect("a");
+        store
+            .studio_upsert(&model("b", std::slice::from_ref(&shared)))
+            .expect("b");
+        assert!(store.studio_orphan_assets().expect("none").is_empty());
+
+        store.studio_remove("a").expect("remove a");
+        let orphans = store.studio_orphan_assets().expect("orphans");
+        assert_eq!(orphans, vec![solo.clone()]);
+        // The shared asset is still referenced by b and can never be forgotten.
+        assert!(!store.studio_forget_orphan(&shared.sha256).expect("guard"));
+        assert!(store.studio_forget_orphan(&solo.sha256).expect("forget"));
+        assert!(!store.studio_forget_orphan(&solo.sha256).expect("again"));
+        assert!(store.studio_asset(&solo.sha256).expect("lookup").is_none());
     }
 }

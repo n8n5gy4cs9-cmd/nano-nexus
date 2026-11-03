@@ -76,8 +76,19 @@ export function StudioModels() {
       setStatus(cancelled ? (discard ? "Cancelling; partial download will be removed." : "Pausing; download bytes stay on USB. Retry the same URL to resume.") : "The transfer has already finished.");
     } catch (error) { setStatus(toIpcException(error).message); }
   };
+  const orphans = useQuery({ queryKey: ["models", "studio-orphans"], queryFn: api.studio.orphans, retry: false });
+  const [reclaiming, setReclaiming] = useState(false);
+  const reclaim = useMutation({
+    mutationFn: (shas: string[]) => api.studio.reclaim(shas),
+    onSuccess: (r) => {
+      setReclaiming(false);
+      setStatus(`Moved ${r.reclaimed.length} unused file(s) (${size(r.bytes)}) to the USB Trash.${r.skipped.length ? ` ${r.skipped.length} no longer eligible.` : ""}${r.failed.length ? ` Failed: ${r.failed.slice(0, 5).join("; ")}` : ""}`);
+      refresh();
+    },
+    onError: (error) => { setReclaiming(false); toast.error(toIpcException(error).message); },
+  });
   const transferring = transfer.isPending || migration.isPending;
-  const busy = transferring || action.isPending;
+  const busy = transferring || action.isPending || reclaim.isPending;
   const patch = (key: "id" | "name" | "role" | "variant", value: string) => setInput((old) => ({ ...old, [key]: value }));
 
   if (models.isPending) return <Skeleton className="h-48" />;
@@ -123,8 +134,22 @@ export function StudioModels() {
         <Button variant="ghost" disabled={busy || view.selected} onClick={() => setRemove(view)}>Remove entry</Button>
       </div>
     </section>)}
+    <section className="flex flex-col gap-2 rounded-panel border border-border bg-surface-1 p-4">
+      <h3 className="font-semibold">Unused files</h3>
+      {orphans.isPending ? <Skeleton className="h-8" /> : orphans.isError ? <p role="alert" className="text-small text-muted">Could not check for unused files: {toIpcException(orphans.error).message}</p>
+        : orphans.data.assets.length === 0 ? <p className="text-small text-muted">No unused files. Every stored file belongs to a model.</p>
+        : <>
+          <p className="text-small text-muted">{orphans.data.assets.length} file(s) belong to no model and would free {size(orphans.data.total_bytes)}. They move to the USB Trash and can be restored from there.</p>
+          <ul className="flex flex-col gap-1 text-small text-muted">{orphans.data.assets.slice(0, 50).map((a) => <li key={a.sha256} className="break-all">{a.path} · {size(a.bytes)}{a.present ? "" : " · file already missing"}</li>)}</ul>
+          <div><Button variant="secondary" disabled={busy} onClick={() => setReclaiming(true)}>Reclaim space…</Button></div>
+        </>}
+    </section>
+    <Dialog open={reclaiming} onOpenChange={setReclaiming}><DialogContent>
+      <DialogTitle>Move unused files to the Trash?</DialogTitle><DialogDescription>{orphans.data?.assets.length ?? 0} file(s), {size(orphans.data?.total_bytes ?? 0)}. Files are moved, not deleted, so they can be restored from the USB Trash folder.</DialogDescription>
+      <DialogFooter><Button variant="secondary" onClick={() => setReclaiming(false)}>Keep files</Button><Button disabled={reclaim.isPending || !orphans.data} onClick={() => { if (orphans.data) reclaim.mutate(orphans.data.assets.slice(0, 500).map((a) => a.sha256)); }}>Move to Trash</Button></DialogFooter>
+    </DialogContent></Dialog>
     <Dialog open={remove !== null} onOpenChange={(open) => { if (!open) setRemove(null); }}><DialogContent>
-      <DialogTitle>Remove {remove?.model.name}?</DialogTitle><DialogDescription>This removes the model entry. Shared asset files stay on USB for other models and recovery; this action does not reclaim their disk space.</DialogDescription>
+      <DialogTitle>Remove {remove?.model.name}?</DialogTitle><DialogDescription>This removes the model entry. Shared asset files stay on USB for other models and recovery; use Unused files below to reclaim space.</DialogDescription>
       <DialogFooter><Button variant="secondary" onClick={() => setRemove(null)}>Keep model</Button><Button disabled={action.isPending} onClick={() => { if (remove) action.mutate(() => api.studio.remove(remove.model.id)); }}>Remove entry</Button></DialogFooter>
     </DialogContent></Dialog>
   </div>;
