@@ -10,6 +10,7 @@ pub mod hardware;
 pub mod hf;
 pub mod media;
 pub mod pack;
+pub mod provider;
 pub mod web;
 
 pub mod studio;
