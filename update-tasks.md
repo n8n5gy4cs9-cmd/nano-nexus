@@ -71,7 +71,7 @@ Use Terra for one task at a time with explicit files/contracts and completion cr
 
 ## Undone — packaging and updates
 
-- [ ] **UP.050** [LEAD] Implement non-destructive DIST assembly with one shared model store and platform launchers.
+- [ ] **UP.050** [LEAD] Implement non-destructive DIST assembly with one shared model store and platform launchers. (PARTIAL 2026-11-03; source only, never run) scripts/portable-assemble.mjs: spec-driven copy of prebuilt apps/runtimes/licenses, refuses symlinks, escaping paths and non-empty targets, requires the new `portable-dist` marker string in every app executable (embedded in lib.rs), writes portable.json, user dirs, launchers and a SHA-256 manifest; --update keeps replaced versions under .rollback and never touches user data. Not done: Mac .app launch/signing, running-process detection beyond a lock-file hint, no tests written.
 - [ ] **UP.051** [LEAD] Package prebuilt macOS Rust app/engines and private workers; handle exFAT launch/signing constraints.
 - [ ] **UP.052** [LEAD] Package prebuilt Windows Rust app/engines, private fixed WebView2 and private workers; no target installers or package managers.
 - [ ] **UP.053** [LEAD] Pin runtime artifacts/digests, collect licenses and disable target-side source builds/implicit downloads.

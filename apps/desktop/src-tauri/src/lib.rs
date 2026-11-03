@@ -313,6 +313,12 @@ fn exit_on_signals(app: &tauri::AppHandle) {
     });
 }
 
+/// Present in the binary only when built with `portable-dist`; `scripts/portable-assemble.mjs` searches
+/// executables for this text and refuses a DIST artifact that lacks it.
+#[cfg(feature = "portable-dist")]
+#[used]
+static PORTABLE_DIST_MARKER: &str = "NANONEXUS_PORTABLE_DIST_REQUIRED_V1";
+
 /// Build and run the Tauri application.
 pub fn run() {
     // Resolve portable storage before any webview or plugin is initialized.
