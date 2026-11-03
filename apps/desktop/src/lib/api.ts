@@ -42,6 +42,7 @@ import type {
   Settings,
   ActivitySnapshot,
   ObserveView,
+  WriteReport,
 } from "@/bindings";
 
 import type {
@@ -116,6 +117,7 @@ export const api = {
     info: () => getTransport().call<AppInfo>("app_info"),
     /** Open an http(s) link in the OS browser. */
     /** Plain-text health report for the `/nano-nexus` chat command. */
+    writeReport: () => getTransport().call<WriteReport>("app_write_report"),
     diagnostics: () => getTransport().call<string>("app_diagnostics"),
     openExternal: (url: string) => getTransport().call<null>("open_external", { url }),
   },

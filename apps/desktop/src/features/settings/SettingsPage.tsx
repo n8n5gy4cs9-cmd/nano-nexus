@@ -14,6 +14,7 @@ import { ZOOM_LEVELS } from "@/lib/zoom";
 import { useUi } from "@/stores/ui";
 
 import { AboutSection } from "./AboutSection";
+import { StorageActivity } from "./StorageActivity";
 import { ShortcutsSection } from "./ShortcutsSection";
 import { ToolsSection } from "./ToolsSection";
 import { Row, Section, SelectRow, TextRow, ToggleRow } from "./fields";
@@ -246,6 +247,7 @@ export function SettingsPage() {
 
       <ShortcutsSection />
 
+      <StorageActivity />
       <AboutSection />
 
       {IS_WEB ? null : (

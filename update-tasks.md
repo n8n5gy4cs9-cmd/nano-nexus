@@ -95,7 +95,7 @@ Use Terra for one task at a time with explicit files/contracts and completion cr
 
 ## Undone — write visibility and older Windows PCs
 
-- [ ] **UP.070** [LEAD] USB-local bounded write audit: recorded operations versus configured destinations, byte counts where known, errors, redaction, rotation and explicit coverage gaps.
+- [x] **UP.070** [LEAD] USB-local bounded write audit: recorded operations versus configured destinations, byte counts where known, errors, redaction, rotation and explicit coverage gaps. (2026-11-03; nexus-core write_audit with 500-entry ring, 1 MiB rotated JSONL, no self-audit, truncated errors; recorded: output creation, output Trash moves, model reclaim; configured worker/cache destinations classified; app_write_report desktop-only. Other writers (Studio publish, journal apply, DB) are not yet recorded and are listed as gaps; check.sh green)
 - [ ] **UP.072** [LEAD] Package Windows CPU-only baseline independently of CUDA/Vulkan; add conservative non-AVX2 variant and CPU-instruction selection before engine startup.
 - [ ] **UP.073** [TERRA+REVIEW] RAM-aware model recommendations and conservative context/thread defaults; explain older-PC image/speech limitations and unsupported OS/CPU cases.
 
@@ -112,7 +112,7 @@ Use Terra for one task at a time with explicit files/contracts and completion cr
 ## Undone — focused UI [TERRA: whole category]
 
 - [x] **UP.022b** [TERRA] Persist browser-only UI preferences such as zoom in USB-backed settings so nonpersistent Mac browser storage does not reset them. (2026-11-02; theme/accent/zoom/default assistant hydrate from SQLite, serialized saves and visible errors; editor host-path sessions intentionally excluded; source only, unbuilt/untested; bindings regeneration pending)
-- [ ] **UP.071** [TERRA] App storage/write-activity view with outside-root destinations and subsystem filters; never claim to observe all OS writes.
+- [x] **UP.071** [TERRA] App storage/write-activity view with outside-root destinations and subsystem filters; never claim to observe all OS writes. (2026-11-03; Settings → Storage activity with filter, outside-drive toggle/alert, configured destinations and not-observed list; loading/error/empty states; check.sh green)
 
 ## Undone — remaining portable integrity work [LEAD]
 
